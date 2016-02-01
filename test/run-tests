@@ -1,0 +1,247 @@
+#!/usr/bin/env python
+
+import fnmatch
+import threading
+from subprocess import Popen, PIPE
+import hashlib
+import sys
+import glob
+import os
+import re
+import getopt
+
+threads = 1
+testcase_pattern = "*.c"
+default_path = ".."
+default_compile_command = "clang"
+default_compile_flags = "-Wall"
+
+QUIET = False
+
+class Future:
+    import threading
+    def __init__(self):
+        self.value = None
+        self.__set = False
+        self.cond = threading.Condition()
+    def get(self):
+        if self.__set:
+            return self.value
+        self.cond.acquire()
+        while not self.__set:
+            self.cond.wait()
+        self.cond.release()
+        return self.value
+
+    def set(self, value):
+        self.cond.acquire()
+        self.value = value
+        self.__set = True
+        self.cond.notifyAll()
+        self.cond.release()
+
+
+def test_case_open(test_case):
+    try:
+        fd = open(test_case);
+    except:
+        print " Couldn't open test case: " + test_case
+        sys.exit(2)
+    return fd
+
+def get_tag(test_case, field, default = None):
+    fd = test_case_open(test_case)
+    value = default
+    for line in fd.readlines():
+        if field in line and ":" in line:
+            value = line[line.index(":") + 1:-1].strip()
+    fd.close()
+    return value
+
+def get_area(test_case, start, stop):
+    fd = test_case_open(test_case)
+    value = []
+    dump = False
+    for line in fd.readlines():
+        if stop in line:
+            dump = False
+        if dump:
+            value.append(line)
+        if start in line:
+            dump = True
+    fd.close()
+    return value
+
+def get_variants(test_case):
+    fd = test_case_open(test_case)
+    content = fd.read()
+    variant_pattern = "{{([a-zA-Z]+)(:.+?)?}}"
+    variant_line_pattern = "{{([a-zA-Z]+)}}"
+
+    variants = {}
+    for variant in re.finditer(variant_pattern, content):
+        variant = variant.group(1)
+        line_tag = ("{{%s}}" % variant)
+        # Is this variant already extracted?
+        if not variant in variants:
+            text = []
+            for line in content.split("\n"):
+                if re.search(variant_line_pattern, line):
+                    if line_tag in line:
+                        line = line.replace(line_tag, "")
+                        text.append(line)
+                    continue
+                def replace(match):
+                    if match.group(1) == variant:
+                        assert match.group(2)
+                        return match.group(2)[1:] # Strip ":"
+                    return ""
+                (line, _) = re.subn(variant_pattern, replace, line)
+                text.append(line)
+            variants[variant] = "\n".join(text)
+    return variants
+
+
+def run_testcase_cleaner(basename):
+    cruftfiles=list()
+    cruftfiles.extend(glob.glob(basename + "*.o"))
+    cruftfiles.extend(glob.glob(basename + "*.var.c"))
+    for cruft in cruftfiles:
+        os.unlink(cruft)
+    return len(cruftfiles)
+
+def run_testcase_helper(test_case, check_name, future):
+    exit_value = get_tag(test_case, "check-exit-value", "0")
+    compile_command = get_tag(test_case, "compile-command", default_compile_command)
+    compile_flags = get_tag(test_case, "compile-flags", default_compile_flags)
+    variants = get_variants(test_case)
+
+    basename, ext = os.path.splitext(test_case)
+
+    cruft = run_testcase_cleaner(basename)
+
+    output = "  TEST %s (%s, %d leftovers removed)\n" % (check_name, test_case, cruft)
+
+    failed = False
+
+    for variant in variants:
+        source_file = "{basename}.{variant}.var{ext}".format(
+            basename=basename,
+            variant=variant,
+            ext=ext)
+        object_file = "{basename}.{variant}.var.o".format(
+            basename=basename,
+            variant=variant)
+
+        # Dump variant file
+        with open(source_file, "w+") as fd:
+            fd.write(variants[variant])
+
+        cmd = "{compiler} -c {source_file} -o {object_file} {flags}".format(
+            compiler=compile_command,
+            source_file=source_file,
+            object_file=object_file,
+            flags=compile_flags)
+        compiler = Popen(cmd, shell=True)
+        compiler.wait()
+
+        # Hash Object File
+        object_hash = hashlib.sha1()
+        with open(object_file) as fd:
+            object_hash.update(fd.read())
+        object_hash = object_hash.hexdigest()
+
+        # Call clang-hash
+        output += "   {source_file} {object_hash}\n".format(
+            source_file=source_file,
+            object_hash=object_hash)
+
+        if int(exit_value) != compiler.returncode:
+            output += "    Exit code was %d (%s exptected)" % (compiler.returncode, exit_value)
+            failed = True
+
+    if failed:
+        output += "  Failed\n"
+
+    future.set(tuple([not failed, output]))
+
+
+def run_testcase(test_case, check_name):
+    future = Future()
+    if threading.active_count() >= threads:
+        run_testcase_helper(test_case, check_name, future)
+        future.get()
+    else:
+        t = threading.Thread(target = run_testcase_helper,
+                             args = (test_case, check_name, future))
+        t.start()
+    return future
+
+def run_test_suite(tests = sorted(fnmatch.filter(os.listdir("."), testcase_pattern))):
+    tests = filter(lambda x: not "var.c" in x, tests)
+    tests_run = 0
+    tests_failed = 0
+    tests_known_fail = 0
+
+    failed_tests = []
+
+    for test_case in tests:
+        check_name = get_tag(test_case, "check-name")
+        if not check_name:
+            print "warning: test '%s' unhandled" % test_case
+            continue
+        failed_tests.append((run_testcase(test_case, check_name),
+                       get_tag(test_case, "check-known-to-fail")))
+
+    for (future, expected) in failed_tests:
+        (passed, output) = future.get()
+        sys.stdout.write(output)
+        if not passed:
+            tests_failed += 1
+            if expected:
+                tests_known_fail += 1
+        tests_run += 1
+    print "Out of %d tests, %d passed, %d failed (%d of them are known to fail)" \
+          % (tests_run, tests_run - tests_failed, tests_failed, tests_known_fail)
+
+    return tests_failed <= tests_known_fail
+
+
+def usage():
+    print "%s [-c] [-t threads] [-q] [test-cases...]" % sys.argv[0]
+    print " if no test-cases are given, all in current directory are run"
+
+if __name__ == '__main__':
+    opts, args = getopt.getopt(sys.argv[1:], "ht:qc")
+
+    for opt,arg in opts:
+        if opt in ('-c', '--clean'):
+            tests = sorted(fnmatch.filter(os.listdir("."), testcase_pattern))
+            for test in tests:
+                basename,_ = os.path.splitext(test)
+                run_testcase_cleaner(basename)
+            sys.exit(1)
+        if opt in ('-t', '--threads'):
+            threads = int(arg)
+            if threads < 1:
+                print "invalid thread_count"
+                usage()
+                sys.exit(1)
+        elif opt in ('-h', '--help'):
+            usage()
+            sys.exit(0)
+        elif opt in ('-q', '--quiet'):
+            QUIET = True
+        else:
+            print "unkown option"
+            assert False
+
+    if len(args) > 0:
+	ret = run_test_suite(args)
+    else:
+        ret = run_test_suite()
+
+    if ret:
+        sys.exit(0)
+    else:
+        sys.exit(-1)
