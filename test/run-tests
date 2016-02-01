@@ -15,6 +15,7 @@ testcase_pattern = "*.c"
 default_path = ".."
 default_compile_command = "clang"
 default_compile_flags = "-Wall"
+default_hash_command = "../build/clang-hash"
 
 QUIET = False
 
@@ -110,9 +111,25 @@ def run_testcase_cleaner(basename):
         os.unlink(cruft)
     return len(cruftfiles)
 
+def run_command(cmd):
+    output = "----- exec: " + cmd + "\n"
+
+    p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+    (stdout, stderr) = p.communicate()
+    if stdout:
+        output += "----- stdout -----\n"
+        output += stdout
+    if stderr:
+        output += "----- stderr -----\n"
+        output += stderr
+    p.wait()
+    return p.returncode, output, stdout, stderr
+
 def run_testcase_helper(test_case, check_name, future):
     exit_value = get_tag(test_case, "check-exit-value", "0")
     compile_command = get_tag(test_case, "compile-command", default_compile_command)
+    hash_command = get_tag(test_case, "hash-command", default_hash_command)
+
     compile_flags = get_tag(test_case, "compile-flags", default_compile_flags)
     variants = get_variants(test_case)
 
@@ -123,6 +140,8 @@ def run_testcase_helper(test_case, check_name, future):
     output = "  TEST %s (%s, %d leftovers removed)\n" % (check_name, test_case, cruft)
 
     failed = False
+
+    results = {}
 
     for variant in variants:
         source_file = "{basename}.{variant}.var{ext}".format(
@@ -142,8 +161,9 @@ def run_testcase_helper(test_case, check_name, future):
             source_file=source_file,
             object_file=object_file,
             flags=compile_flags)
-        compiler = Popen(cmd, shell=True)
-        compiler.wait()
+        (ret_compiler, x, _, __) = run_command(cmd)
+        if not QUIET:
+            output += x
 
         # Hash Object File
         object_hash = hashlib.sha1()
@@ -151,14 +171,51 @@ def run_testcase_helper(test_case, check_name, future):
             object_hash.update(fd.read())
         object_hash = object_hash.hexdigest()
 
-        # Call clang-hash
-        output += "   {source_file} {object_hash}\n".format(
+        cmd = "{cmd} {source_file} {flags}".format(
+            cmd=hash_command,
             source_file=source_file,
-            object_hash=object_hash)
+            flags=compile_flags)
+        (ret_hasher, x, _, stderr) = run_command(cmd)
+        if not QUIET:
+            output += x
+        ast_hash = None
+        for line in stderr.split("\n"):
+            if line.startswith("top-level-hash"):
+                ast_hash = line.split(":")[1].strip()
+        assert ast_hash, "Did not find top-level-hash in stderr"
 
-        if int(exit_value) != compiler.returncode:
+        # Call clang-hash
+        if not QUIET:
+            output += " {source_file} {object_hash} {ast_hash}\n".format(
+                source_file=source_file,
+                object_hash=object_hash,
+                ast_hash=ast_hash)
+
+        if int(exit_value) != ret_compiler:
+            assert ret_hasher == ret_compiler
             output += "    Exit code was %d (%s exptected)" % (compiler.returncode, exit_value)
             failed = True
+
+        results[variant] = (object_hash, ast_hash)
+
+    # Compare all hashes
+    mapping = {}
+    for var_1 in results:
+        obj, ast = results[var_1]
+
+        for var_2 in results:
+            if var_2 <= var_1:
+                continue
+            other_obj, other_ast = results[var_2]
+            if obj == other_obj and ast == other_ast:
+                continue
+            if obj != other_obj and ast != other_ast:
+                continue
+
+            output += "!!! Failure:\n"
+            output += " {var_1} {obj} {ast}\n".format(**locals())
+            output += " {var_2} {other_obj} {other_ast}\n".format(**locals())
+
 
     if failed:
         output += "  Failed\n"

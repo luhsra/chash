@@ -3,4 +3,4 @@
 
 printf -v ARGS "%q " "$@"
 
-${CMAKE_C_COMPILER} -Xclang -load -Xclang ${PROJECT_BINARY_DIR}/src/libclang-hash.so -Xclang -plugin -Xclang print-fns -fsyntax-only $ARGS
+${CMAKE_C_COMPILER} -Xclang -load -Xclang ${PROJECT_BINARY_DIR}/src/libclang-hash.so -Xclang -plugin -Xclang hash-unit -fsyntax-only $ARGS

@@ -4,7 +4,7 @@ using namespace clang;
 using namespace std;
 
 string TranslationUnitHashVisitor::GetHash() {
-    return "FIXME";
+    return toplevel_hash.getHextDigest();
 }
 
 bool TranslationUnitHashVisitor::VisitVarDecl(VarDecl *Declaration) {

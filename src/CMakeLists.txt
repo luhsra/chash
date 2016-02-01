@@ -15,47 +15,14 @@ execute_process(COMMAND ${LLVM_CONFIG_EXE} --ldflags
   OUTPUT_VARIABLE LLVM_LDFLAGS
   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-execute_process(COMMAND ${LLVM_CONFIG_EXE} --libs --system-libs
-  OUTPUT_VARIABLE LLVM_LIBS
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-add_definitions(${LLVM_CXXFLAGS})
-
+add_definitions(${LLVM_CXXFLAGS} -std=c++11)
 include_directories(${LLVM_OBJROOT}/tools/clang/include)
 include_directories(${LLVM_SRCROOT}/tools/clang/include)
 
-add_executable(clang-hash clang-hash.cc)
+add_library(clang-hash SHARED
+  clang-hash.cc
+  hash-visitor.cc)
 
 SET_TARGET_PROPERTIES(clang-hash PROPERTIES LINK_FLAGS ${LLVM_LDFLAGS})
 
-message(${LLVM_LIBS})
-# Link against LLVM libraries
-target_link_libraries(clang-hash
-  -Wl,--start-group
-  clangAST
-  clangAnalysis
-  clangBasic
-  clangDriver
-  clangEdit
-  clangFrontend
-  clangFrontendTool
-  clangLex
-  clangParse
-  #clangSema
-  #clangEdit
-  clangASTMatchers
-  #clangRewrite
-  #clangRewriteFrontend
-  #clangStaticAnalyzerFrontend
-  #clangStaticAnalyzerCheckers
-  #clangStaticAnalyzerCore
-  #clangSerialization
-  clangToolingCore
-  clangTooling
-  # System Libs
-  tinfo
-  pthread
-  dl m z
-  # LLVM
-  LLVMSupport
-  )
+configure_file(clang-hash.in ${PROJECT_BINARY_DIR}/clang-hash)
