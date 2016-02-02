@@ -32,6 +32,33 @@
 
 namespace sha1
 {
+    struct digest {
+        enum { ITEMS = 5 };
+        typedef uint32_t digest32_t[5];
+        digest32_t value;
+
+        bool operator==(const digest &other) const {
+            for (unsigned i = 0; i < ITEMS; i++) {
+                if (other.value[i] != value[i])
+                    return false;
+            }
+            return true;
+        }
+        bool operator!=(const digest &other) const {
+            return !(*this == other);
+        }
+
+
+        std::string getHexDigest() const {
+            std::stringstream ss;
+            for (unsigned i = 0; i < ITEMS; i++) {
+                ss << std::hex << std::setfill('0') << std::setw(8)
+                   << value[i];
+            }
+            return ss.str();
+        }
+    };
+
     class SHA1
     {
     public:
@@ -83,6 +110,55 @@ namespace sha1
             processBlock(block, block + len);
             return *this;
         }
+
+        // Stream Operators
+        SHA1& operator<<(uint8_t x) { processByte(x); return *this; }
+        SHA1& operator<<(uint16_t x) {
+            *this << (uint8_t) (x & 0xFF) << (uint8_t)(x >> 8);
+            return *this;
+        }
+        SHA1& operator<<(uint32_t x) {
+            *this << (uint16_t)(x & 0xFFFF) << (uint16_t) (x >> 16);
+            return *this;
+        }
+        SHA1& operator<<(uint64_t x) {
+            *this << (uint32_t)(x & 0xFFFFFFFF) << (uint32_t)(x >> 32);
+            return *this;
+        }
+        SHA1& operator<<(int8_t x) { processByte(x); return *this; }
+        SHA1& operator<<(int16_t x) {
+            *this << (int8_t) (x & 0xFF) << (int8_t)(x >> 8);
+            return *this;
+        }
+        SHA1& operator<<(int32_t x) {
+            *this << (int16_t)(x & 0xFFFF) << (int16_t) (x >> 16);
+            return *this;
+        }
+        SHA1& operator<<(int64_t x) {
+            *this << (int32_t)(x & 0xFFFFFFFF) << (int32_t)(x >> 32);
+            return *this;
+        }
+
+        SHA1& operator<<(const sha1::digest & x) {
+           return  processBytes(&x, sizeof(sha1::digest));
+        }
+
+        SHA1& operator<<(const SHA1 & x) {
+            SHA1 copy = x;
+            digest digest;
+            copy.getDigest(digest.value);
+
+            *this << digest;
+
+            return *this;
+        }
+
+        SHA1& operator<<(const std::string &x) {
+            processBytes(x.c_str(), x.length());
+            return *this;
+        }
+
+
         const uint32_t* getDigest(digest32_t digest) {
             size_t bitCount = this->m_byteCount * 8;
             processByte(0x80);
@@ -142,15 +218,10 @@ namespace sha1
             return digest;
         }
 
-        const std::string getHextDigest() {
-            digest32_t digest; getDigest(digest);
-
-            std::stringstream ss;
-            for (unsigned i = 0; i < 5; i++) {
-                ss << std::hex << std::setfill('0') << std::setw(8)
-                   << digest[i];
-            }
-            return ss.str();
+        const std::string getHexDigest() {
+            digest digest;
+            getDigest(digest.value);
+            return digest.getHexDigest();
         }
 
     protected:
@@ -209,5 +280,8 @@ namespace sha1
         size_t m_blockByteIndex;
         size_t m_byteCount;
     };
+
+
+
 }
 #endif

@@ -14,7 +14,9 @@ public:
     virtual void HandleTranslationUnit(clang::ASTContext &Context) {
         // Traversing the translation unit decl via a RecursiveASTVisitor
         // will visit all nodes in the AST.
-        Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+        Visitor.hashDecl(Context.getTranslationUnitDecl());
+
+        // Context.getTranslationUnitDecl()->dump();
 
         llvm::errs() << "top-level-hash: " << Visitor.GetHash() << "\n";
     }
