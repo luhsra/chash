@@ -8,7 +8,7 @@ struct foobar *mkay; {{A}}
 int rot_rot_usw;
 
 /*
- * check-name: Definition of Global Variable
+ * check-name: struct 3
  * B != A
  */
 

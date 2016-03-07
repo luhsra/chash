@@ -3,7 +3,7 @@ const int first; {{B}}
 
 char second;
 /*
- * check-name: Definition of Global Variable
+ * check-name: Testing const
  * B != A
  */
 

@@ -2,6 +2,8 @@
 
 #include "hash-visitor.h"
 
+#define MAGIC_NO 1
+
 using namespace llvm;
 using namespace clang;
 using namespace std;
@@ -73,12 +75,13 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
     hashName(Decl);
     hashType(Decl->getType());
 
+	//TODO: static in Funktion schon abgedeckt?
     Hash() << Decl->getStorageClass();
     Hash() << Decl->getTLSKind();
-    Hash() << Decl->isModulePrivate();
+    Hash() << Decl->isModulePrivate(); /* globales static */
     Hash() << Decl->isNRVOVariable();
 
-   // FIXME Init Statement
+   // FIXME Init Statement (vmtl. Zuweisung)
 
     return true;
 }
@@ -87,7 +90,7 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
 void HashVisitor::hashType(QualType T) {
 	uint64_t qualifiers = 0;
     if(T.hasQualifiers()){
-		//TODO evtl. typedef indirektion
+		//TODO evtl. typedef indirektion evtl. CVRMASK benutzen
 		if(T.isLocalConstQualified()){
 			qualifiers |= 1;
 		}

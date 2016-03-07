@@ -2,7 +2,7 @@ int first; {{A}}
 static int first; {{B}}
 
 /*
- * check-name: Definition of Global Variable
+ * check-name: Testing static (not in function)
  * B != A
  */
 

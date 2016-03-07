@@ -6,6 +6,6 @@ unsigned int first; {{B}}
 
 typedef int unused; {{C}}
 /*
- * check-name: Definition of Global Variable
+ * check-name: Definition of Global Variable 1
  * A == C, B != A
  */

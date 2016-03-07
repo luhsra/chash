@@ -10,7 +10,7 @@ double a3; {{A}}
 long double a1; {{B}}
 unsigned short a2; {{C}}
 /*
- * check-name: Definition of Global Variable
+ * check-name: More Types
  * B != A, C != B, A != C
  */
 

@@ -26,7 +26,8 @@ int main(){
 	op();
 }
 /*
- * check-name: Definition of Global Variable
+ * check-name: Function-Test-2
  * B != A
  */
+
 

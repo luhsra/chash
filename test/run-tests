@@ -51,6 +51,7 @@ def test_case_open(test_case):
     return fd
 
 def get_tag(test_case, field, default = None):
+	#TODO: Testcases anpassen: object-files koennen matchen, obwohl AST verschieden
     fd = test_case_open(test_case)
     value = default
     for line in fd.readlines():

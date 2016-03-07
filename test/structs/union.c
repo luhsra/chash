@@ -6,7 +6,7 @@ union foobar{ {{B}}
 };
 
 /*
- * check-name: Definition of Global Variable
+ * check-name: Union or struct
  * B != A
  */
 

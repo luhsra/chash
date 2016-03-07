@@ -6,6 +6,6 @@ unsigned int *first; {{B}}
 
 typedef int unused; {{C}}
 /*
- * check-name: Definition of Global Variable
+ * check-name: Definition of Global Variable with Pointer 2
  * A == C, B != A
  */

@@ -7,7 +7,7 @@ struct foobar{
 int dasGehtDochNicht; {{A}}
 
 /*
- * check-name: Definition of Global Variable
+ * check-name: struct 2
  * B != A
  */
 

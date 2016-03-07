@@ -34,7 +34,7 @@ int main(){ {{B}}
 
 
 /*
- * check-name: Definition of Global Variable
- * A == C, B != A
+ * check-name: Function-Test-1
+ * B != A
  */
 
