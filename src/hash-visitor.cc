@@ -19,6 +19,7 @@ void HashVisitor::hashDecl(const Decl *D) {
     if (!D) {
         return;
     }
+
     // Visit in Pre-Order
     unsigned Depth = beforeDescent();
 
@@ -84,7 +85,20 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
 
 // Types
 void HashVisitor::hashType(QualType T) {
-    assert (!T.hasQualifiers()); // FIXME
+	uint64_t qualifiers = 0;
+    if(T.hasQualifiers()){
+		//TODO evtl. typedef indirektion
+		if(T.isLocalConstQualified()){
+			qualifiers |= 1;
+		}
+		if(T.isLocalRestrictQualified()){
+			qualifiers |= (1 << 1);
+		}
+		if(T.isLocalVolatileQualified()){
+			qualifiers |= (1 << 2);
+		}
+		//weitere qualifier?
+    }
 
     const Type *type = T.getTypePtr();
     assert (type != nullptr);
@@ -105,8 +119,13 @@ void HashVisitor::hashType(QualType T) {
 
     const sha1::digest digest = PopHash(hash);
 
+	if(qualifiers) {
+		Hash() << qualifiers;
+	}
+
     // Hash into Parent
     Hash() << digest;
+	
 
     // This will be the root of a future optimization
     const sha1::digest * saved_digest = GetHash(type);
