@@ -165,6 +165,10 @@ bool HashVisitor::VisitPointerType(const PointerType *T) {
 	}
 }
 
+bool HashVisitor::VisitArrayType(const ArrayType *T){
+	return true; //FIXME
+}
+
 bool HashVisitor::VisitType(const Type *T){
 	if(T->isStructureType()){
 		Hash() << "struct";
