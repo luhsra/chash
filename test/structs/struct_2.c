@@ -4,10 +4,10 @@ struct foobar{
 	unsigned long magenta; {{B}}
 };
 
-int dasGehtDochNicht; {{A}}
+int dasGehtDochNicht;
 
 /*
  * check-name: struct 2
- * B != A
+ * B == A
  */
 

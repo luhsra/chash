@@ -5,6 +5,7 @@ struct foobar{
 };
 
 int dasGehtDochNicht = 0; {{A}}
+struct foobar foo;
 
 /*
  * check-name: struct 1

@@ -5,6 +5,9 @@ union foobar{ {{B}}
 	unsigned long flieder_ist_keine_farbe_sondern_eine_pflanze;
 };
 
+struct foobar foo; {{A}}
+union foobar foo; {{B}}
+
 /*
  * check-name: Union or struct
  * B != A
