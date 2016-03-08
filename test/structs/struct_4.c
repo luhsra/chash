@@ -6,6 +6,7 @@ struct not_used{ {{A}}
 	int b; {{A}}
 }; {{A}}
 
+{{B}}
 struct used_with_typedef{
 	int c;
 	int d;

@@ -78,10 +78,15 @@ public:
     /// Not interesting
     bool VisitTypedefDecl(const TypedefDecl *) { return true; };
 
+	/* Wird erst in Aufrufen geprueft */	
+	bool VisitRecordDecl(const RecordDecl *D){ return true; };
+	bool VisitFieldDecl(const FieldDecl *D){ return true; };
+
 
     // C Types
     bool VisitBuiltinType(const BuiltinType *);
 	bool VisitPointerType(const PointerType *T);
+	bool VisitType(const Type *T);
     std::string GetHash();
 
 protected:

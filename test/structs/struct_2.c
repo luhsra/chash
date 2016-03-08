@@ -3,7 +3,7 @@ struct foobar{
 	char gruen;
 	unsigned long magenta; {{B}}
 };
-
+{{A}}
 int dasGehtDochNicht;
 
 /*

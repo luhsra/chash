@@ -4,7 +4,7 @@ struct foobar{
 	unsigned long magenta; {{B}}
 };
 
-int dasGehtDochNicht = 0; {{A}}
+//int dasGehtDochNicht = 0; {{A}}
 struct foobar foo;
 
 /*

@@ -150,7 +150,53 @@ bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
 
 bool HashVisitor::VisitPointerType(const PointerType *T) {
 	Hash() << "pointer";
-	return mt_typevisitor::Visit((T->getPointeeType()).getTypePtr());
+	//FIXME: FunctionPointerType
+	//TODO: evtl. Zeug um visit rum
+	if((T->getPointeeType()).getTypePtr()->isStructureType()){
+		Hash() << "struct";
+		Hash() << (T->getPointeeType()).getAsString();
+		return true;
+	}else if((T->getPointeeType()).getTypePtr()->isUnionType()){
+		Hash() << "union";
+		Hash() << (T->getPointeeType()).getAsString();
+		return true;
+	}else{
+		return mt_typevisitor::Visit((T->getPointeeType()).getTypePtr());
+	}
+}
+
+bool HashVisitor::VisitType(const Type *T){
+	if(T->isStructureType()){
+		Hash() << "struct";
+		const RecordType *rt = T->getAsStructureType();
+		RecordDecl *rd = rt->getDecl();
+		const sha1::SHA1 *hash = PushHash();
+		for(RecordDecl::field_iterator iter=rd->field_begin(); iter != rd->field_end(); iter++){
+			FieldDecl fd = **iter;
+			hashType(fd.getType());
+			hashName(&fd);
+		}
+		const sha1::digest digest = PopHash(hash);
+		Hash() << digest;
+		return true;
+		
+	}else if(T->isUnionType()){
+		Hash() << "union";
+		const RecordType *rt = T->getAsUnionType();
+		RecordDecl *rd = rt->getDecl();
+		const sha1::SHA1 *hash = PushHash();
+		for(RecordDecl::field_iterator iter=rd->field_begin(); iter != rd->field_end(); iter++){
+			FieldDecl fd = **iter;
+			hashType(fd.getType());
+			hashName(&fd);
+		}
+		const sha1::digest digest = PopHash(hash);
+		Hash() << digest;
+		return true;
+		
+	}else{ //FIXME: FunctionPointerType
+		return false;
+	}
 }
 
 
