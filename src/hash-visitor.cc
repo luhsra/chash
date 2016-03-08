@@ -166,7 +166,22 @@ bool HashVisitor::VisitPointerType(const PointerType *T) {
 }
 
 bool HashVisitor::VisitArrayType(const ArrayType *T){
-	return true; //FIXME
+	//TODO: evtl. Zeug um visit rum
+	const sha1::SHA1 *hash = PushHash();
+	bool iDidIt = mt_typevisitor::Visit(T->getElementType().getTypePtr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	Hash() << "[" << "*" << "]";
+	return iDidIt;
+}
+
+bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T){
+	const sha1::SHA1 *hash = PushHash();
+	bool iDidIt = mt_typevisitor::Visit(T->getElementType().getTypePtr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	Hash() << "[" << T->getSize().getZExtValue() << "]";
+	return iDidIt;
 }
 
 bool HashVisitor::VisitType(const Type *T){

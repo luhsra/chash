@@ -87,6 +87,7 @@ public:
     bool VisitBuiltinType(const BuiltinType *);
 	bool VisitPointerType(const PointerType *T);
 	bool VisitArrayType(const ArrayType *T);
+	bool VisitConstantArrayType(const ConstantArrayType *T);
 	bool VisitType(const Type *T);
     std::string GetHash();
 
