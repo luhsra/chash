@@ -91,6 +91,25 @@ public:
 	bool VisitType(const Type *T);
     std::string GetHash();
 
+	//C Exprs
+	bool VisitExpr(const Expr *Node);	//vielleicht nicht
+	bool VisitCastExpr(const CastExpr *Node);
+	bool VisitDeclRefExpr(const DeclRefExpr *Node);
+	bool VisitPredefinedExpr(const PredefinedExpr *Node);
+	bool VisitCharacterLiteral(const CharacterLiteral *Node);
+	bool VisitIntegerLiteral(const IntegerLiteral *Node);
+	bool VisitFloatingLiteral(const FloatingLiteral *Node);
+	bool VisitStringLiteral(const StringLiteral *Str);
+	bool VisitInitListExpr(const InitListExpr *ILE);
+	bool VisitUnaryOperator(const UnaryOperator *Node);
+	bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node);
+	bool VisitMemberExpr(const MemberExpr *Node);
+	bool VisitBinaryOperator(const BinaryOperator *Node);
+	bool VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
+	bool VisitAddrLabelExpr(const AddrLabelExpr *Node);
+	bool VisitBlockExpr(const BlockExpr *Node);
+	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
+
 protected:
     // Hash Silo
     void StoreHash(const void *obj, sha1::digest digest) {

@@ -80,8 +80,21 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
     Hash() << Decl->getTLSKind();
     Hash() << Decl->isModulePrivate(); /* globales static */
     Hash() << Decl->isNRVOVariable();
+	bool handled = true;
 
-   // FIXME Init Statement (vmtl. Zuweisung)
+	if(Decl->hasInit()){
+		const Expr *expr = Decl->getInit();
+		const sha1::SHA1 *hash = PushHash();
+		handled &= mt_stmtvisitor::Visit(expr);
+		const sha1::digest digest = PopHash(hash);
+		Hash() << "init";
+		Hash() << digest;
+		if (!handled) {
+        	errs() << "---- START unhandled Expr -----\n";
+        	expr->dump();
+        	errs() << "---- END unhandled Expr -----\n";
+    	}
+	}
 
     return true;
 }
@@ -185,6 +198,7 @@ bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T){
 }
 
 bool HashVisitor::VisitType(const Type *T){
+	//TODO: evtl. silo
 	if(T->isStructureType()){
 		Hash() << "struct";
 		const RecordType *rt = T->getAsStructureType();
@@ -227,4 +241,142 @@ void HashVisitor::hashName(const NamedDecl *ND) {
     } else {
         Hash() << 0;
     }
+}
+
+//Expressions
+bool HashVisitor::VisitCastExpr(const CastExpr *Node){
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getSubExpr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << "cast";
+	Hash() << digest;
+	Hash() << Node->getCastKind();
+	hashType(Node->getType());
+	return handled;	
+}
+
+bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node){
+	const ValueDecl *vd = Node->getDecl();
+	Hash() << "ref";
+	hashType(vd->getType());
+	hashName(vd);
+	return true;
+}
+
+bool HashVisitor::VisitPredefinedExpr(const PredefinedExpr *Node){
+	Hash() << "predef";
+	hashType(Node->getType());
+	Hash() << Node->getFunctionName()->getString().str();
+	return true;
+}
+
+bool HashVisitor::VisitCharacterLiteral(const CharacterLiteral *Node){
+	Hash() << "literal";	
+	hashType(Node->getType());
+	Hash() << Node->getValue();
+	return true;
+}
+
+bool HashVisitor::VisitIntegerLiteral(const IntegerLiteral *Node){
+	Hash() << "literal";	
+	hashType(Node->getType());
+	if(Node->getValue().isNegative()){
+		Hash() << Node->getValue().getSExtValue();
+	}else{
+		Hash() << Node->getValue().getZExtValue();
+	}
+	return true;
+}
+
+bool HashVisitor::VisitFloatingLiteral(const FloatingLiteral *Node){
+	Hash() << "literal";	
+	hashType(Node->getType());
+	double mkay = (Node->getValue().convertToDouble());
+	double *mmkay = &mkay;
+	uint64_t *mval = (uint64_t *)(mmkay);
+	uint64_t val = *mval;
+	Hash() << val;
+	return true;
+}
+
+bool HashVisitor::VisitStringLiteral(const StringLiteral *Str){
+	Hash() << "literal";	
+	hashType(Str->getType());
+	Hash() << Str->getString().str();
+	return true;
+}
+
+bool HashVisitor::VisitInitListExpr(const InitListExpr *ILE){
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = true;
+	for(unsigned int i = 0; i < ILE->getNumInits(); i++){
+		handled &= mt_stmtvisitor::Visit(ILE->getInit(i));
+	}
+	const sha1::digest digest = PopHash(hash);
+	Hash() << "list";
+	Hash() << digest;
+	return handled;
+}
+
+bool HashVisitor::VisitUnaryOperator(const UnaryOperator *Node){
+
+	//FIXME: Spezialfall Dereferenzierung
+
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getSubExpr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << "unary";
+	Hash() << Node->getOpcode();
+	Hash() << digest;
+	hashType(Node->getType());
+	return handled;
+}
+
+bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node){
+	//TODO
+	return false;
+}
+
+bool HashVisitor::VisitMemberExpr(const MemberExpr *Node){
+	//TODO
+	return false;
+}
+
+bool HashVisitor::VisitBinaryOperator(const BinaryOperator *Node){
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getLHS());
+	handled &= mt_stmtvisitor::Visit(Node->getRHS());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << "binary";
+	Hash() << Node->getOpcode();
+	Hash() << digest;
+	hashType(Node->getType());
+	return handled;
+}
+
+//erbt von BinaryOperator
+bool HashVisitor::VisitCompoundAssignOperator(const CompoundAssignOperator *Node){	
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getLHS());
+	handled &= mt_stmtvisitor::Visit(Node->getRHS());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << "compound";
+	Hash() << Node->getOpcode();
+	Hash() << digest;
+	hashType(Node->getType());
+	return handled;
+}
+
+bool HashVisitor::VisitAddrLabelExpr(const AddrLabelExpr *Node){
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getLabel()->getStmt());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << "addrlabel";
+	Hash() << digest;
+	return handled;
+}
+
+bool HashVisitor::VisitBlockExpr(const BlockExpr *Node){
+	//TODO
+	return false;
 }
