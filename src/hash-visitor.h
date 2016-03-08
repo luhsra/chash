@@ -81,6 +81,7 @@ public:
 
     // C Types
     bool VisitBuiltinType(const BuiltinType *);
+	bool VisitPointerType(const PointerType *T);
     std::string GetHash();
 
 protected:

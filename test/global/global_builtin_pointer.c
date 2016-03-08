@@ -7,5 +7,6 @@ unsigned int *first; {{B}}
 typedef int unused; {{C}}
 /*
  * check-name: Definition of Global Variable with Pointer 2
+ * obj-not-diff: yes
  * A == C, B != A
  */

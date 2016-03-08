@@ -148,6 +148,11 @@ bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
     return true;
 }
 
+bool HashVisitor::VisitPointerType(const PointerType *T) {
+	Hash() << "pointer";
+	return mt_typevisitor::Visit((T->getPointeeType()).getTypePtr());
+}
+
 
 
 // Other Utilities
