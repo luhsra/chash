@@ -19,6 +19,8 @@ default_hash_command = "../build/clang-hash"
 
 QUIET = False
 
+FAILURES = 0
+
 class Future:
     import threading
     def __init__(self):
@@ -128,6 +130,7 @@ def run_command(cmd, stdin=None):
     return p.returncode, output, stdout, stderr
 
 def run_testcase_helper(test_case, check_name, future):
+    global FAILURES
     exit_value = get_tag(test_case, "check-exit-value", "0")
     compile_command = get_tag(test_case, "compile-command", default_compile_command)
     hash_command = get_tag(test_case, "hash-command", default_hash_command)
@@ -141,7 +144,7 @@ def run_testcase_helper(test_case, check_name, future):
 
     cruft = run_testcase_cleaner(basename)
 
-    output = "  TEST %s (%s, %d leftovers removed)\n" % (check_name, test_case, cruft)
+    output = "\n\n  TEST %s (%s, %d leftovers removed)\n" % (check_name, test_case, cruft)
 
     failed = False
 
@@ -221,6 +224,7 @@ def run_testcase_helper(test_case, check_name, future):
             output += "!!! Failure:\n"
             output += " {var_1} {obj} {ast}\n".format(**locals())
             output += " {var_2} {other_obj} {other_ast}\n".format(**locals())
+            FAILURES += 1
 
 
     if failed:
@@ -241,6 +245,7 @@ def run_testcase(test_case, check_name):
     return future
 
 def run_test_suite(tests = sorted(fnmatch.filter(os.listdir("."), testcase_pattern))):
+    global FAILURES
     tests = filter(lambda x: not "var.c" in x, tests)
     tests_run = 0
     tests_failed = 0
@@ -264,8 +269,8 @@ def run_test_suite(tests = sorted(fnmatch.filter(os.listdir("."), testcase_patte
             if expected:
                 tests_known_fail += 1
         tests_run += 1
-    print "Out of %d tests, %d passed, %d failed (%d of them are known to fail)" \
-          % (tests_run, tests_run - tests_failed, tests_failed, tests_known_fail)
+    print "Out of %d tests, %d passed, %d failed (%d of them are known to fail). There were %d FAILURES." \
+          % (tests_run, tests_run - tests_failed, tests_failed, tests_known_fail, FAILURES)
 
     return tests_failed <= tests_known_fail
 
@@ -276,6 +281,8 @@ def usage():
 
 if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], "ht:qc")
+
+    FAILURES = 0
 
     for opt,arg in opts:
         if opt in ('-c', '--clean'):

@@ -190,6 +190,10 @@ bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T){
 	return true;
 }
 
+bool HashVisitor::VisitTypedefType(const TypedefType *T){
+	return mt_typevisitor::Visit(T->desugar().getTypePtr());
+}
+
 bool HashVisitor::VisitType(const Type *T){
 	//TODO: evtl. silo
 	if(T->isStructureType()){
@@ -323,7 +327,7 @@ bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *
 	if(Node->isArgumentType()){
 		Hash() << "UOTT";
 		Hash() << Node->getKind();
-		hashType(getArgumentType());
+		hashType(Node->getArgumentType());
 		return true;
 	}else{
 		const sha1::SHA1 *hash = PushHash();

@@ -89,6 +89,7 @@ public:
 	bool VisitArrayType(const ArrayType *T);
 	bool VisitConstantArrayType(const ConstantArrayType *T);
 	bool VisitType(const Type *T);
+	bool VisitTypedefType(const TypedefType *T);
     std::string GetHash();
 
 	//C Exprs
