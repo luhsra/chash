@@ -491,6 +491,20 @@ bool HashVisitor::VisitBlockDecl(const BlockDecl *Node)
 }
 
 //common statements
+void HashVisitor::hashStmt(const Stmt *stmt){
+	//TODO: stimmt das so?
+	unsigned depth = beforeDescent();
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(stmt);
+	if(!handled){
+		errs() << "---- START unhandled statement ----\n";
+		stmt->dump();
+		errs() << "----- END unhandled statement -----\n";
+	}
+	afterDescent(depth);
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+}
 //TODO: ueberlagern :D
 bool HashVisitor::VisitStmt(const Stmt *Node)
 {
@@ -499,3 +513,10 @@ bool HashVisitor::VisitStmt(const Stmt *Node)
     return false;
 }
 
+bool HashVisitor::VisitCompoundStmt(const CompoundStmt *Node){
+	Hash() << "compound";
+	for(CompoundStmt::const_body_iterator iter = Node->body_begin(); iter != Node->body_end(); iter++){
+		hashStmt(*iter);
+	}
+	return true;
+}

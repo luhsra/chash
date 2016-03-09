@@ -123,6 +123,9 @@ public:
     bool VisitBlockDecl(const BlockDecl *Node);
     bool VisitStmt(const Stmt *Node);
 
+	//statements
+	bool VisitCompoundStmt(const CompoundStmt *Node);
+
 protected:
 	std::map<const void *, const Type *> seen_types;
 		
