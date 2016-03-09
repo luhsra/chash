@@ -120,6 +120,7 @@ public:
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
 
     //functions and statements
+    bool VisitFunctionDecl(const FunctionDecl *D);
     bool VisitBlockDecl(const BlockDecl *Node);
     bool VisitStmt(const Stmt *Node);
 
