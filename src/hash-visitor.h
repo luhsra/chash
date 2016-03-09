@@ -100,7 +100,7 @@ public:
 
     std::string GetHash();
 
-	//C Exprs
+	//C Exprs (no clang-builtins, ...)
 	bool VisitExpr(const Expr *Node);	//vielleicht nicht
 	bool VisitCastExpr(const CastExpr *Node);
 	bool VisitDeclRefExpr(const DeclRefExpr *Node);
@@ -117,6 +117,13 @@ public:
 	bool VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
 	bool VisitAddrLabelExpr(const AddrLabelExpr *Node);
 	bool VisitBlockExpr(const BlockExpr *Node);
+	/* might not be needed: */
+	bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node);
+	bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);
+	bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node);
+	bool VisitBinaryConditionalOperator(const BinaryConditionalOperator *Node);	
+	
+	//TODO: evtl. ImplicitValueInitExpr, GenericSelectionExpr, ArraySubscriptExpr
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
 
     //functions and statements
