@@ -127,8 +127,9 @@ public:
 	bool VisitCompoundStmt(const CompoundStmt *stmt);
 	bool VisitBreakStmt(const BreakStmt *stmt);
 	bool VisitContinueStmt(const ContinueStmt *stmt);
+	bool VisitGotoStmt(const GotoStmt *stmt);
 	//TODO: spaeter: AsmStmt
-	//TODO: vllt. AttributedStmt
+	//TODO: vllt. AttributedStmt, CapturedStmt
 
 protected:
 	std::map<const void *, const Type *> seen_types;

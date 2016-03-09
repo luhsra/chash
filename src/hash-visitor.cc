@@ -530,3 +530,9 @@ bool HashVisitor::VisitContinueStmt(const ContinueStmt *stmt){
 	Hash() << "continue";
 	return true;
 }
+
+bool HashVisitor::VisitGotoStmt(const GotoStmt *stmt){
+	Hash() << "goto";
+	bool handled = mt_declvisitor::Visit(stmt->getLabel());
+	return handled;
+}
