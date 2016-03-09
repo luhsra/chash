@@ -513,10 +513,20 @@ bool HashVisitor::VisitStmt(const Stmt *Node)
     return false;
 }
 
-bool HashVisitor::VisitCompoundStmt(const CompoundStmt *Node){
+bool HashVisitor::VisitCompoundStmt(const CompoundStmt *stmt){
 	Hash() << "compound";
-	for(CompoundStmt::const_body_iterator iter = Node->body_begin(); iter != Node->body_end(); iter++){
+	for(Stmt::const_child_iterator iter = stmt->child_begin(); iter != stmt->child_end(); iter++){
 		hashStmt(*iter);
 	}
+	return true;
+}
+
+bool HashVisitor::VisitBreakStmt(const BreakStmt *stmt){
+	Hash() << "break";
+	return true;
+}
+
+bool HashVisitor::VisitContinueStmt(const ContinueStmt *stmt){
+	Hash() << "continue";
 	return true;
 }
