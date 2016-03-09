@@ -256,23 +256,32 @@ bool HashVisitor::VisitFunctionProtoType(const FunctionProtoType *T){
 }
 
 bool HashVisitor::VisitType(const Type *T){
+	const sha1::digest *digest = GetHash(T);
+	if(digest){
+		Hash() << *digest;
+		return true;
+	}
 	if(T->isStructureType()){
+		haveSeen(T, T);
 		Hash() << "struct";
 		const RecordType *rt = T->getAsStructureType();
 		RecordDecl *rd = rt->getDecl();
 		for(RecordDecl::field_iterator iter=rd->field_begin(); iter != rd->field_end(); iter++){
 			FieldDecl fd = **iter;
+			Hash() << "member";
 			hashType(fd.getType());
 			hashName(&fd);
 		}
 		return true;
 		
 	}else if(T->isUnionType()){
+		haveSeen(T, T);
 		Hash() << "union";
 		const RecordType *rt = T->getAsUnionType();
 		RecordDecl *rd = rt->getDecl();
 		for(RecordDecl::field_iterator iter=rd->field_begin(); iter != rd->field_end(); iter++){
 			FieldDecl fd = **iter;
+			Hash() << "member";
 			hashType(fd.getType());
 			hashName(&fd);
 		}

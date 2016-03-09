@@ -28,6 +28,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <iostream>
 
 
 namespace sha1
@@ -112,34 +113,41 @@ namespace sha1
         }
 
         // Stream Operators
-        SHA1& operator<<(uint8_t x) { processByte(x); return *this; }
+        SHA1& operator<<(uint8_t x) { /*DEBUG:*/std::cerr << "Hash<<" << x << std::endl ; processByte(x); return *this; }
         SHA1& operator<<(uint16_t x) {
+			/*DEBUG:*/std::cerr << "Hash<<" << x << std::endl;
             *this << (uint8_t) (x & 0xFF) << (uint8_t)(x >> 8);
             return *this;
         }
         SHA1& operator<<(uint32_t x) {
+			/*DEBUG:*/std::cerr << "Hash<<" << x << std::endl;
             *this << (uint16_t)(x & 0xFFFF) << (uint16_t) (x >> 16);
             return *this;
         }
         SHA1& operator<<(uint64_t x) {
+			/*DEBUG:*/std::cerr << "Hash<<" << x << std::endl;
             *this << (uint32_t)(x & 0xFFFFFFFF) << (uint32_t)(x >> 32);
             return *this;
         }
-        SHA1& operator<<(int8_t x) { processByte(x); return *this; }
+        SHA1& operator<<(int8_t x) { /*DEBUG:*/std::cerr << "Hash<<" << x << std::endl; processByte(x); return *this; }
         SHA1& operator<<(int16_t x) {
+			/*DEBUG:*/std::cerr << "Hash<<" << x << std::endl;
             *this << (int8_t) (x & 0xFF) << (int8_t)(x >> 8);
             return *this;
         }
         SHA1& operator<<(int32_t x) {
+			/*DEBUG:*/std::cerr << "Hash<<" << x << std::endl;
             *this << (int16_t)(x & 0xFFFF) << (int16_t) (x >> 16);
             return *this;
         }
         SHA1& operator<<(int64_t x) {
+			/*DEBUG:*/std::cerr << "Hash<<" << x << std::endl;
             *this << (int32_t)(x & 0xFFFFFFFF) << (int32_t)(x >> 32);
             return *this;
         }
 
         SHA1& operator<<(const sha1::digest & x) {
+			/*DEBUG:*/std::cerr << "Hash<<" << x.getHexDigest() << std::endl;
            return  processBytes(&x, sizeof(sha1::digest));
         }
 
@@ -148,12 +156,14 @@ namespace sha1
             digest digest;
             copy.getDigest(digest.value);
 
+			/*DEBUG:*/std::cerr << "Hash<<" << digest.getHexDigest() << std::endl;
             *this << digest;
 
             return *this;
         }
 
         SHA1& operator<<(const std::string &x) {
+			/*DEBUG:*/std::cerr << "Hash<<" << x << std::endl;
             processBytes(x.c_str(), x.length());
             return *this;
         }
