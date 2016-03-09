@@ -162,14 +162,14 @@ bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
 
 bool HashVisitor::VisitPointerType(const PointerType *T) {
 	Hash() << "pointer";
-	const sha1::digest *digest = getHash(T->getPointeeType().getTypePtr());
+	const sha1::digest *digest = GetHash(T->getPointeeType().getTypePtr());
 	if(digest){
 		Hash() << *digest;
 		return true;
 	}
 	//FIXME: evtl. FunctionPointerType (erst Testsysteme)
 	if((T->getPointeeType()).getTypePtr()->isStructureType()){
-		if(haveSeen(T->getPointeeType().getTypePtr(), T->getPointeeType().getTypePtr()){
+		if(haveSeen(T->getPointeeType().getTypePtr(), T->getPointeeType().getTypePtr())){
 			Hash() << "struct";
 			Hash() << (T->getPointeeType()).getAsString();
 		}else{
@@ -177,7 +177,7 @@ bool HashVisitor::VisitPointerType(const PointerType *T) {
 			hashType(T->getPointeeType());
 		}
 	}else if((T->getPointeeType()).getTypePtr()->isUnionType()){
-		if(haveSeen(T->getPointeeType().getTypePtr(), T->getPointeeType().getTypePtr()){
+		if(haveSeen(T->getPointeeType().getTypePtr(), T->getPointeeType().getTypePtr())){
 			Hash() << "union";
 			Hash() << (T->getPointeeType()).getAsString();
 		}else{
