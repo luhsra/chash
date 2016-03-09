@@ -408,6 +408,21 @@ bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *
 
 bool HashVisitor::VisitMemberExpr(const MemberExpr *Node){
 	//TODO
+    Hash() << "member";
+    Expr base = Node->getBase();
+    bool handled = true;
+    handled &= mt_stmtvisitor::Visit(base);
+
+    //hashType(Node->);
+    ValueDecl *member = getMemberDecl();
+    FieldDecl *real_member = dynamic_cast<FieldDecl*>(member());
+    assert(real_member);//otherwise it is C++ and invalid
+    handled &= mt_stmtvisitor::Visit(real_member);
+
+    Hash() << Node->isArrow();
+
+
+
 	return false;
 }
 
