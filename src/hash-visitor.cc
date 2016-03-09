@@ -458,6 +458,26 @@ bool HashVisitor::VisitAddrLabelExpr(const AddrLabelExpr *Node){
 	return handled;
 }
 
+bool HashVisitor::VisitImaginaryLiteral(const ImaginaryLiteral *Node){
+	Hash() << "imglit";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getSubExpr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
+bool HashVisitor::VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node){
+	Hash() << "complit";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getInitializer());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
 bool HashVisitor::VisitBlockExpr(const BlockExpr *Node){
 	//TODO
     Hash() << "block expr";
