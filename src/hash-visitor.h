@@ -121,7 +121,14 @@ public:
 	bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node);
 	bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);
 	bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node);
-	bool VisitBinaryConditionalOperator(const BinaryConditionalOperator *Node);	
+	bool VisitBinaryConditionalOperator(const BinaryConditionalOperator *Node);
+	bool VisitCallExpr(const CallExpr *Node);
+	bool VisitOffsetOfExpr(const OffsetOfExpr *Node);
+	bool VisitParenExpr(const ParenExpr *Node);
+	bool VisitAtomicExpr(const AtomicExpr *Node);
+	bool VisitParenListExpr(const ParenListExpr *Node);
+	bool VisitDesignatedInitExpr(const DesignatedInitExpr *Node);
+	bool VisitStmtExpr(const StmtExpr *Node);
 	
 	//TODO: evtl. ImplicitValueInitExpr, GenericSelectionExpr, ArraySubscriptExpr
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)

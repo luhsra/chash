@@ -502,8 +502,60 @@ bool HashVisitor::VisitBinaryConditionalOperator(const BinaryConditionalOperator
 	return handled;
 }
 
-bool HashVisitor::VisitBlockExpr(const BlockExpr *Node){
+bool HashVisitor::VisitCallExpr(const CallExpr *Node){
 	//TODO
+	return false;
+}
+
+bool HashVisitor::VisitOffsetOfExpr(const OffsetOfExpr *Node){
+	//TODO
+	return false;
+}
+
+bool HashVisitor::VisitParenExpr(const ParenExpr *Node){
+	Hash() << "parenExpr";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getSubExpr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
+bool HashVisitor::VisitAtomicExpr(const AtomicExpr *Node){
+	//TODO
+	return false;
+}
+
+bool HashVisitor::VisitParenListExpr(const ParenListExpr *Node){
+	Hash() << "parenListExpr";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = true;
+	for(Expr *expr:((ParenListExpr *)Node)->exprs()){
+		handled &= mt_stmtvisitor::Visit(expr);
+	}
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
+bool HashVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *Node){
+	//TODO
+	return false;
+}
+
+bool HashVisitor::VisitStmtExpr(const StmtExpr *Node){
+	Hash() << "stmtExpr";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getSubStmt());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
+bool HashVisitor::VisitBlockExpr(const BlockExpr *Node){
     Hash() << "block expr";
     bool handled = true;
     handled &= mt_declvisitor::Visit(Node->getBlockDecl());
