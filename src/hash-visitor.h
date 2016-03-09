@@ -119,6 +119,10 @@ public:
 	bool VisitBlockExpr(const BlockExpr *Node);
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
 
+    //functions and statements
+    bool VisitBlockDecl(const BlockDecl *Node);
+    bool VisitStmt(const Stmt *Node);
+
 protected:
 	std::map<const void *, const Type *> seen_types;
 		

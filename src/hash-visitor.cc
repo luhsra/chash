@@ -398,17 +398,15 @@ bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *
 }
 
 bool HashVisitor::VisitMemberExpr(const MemberExpr *Node){
-	//TODO
+    //TODO testen
     Hash() << "member";
-    Expr base = Node->getBase();
+    Expr *base = Node->getBase();
     bool handled = true;
     handled &= mt_stmtvisitor::Visit(base);
 
     //hashType(Node->);
-    ValueDecl *member = getMemberDecl();
-    FieldDecl *real_member = dynamic_cast<FieldDecl*>(member());
-    assert(real_member);//otherwise it is C++ and invalid
-    handled &= mt_stmtvisitor::Visit(real_member);
+    ValueDecl *member = Node->getMemberDecl();
+    handled &= mt_declvisitor::Visit(member);
 
     Hash() << Node->isArrow();
 
@@ -453,5 +451,42 @@ bool HashVisitor::VisitAddrLabelExpr(const AddrLabelExpr *Node){
 
 bool HashVisitor::VisitBlockExpr(const BlockExpr *Node){
 	//TODO
-	return false;
+    Hash() << "block expr";
+    bool handled = true;
+    handled &= mt_declvisitor::Visit(Node->getBlockDecl());
+    handled &= mt_stmtvisitor::Visit(Node->getBody());
+
+    return handled;
 }
+
+//common Decls
+
+bool HashVisitor::VisitBlockDecl(const BlockDecl *Node)
+{
+    //TODO
+    Hash() << "blockDecl";
+
+/*
+    for(BlockDecl::param_iterator iterator = Node->param_begin(); iterator != Node->param_end();iterator++){
+        ParmVarDecl element = **iterator;
+        hashType(element.getOriginalType());
+        hashName(&element);
+    }
+ */
+    for(ParmVarDecl* par: Node->parameters()){
+        VisitVarDecl(par);
+    }
+
+    return mt_stmtvisitor::Visit(Node->getBody());
+
+}
+
+//common statements
+//TODO: ueberlagern :D
+bool HashVisitor::VisitStmt(const Stmt *Node)
+{
+    errs() << "StatementNotHandled";
+    //TODO
+    return false;
+}
+
