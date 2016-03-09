@@ -100,7 +100,7 @@ public:
 
     std::string GetHash();
 
-	//C Exprs
+	//C Exprs (no clang-builtins, ...)
 	bool VisitExpr(const Expr *Node);	//vielleicht nicht
 	bool VisitCastExpr(const CastExpr *Node);
 	bool VisitDeclRefExpr(const DeclRefExpr *Node);
@@ -117,12 +117,27 @@ public:
 	bool VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
 	bool VisitAddrLabelExpr(const AddrLabelExpr *Node);
 	bool VisitBlockExpr(const BlockExpr *Node);
+	/* might not be needed: */
+	bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node);
+	bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);
+	bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node);
+	bool VisitBinaryConditionalOperator(const BinaryConditionalOperator *Node);	
+	
+	//TODO: evtl. ImplicitValueInitExpr, GenericSelectionExpr, ArraySubscriptExpr
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
 
     //functions and statements
     bool VisitFunctionDecl(const FunctionDecl *D);
     bool VisitBlockDecl(const BlockDecl *Node);
     bool VisitStmt(const Stmt *Node);
+
+	//statements
+	bool VisitCompoundStmt(const CompoundStmt *stmt);
+	bool VisitBreakStmt(const BreakStmt *stmt);
+	bool VisitContinueStmt(const ContinueStmt *stmt);
+	bool VisitGotoStmt(const GotoStmt *stmt);
+	//TODO: spaeter: AsmStmt
+	//TODO: vllt. AttributedStmt, CapturedStmt
 
 protected:
 	std::map<const void *, const Type *> seen_types;

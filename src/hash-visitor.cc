@@ -457,6 +457,51 @@ bool HashVisitor::VisitAddrLabelExpr(const AddrLabelExpr *Node){
 	return handled;
 }
 
+bool HashVisitor::VisitImaginaryLiteral(const ImaginaryLiteral *Node){
+	Hash() << "imglit";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getSubExpr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
+bool HashVisitor::VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node){
+	Hash() << "complit";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getInitializer());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
+bool HashVisitor::VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node){
+	Hash() << "ACondO";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getCond());
+	handled &= mt_stmtvisitor::Visit(Node->getTrueExpr());
+	handled &= mt_stmtvisitor::Visit(Node->getFalseExpr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
+bool HashVisitor::VisitBinaryConditionalOperator(const BinaryConditionalOperator *Node){
+	Hash() << "BCondO";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getCond());
+	handled &= mt_stmtvisitor::Visit(Node->getCommon());
+	handled &= mt_stmtvisitor::Visit(Node->getTrueExpr());
+	handled &= mt_stmtvisitor::Visit(Node->getFalseExpr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
 bool HashVisitor::VisitBlockExpr(const BlockExpr *Node){
 	//TODO
     Hash() << "block expr";
@@ -552,6 +597,20 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
 }
 
 //common statements
+void HashVisitor::hashStmt(const Stmt *stmt){
+	//TODO: stimmt das so?
+	unsigned depth = beforeDescent();
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(stmt);
+	if(!handled){
+		errs() << "---- START unhandled statement ----\n";
+		stmt->dump();
+		errs() << "----- END unhandled statement -----\n";
+	}
+	afterDescent(depth);
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+}
 //TODO: ueberlagern :D
 bool HashVisitor::VisitStmt(const Stmt *Node)
 {
@@ -560,3 +619,26 @@ bool HashVisitor::VisitStmt(const Stmt *Node)
     return false;
 }
 
+bool HashVisitor::VisitCompoundStmt(const CompoundStmt *stmt){
+	Hash() << "compound";
+	for(Stmt::const_child_iterator iter = stmt->child_begin(); iter != stmt->child_end(); iter++){
+		hashStmt(*iter);
+	}
+	return true;
+}
+
+bool HashVisitor::VisitBreakStmt(const BreakStmt *stmt){
+	Hash() << "break";
+	return true;
+}
+
+bool HashVisitor::VisitContinueStmt(const ContinueStmt *stmt){
+	Hash() << "continue";
+	return true;
+}
+
+bool HashVisitor::VisitGotoStmt(const GotoStmt *stmt){
+	Hash() << "goto";
+	bool handled = mt_declvisitor::Visit(stmt->getLabel());
+	return handled;
+}
