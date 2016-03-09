@@ -123,6 +123,10 @@ void HashVisitor::hashType(QualType T) {
     unsigned Depth = beforeDescent();
     const sha1::SHA1 *hash = PushHash();
 
+	if(qualifiers) {
+		Hash() << qualifiers;
+	}
+
     bool handled = mt_typevisitor::Visit(type);
     if (!handled) {
         errs() << "---- START unhandled type -----\n";
@@ -134,10 +138,6 @@ void HashVisitor::hashType(QualType T) {
     afterDescent(Depth);
 
     const sha1::digest digest = PopHash(hash);
-
-	if(qualifiers) {
-		Hash() << qualifiers;
-	}
 
     // Hash into Parent
     Hash() << digest;
@@ -168,33 +168,26 @@ bool HashVisitor::VisitPointerType(const PointerType *T) {
 	if((T->getPointeeType()).getTypePtr()->isStructureType()){
 		Hash() << "struct";
 		Hash() << (T->getPointeeType()).getAsString();
-		return true;
 	}else if((T->getPointeeType()).getTypePtr()->isUnionType()){
 		Hash() << "union";
 		Hash() << (T->getPointeeType()).getAsString();
-		return true;
 	}else{
-		return mt_typevisitor::Visit((T->getPointeeType()).getTypePtr());
+		hashType(T->getPointeeType());
 	}
+	return true;
 }
 
 bool HashVisitor::VisitArrayType(const ArrayType *T){
 	//TODO: evtl. Zeug um visit rum
-	const sha1::SHA1 *hash = PushHash();
-	bool iDidIt = mt_typevisitor::Visit(T->getElementType().getTypePtr());
-	const sha1::digest digest = PopHash(hash);
-	Hash() << digest;
+	hashType(T->getElementType());
 	Hash() << "[" << "*" << "]";
-	return iDidIt;
+	return true;
 }
 
 bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T){
-	const sha1::SHA1 *hash = PushHash();
-	bool iDidIt = mt_typevisitor::Visit(T->getElementType().getTypePtr());
-	const sha1::digest digest = PopHash(hash);
-	Hash() << digest;
+	hashType(T->getElementType());
 	Hash() << "[" << T->getSize().getZExtValue() << "]";
-	return iDidIt;
+	return true;
 }
 
 bool HashVisitor::VisitType(const Type *T){
@@ -203,28 +196,22 @@ bool HashVisitor::VisitType(const Type *T){
 		Hash() << "struct";
 		const RecordType *rt = T->getAsStructureType();
 		RecordDecl *rd = rt->getDecl();
-		const sha1::SHA1 *hash = PushHash();
 		for(RecordDecl::field_iterator iter=rd->field_begin(); iter != rd->field_end(); iter++){
 			FieldDecl fd = **iter;
 			hashType(fd.getType());
 			hashName(&fd);
 		}
-		const sha1::digest digest = PopHash(hash);
-		Hash() << digest;
 		return true;
 		
 	}else if(T->isUnionType()){
 		Hash() << "union";
 		const RecordType *rt = T->getAsUnionType();
 		RecordDecl *rd = rt->getDecl();
-		const sha1::SHA1 *hash = PushHash();
 		for(RecordDecl::field_iterator iter=rd->field_begin(); iter != rd->field_end(); iter++){
 			FieldDecl fd = **iter;
 			hashType(fd.getType());
 			hashName(&fd);
 		}
-		const sha1::digest digest = PopHash(hash);
-		Hash() << digest;
 		return true;
 		
 	}else{ //FIXME: FunctionPointerType
