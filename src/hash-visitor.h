@@ -135,6 +135,14 @@ public:
 	bool VisitBreakStmt(const BreakStmt *stmt);
 	bool VisitContinueStmt(const ContinueStmt *stmt);
 	bool VisitGotoStmt(const GotoStmt *stmt);
+	bool VisitLabelStmt(const LabelStmt *stmt);
+	bool VisitDoStmt(const DoStmt *stmt);
+	bool VisitForStmt(const ForStmt *stmt);
+	bool VisitIfStmt(const IfStmt *stmt);
+	bool VisitNullStmt(const NullStmt *stmt);
+	bool VisitReturnStmt(const ReturnStmt *stmt);
+	bool VisitWhileStmt(const WhileStmt *stmt);
+	bool VisitSwitchStmt(const SwitchStmt *stmt);
 	//TODO: spaeter: AsmStmt
 	//TODO: vllt. AttributedStmt, CapturedStmt
 
