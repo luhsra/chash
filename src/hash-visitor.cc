@@ -162,13 +162,28 @@ bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
 
 bool HashVisitor::VisitPointerType(const PointerType *T) {
 	Hash() << "pointer";
+	const sha1::digest *digest = getHash(T->getPointeeType().getTypePtr());
+	if(digest){
+		Hash() << *digest;
+		return true;
+	}
 	//FIXME: evtl. FunctionPointerType (erst Testsysteme)
 	if((T->getPointeeType()).getTypePtr()->isStructureType()){
-		Hash() << "struct";
-		Hash() << (T->getPointeeType()).getAsString();
+		if(haveSeen(T->getPointeeType().getTypePtr(), T->getPointeeType().getTypePtr()){
+			Hash() << "struct";
+			Hash() << (T->getPointeeType()).getAsString();
+		}else{
+			//rekursiv absteigen...
+			hashType(T->getPointeeType());
+		}
 	}else if((T->getPointeeType()).getTypePtr()->isUnionType()){
-		Hash() << "union";
-		Hash() << (T->getPointeeType()).getAsString();
+		if(haveSeen(T->getPointeeType().getTypePtr(), T->getPointeeType().getTypePtr()){
+			Hash() << "union";
+			Hash() << (T->getPointeeType()).getAsString();
+		}else{
+			//rekursiv absteigen...
+			hashType(T->getPointeeType());
+		}
 	}else{
 		hashType(T->getPointeeType());
 	}
@@ -355,9 +370,6 @@ bool HashVisitor::VisitInitListExpr(const InitListExpr *ILE){
 }
 
 bool HashVisitor::VisitUnaryOperator(const UnaryOperator *Node){
-
-	//FIXME: Spezialfall Dereferenzierung
-
 	const sha1::SHA1 *hash = PushHash();
 	bool handled = mt_stmtvisitor::Visit(Node->getSubExpr());
 	const sha1::digest digest = PopHash(hash);

@@ -120,7 +120,6 @@ public:
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
 
 protected:
-	bool recursivePointers = false;	//struct-pointern nachlaufen oder nicht?
 	std::map<const void *, const Type *> seen_types;
 		
 	bool haveSeen(const void *key, const Type *type){
