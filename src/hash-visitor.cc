@@ -478,6 +478,31 @@ bool HashVisitor::VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node){
 	return handled;
 }
 
+bool HashVisitor::VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node){
+	Hash() << "ACondO";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getCond());
+	handled &= mt_stmtvisitor::Visit(Node->getTrueExpr());
+	handled &= mt_stmtvisitor::Visit(Node->getFalseExpr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
+bool HashVisitor::VisitBinaryConditionalOperator(const BinaryConditionalOperator *Node){
+	Hash() << "BCondO";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = mt_stmtvisitor::Visit(Node->getCond());
+	handled &= mt_stmtvisitor::Visit(Node->getCommon());
+	handled &= mt_stmtvisitor::Visit(Node->getTrueExpr());
+	handled &= mt_stmtvisitor::Visit(Node->getFalseExpr());
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
+}
+
 bool HashVisitor::VisitBlockExpr(const BlockExpr *Node){
 	//TODO
     Hash() << "block expr";

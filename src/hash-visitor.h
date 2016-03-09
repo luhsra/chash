@@ -119,7 +119,9 @@ public:
 	bool VisitBlockExpr(const BlockExpr *Node);
 	/* might not be needed: */
 	bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node);
-	bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);	
+	bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);
+	bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node);
+	bool VisitBinaryConditionalOperator(const BinaryConditionalOperator *Node);	
 	
 	//TODO: evtl. ImplicitValueInitExpr, GenericSelectionExpr, ArraySubscriptExpr
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
