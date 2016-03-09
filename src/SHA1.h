@@ -185,7 +185,7 @@ namespace sha1
 #ifdef DEBUG
 			/*DEBUG:*/std::cerr << "Hash<<" << digest.getHexDigest() << std::endl;
 #else
-			x.getHexDigest();
+			digest.getHexDigest();
 #endif
             *this << digest;
 
