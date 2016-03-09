@@ -694,3 +694,46 @@ bool HashVisitor::VisitGotoStmt(const GotoStmt *stmt){
 	bool handled = mt_declvisitor::Visit(stmt->getLabel());
 	return handled;
 }
+
+bool HashVisitor::VisitLabelStmt(const LabelStmt *stmt){
+	Hash() << "label";
+	Hash() << stmt->getName();
+	bool handled = mt_stmtvisitor::Visit(stmt->getSubStmt());
+	return handled;
+}
+
+bool HashVisitor::VisitDoStmt(const DoStmt *stmt){
+	Hash() << "do-while";
+	bool handled = mt_stmtvisitor::Visit(stmt->getCond());
+	handled &= mt_stmtvisitor::Visit(stmt->getBody());
+	return handled;
+}
+
+bool HashVisitor::VisitForStmt(const ForStmt *stmt){
+	Hash() << "for";
+	bool handled = mt_stmtvisitor::Visit(stmt->getInit());
+	handled &= mt_stmtvisitor::Visit(stmt->getCond());
+	handled &= mt_stmtvisitor::Visit(stmt->getInc());
+	handled &= mt_stmtvisitor::Visit(stmt->getBody());
+	if(stmt->getConditionVariable() != nullptr){
+		handled &= mt_stmtvisitor::Visit(stmt->getConditionVariableDeclStmt());
+	}
+	return handled;
+}
+
+bool HashVisitor::VisitIfStmt(const IfStmt *stmt){
+	Hash() << "if";
+	bool handled = true;
+	if(stmt->getConditionVariable() != nullptr){
+		handled &= mt_stmtvisitor::Visit(stmt->getConditionVariableDeclStmt());
+	}
+	handled &= mt_stmtvisitor::Visit(stmt->getCond());
+	handled &= mt_stmtvisitor::Visit(stmt->getThen());
+	handled &= mt_stmtvisitor::Visit(stmt->getElse());
+	return handled;
+}
+
+bool HashVisitor::VisitNullStmt(const NullStmt *stmt){
+	//macht funktional keinen Unterschied...
+	return true;
+}
