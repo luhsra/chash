@@ -141,7 +141,6 @@ void HashVisitor::hashType(QualType T) {
     // Hash into Parent
     Hash() << digest;
 	
-
     // This will be the root of a future optimization
     const sha1::digest * saved_digest = GetHash(type);
     assert(!saved_digest || digest == *saved_digest && "Hashes do not match");
@@ -391,7 +390,7 @@ bool HashVisitor::VisitUnaryOperator(const UnaryOperator *Node){
 
 bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node){
 	if(Node->isArgumentType()){
-		Hash() << "UOTT";
+        Hash() << "UOTT";
 		Hash() << Node->getKind();
 		hashType(Node->getArgumentType());
 		return true;
@@ -402,7 +401,7 @@ bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *
 		Hash() << "UOTT";
 		Hash() << Node->getKind();
 		Hash() << digest;
-		return handled;
+        return handled;
 	}
 }
 
@@ -533,6 +532,68 @@ bool HashVisitor::VisitBlockDecl(const BlockDecl *Node)
 
     return mt_stmtvisitor::Visit(Node->getBody());
 
+}
+
+bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
+
+    bool handled = true;
+
+    Hash() << "FunctionDecl";
+    Hash() << Node->getNameInfo().getName().getAsString();
+    //Hash() << Node->containsUnexpandedParameterPack();
+    if(Node->hasBody()){
+        handled &= mt_stmtvisitor::Visit(Node->getBody());
+    }
+    Hash() << Node->isDefined();
+    Hash() << Node->isThisDeclarationADefinition();
+    Hash() << Node->isVariadic();
+    Hash() << Node->isVirtualAsWritten();
+    Hash() << Node->isPure();
+    Hash() << Node->hasImplicitReturnZero();
+    Hash() << Node->hasPrototype();
+    Hash() << Node->hasWrittenPrototype();
+    Hash() << Node->hasInheritedPrototype();
+    Hash() << Node->isMain();
+    Hash() << Node->isExternC();
+    Hash() << Node->isGlobal();
+    Hash() << Node->isNoReturn();
+    Hash() << Node->hasSkippedBody();//???
+    Hash() << Node->getBuiltinID();
+
+    Hash() << Node->getStorageClass();//static and stuff
+    Hash() << Node->isInlineSpecified();
+    Hash() << Node->isInlined();
+
+
+
+    //hash all parameters
+    for(ParmVarDecl *decl: Node->parameters()){
+        //handled &= mt_declvisitor::Visit(decl);
+        hashDecl(decl);
+    }
+
+    //vielleicht will man das ja auch:
+    for(NamedDecl *decl: Node->getDeclsInPrototypeScope()){
+        //handled &= mt_declvisitor::Visit(decl);
+        hashDecl(decl);
+    }
+
+    //visit QualType
+    hashType(Node->getReturnType());
+
+    //here an error (propably nullptr) occured
+    const IdentifierInfo *ident = Node->getLiteralIdentifier();
+    if(ident != nullptr){
+        const char *str = ident->getNameStart();
+        if(str != nullptr)
+            Hash() << str;
+    }
+
+
+    Hash() << Node->getMemoryFunctionKind();//maybe needed
+
+
+    return true;
 }
 
 //common statements
