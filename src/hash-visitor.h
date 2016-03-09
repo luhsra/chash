@@ -90,6 +90,14 @@ public:
 	bool VisitConstantArrayType(const ConstantArrayType *T);
 	bool VisitType(const Type *T);
 	bool VisitTypedefType(const TypedefType *T);
+	bool VisitComplexType(const ComplexType *T);
+	bool VisitAtomicType(const AtomicType *T);
+	bool VisitTypeOfExprType(const TypeOfExprType *T);
+	bool VisitTypeOfType(const TypeOfType *T);
+	bool VisitParenType(const ParenType *T);
+	bool VisitFunctionType(const FunctionType *T);
+	bool VisitFunctionProtoType(const FunctionProtoType *T);
+
     std::string GetHash();
 
 	//C Exprs

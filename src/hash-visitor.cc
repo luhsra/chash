@@ -75,10 +75,9 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
     hashName(Decl);
     hashType(Decl->getType());
 
-	//TODO: static in Funktion schon abgedeckt?
     Hash() << Decl->getStorageClass();
     Hash() << Decl->getTLSKind();
-    Hash() << Decl->isModulePrivate(); /* globales static */
+    Hash() << Decl->isModulePrivate();
     Hash() << Decl->isNRVOVariable();
 	bool handled = true;
 
@@ -103,7 +102,7 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
 void HashVisitor::hashType(QualType T) {
 	uint64_t qualifiers = 0;
     if(T.hasQualifiers()){
-		//TODO evtl. typedef indirektion evtl. CVRMASK benutzen
+		//TODO evtl. CVRMASK benutzen
 		if(T.isLocalConstQualified()){
 			qualifiers |= 1;
 		}
@@ -163,8 +162,7 @@ bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
 
 bool HashVisitor::VisitPointerType(const PointerType *T) {
 	Hash() << "pointer";
-	//FIXME: FunctionPointerType
-	//TODO: evtl. Zeug um visit rum
+	//FIXME: evtl. FunctionPointerType (erst Testsysteme)
 	if((T->getPointeeType()).getTypePtr()->isStructureType()){
 		Hash() << "struct";
 		Hash() << (T->getPointeeType()).getAsString();
@@ -178,7 +176,6 @@ bool HashVisitor::VisitPointerType(const PointerType *T) {
 }
 
 bool HashVisitor::VisitArrayType(const ArrayType *T){
-	//TODO: evtl. Zeug um visit rum
 	hashType(T->getElementType());
 	Hash() << "[" << "*" << "]";
 	return true;
@@ -194,8 +191,56 @@ bool HashVisitor::VisitTypedefType(const TypedefType *T){
 	return mt_typevisitor::Visit(T->desugar().getTypePtr());
 }
 
+bool HashVisitor::VisitComplexType(const ComplexType *T){
+	hashType(T->getElementType());
+	Hash() << "complex";
+	return true;
+}
+
+bool HashVisitor::VisitAtomicType(const AtomicType *T){
+	hashType(T->getValueType());
+	Hash() << "atomic";
+	return true;
+}
+
+bool HashVisitor::VisitTypeOfExprType(const TypeOfExprType *T){
+	hashType(T->desugar());
+	Hash() << "typeof";
+	return true;
+}
+
+bool HashVisitor::VisitTypeOfType(const TypeOfType *T){
+	hashType(T->desugar());
+	Hash() << "typeoftypetype";
+	return true;
+}
+
+bool HashVisitor::VisitParenType(const ParenType *T){
+		hashType(T->desugar());
+		Hash() << "parenType";
+		return true;
+}
+
+bool HashVisitor::VisitFunctionType(const FunctionType *T){
+	hashType(T->getReturnType());
+	Hash() << "functype";
+	Hash() << T->getRegParmType();
+	Hash() << T->getCallConv();
+	return true;
+}
+
+bool HashVisitor::VisitFunctionProtoType(const FunctionProtoType *T){
+	hashType(T->getReturnType());
+	for(QualType qt: T->getParamTypes()){
+		hashType(qt);
+	}
+	Hash() << "funcytype";
+	Hash() << T->getRegParmType();
+	Hash() << T->getCallConv();
+	return true;
+}
+
 bool HashVisitor::VisitType(const Type *T){
-	//TODO: evtl. silo
 	if(T->isStructureType()){
 		Hash() << "struct";
 		const RecordType *rt = T->getAsStructureType();
@@ -218,7 +263,7 @@ bool HashVisitor::VisitType(const Type *T){
 		}
 		return true;
 		
-	}else{ //FIXME: FunctionPointerType
+	}else{ //FIXME: evtl. FunctionPointerType (erst Testsysteme)
 		return false;
 	}
 }
