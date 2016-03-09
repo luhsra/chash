@@ -333,8 +333,20 @@ bool HashVisitor::VisitUnaryOperator(const UnaryOperator *Node){
 }
 
 bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node){
-	//TODO
-	return false;
+	if(Node->isArgumentType()){
+		Hash() << "UOTT";
+		Hash() << Node->getKind();
+		hashType(getArgumentType());
+		return true;
+	}else{
+		const sha1::SHA1 *hash = PushHash();
+		bool handled = mt_stmtvisitor::Visit(Node->getArgumentExpr());
+		const sha1::digest digest = PopHash(hash);
+		Hash() << "UOTT";
+		Hash() << Node->getKind();
+		Hash() << digest;
+		return handled;
+	}
 }
 
 bool HashVisitor::VisitMemberExpr(const MemberExpr *Node){

@@ -111,6 +111,17 @@ public:
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
 
 protected:
+	bool recursivePointers = false;	//struct-pointern nachlaufen oder nicht?
+	std::map<const void *, const Type *> seen_types;
+		
+	bool haveSeen(const void *key, const Type *type){
+		if (seen_types.find(key) != seen_types.end()){
+			return true;
+		}
+		seen_types[key] = type;
+		return false;
+	}
+
     // Hash Silo
     void StoreHash(const void *obj, sha1::digest digest) {
         silo[obj] = digest;
@@ -141,6 +152,12 @@ protected:
     sha1::SHA1 &Hash() {
         return HashStack.back();
     }
+
+	sha1::digest getDigest(){
+		sha1::digest digest;
+        HashStack.back().getDigest(digest.value);
+		return digest;
+	}
 };
 
 #endif
