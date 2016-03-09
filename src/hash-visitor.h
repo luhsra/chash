@@ -130,6 +130,13 @@ public:
     bool VisitBlockDecl(const BlockDecl *Node);
     bool VisitStmt(const Stmt *Node);
 
+	//statements
+	bool VisitCompoundStmt(const CompoundStmt *stmt);
+	bool VisitBreakStmt(const BreakStmt *stmt);
+	bool VisitContinueStmt(const ContinueStmt *stmt);
+	//TODO: spaeter: AsmStmt
+	//TODO: vllt. AttributedStmt
+
 protected:
 	std::map<const void *, const Type *> seen_types;
 		
