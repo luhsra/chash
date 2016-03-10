@@ -779,7 +779,9 @@ bool HashVisitor::VisitIfStmt(const IfStmt *stmt){
 	}
 	hashStmt(stmt->getCond());
 	hashStmt(stmt->getThen());
-	hashStmt(stmt->getElse());
+	if(stmt->getElse() != nullptr){
+		hashStmt(stmt->getElse());
+	}
 	return true;
 }
 
