@@ -8,5 +8,6 @@ void a(){
 
 /*
  * check-name: init-stmt in for
+ * obj-not-diff: B == C
  * A != B; B != C; C != A
  */

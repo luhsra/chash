@@ -22,17 +22,17 @@ void HashVisitor::hashDecl(const Decl *D) {
     if (!D) {
         return;
     }
-    //errs() << "hashDECL\n";
+    errs() << "hashDECL\n";
     const sha1::digest * saved_digest = GetHash(D);
-    //errs() << "GETHASH ";
+    errs() << "GETHASH ";
     D->dump();
     if(saved_digest){
-        //errs() << saved_digest;
-        //D->dump();
+        errs() << saved_digest;
+        D->dump();
         //errs() << *saved_digest;
-        //errs() << "HASHSTACKSIZE " << HashStack.size() << "\n";
+        errs() << "HASHSTACKSIZE " << HashStack.size() << "\n";
         Hash() << *saved_digest;
-        //errs() << "GOOD\n";
+        errs() << "GOOD\n";
         return;
     }
     
@@ -349,6 +349,37 @@ bool HashVisitor::VisitTagType(const TagType *Node){
 */
     return true;
 }
+
+bool HashVisitor::VisitAttributedType(const AttributedType *Node){
+	Hash() << "AttributedType";
+	Hash() << Node->getAttrKind();
+	hashType(Node->getModifiedType());
+	hashType(Node->getEquivalentType());
+	return true;
+}
+
+bool HashVisitor::VisitUnaryTransformType(const UnaryTransformType *T){
+	Hash() << "UnaryTransformType";
+	hashType(T->getBaseType());
+	hashType(T->getUnderlyingType());
+	Hash() << T->getUTTKind();
+	return true;
+}
+
+bool HashVisitor::VisitDecayedType(const DecayedType *T){
+	Hash() << "DecayedType";
+	hashType(T->getOriginalType());
+	hashType(T->getAdjustedType());
+	hashType(T->getPointeeType());
+	return true;}
+
+bool HashVisitor::VisitAdjustedType(const AdjustedType *T){
+	Hash() << "AdjustedType";
+	hashType(T->getOriginalType());
+	hashType(T->getAdjustedType());
+	return true;	
+}
+
 
 bool HashVisitor::VisitType(const Type *T){
 	const sha1::digest *digest = GetHash(T);
@@ -770,6 +801,33 @@ bool HashVisitor::VisitEnumConstantDecl(const EnumConstantDecl *Node){
     
     return true;
 }
+
+
+
+//An instance of this class is created to represent a field injected from
+//an anonymous union/struct into the parent scope
+//--> do not follow the struct because it does not exist then...
+bool HashVisitor::VisitIndirectFieldDecl(const IndirectFieldDecl *Node){
+    Hash() << "VisitIndirectFieldDecl";
+    for(IndirectFieldDecl::chain_iterator iter = Node->chain_begin();iter != Node->chain_end();iter++){
+       NamedDecl nd = **iter;
+       hashDecl(&nd);
+    }
+    VisitValueDecl(Node);
+    return true;
+}
+
+//called by children
+bool HashVisitor::VisitValueDecl(const ValueDecl *Node){
+
+    Hash() << "VisitValueDecl";
+    hashType(Node->getType());
+    hashName(Node);
+    return true;
+}
+
+
+
 
 
 //common statements

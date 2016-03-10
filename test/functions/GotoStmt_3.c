@@ -8,5 +8,6 @@ ende:	b = 0; {{B}}
 
 /*
  * check-name: goto forwards to not empty label
+ * obj-not-diff: maybe
  * A != B
  */
