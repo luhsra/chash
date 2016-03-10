@@ -22,17 +22,17 @@ void HashVisitor::hashDecl(const Decl *D) {
     if (!D) {
         return;
     }
-    //errs() << "hashDECL\n";
+    errs() << "hashDECL\n";
     const sha1::digest * saved_digest = GetHash(D);
-    //errs() << "GETHASH ";
+    errs() << "GETHASH ";
     D->dump();
     if(saved_digest){
-        //errs() << saved_digest;
-        //D->dump();
+        errs() << saved_digest;
+        D->dump();
         //errs() << *saved_digest;
-        //errs() << "HASHSTACKSIZE " << HashStack.size() << "\n";
+        errs() << "HASHSTACKSIZE " << HashStack.size() << "\n";
         Hash() << *saved_digest;
-        //errs() << "GOOD\n";
+        errs() << "GOOD\n";
         return;
     }
     
@@ -768,6 +768,21 @@ bool HashVisitor::VisitEnumConstantDecl(const EnumConstantDecl *Node){
     }
     Hash() << Node->getInitVal().getExtValue(); //TODO: gebraucht?
     
+    return true;
+}
+
+
+
+//An instance of this class is created to represent a field injected from
+//an anonymous union/struct into the parent scope
+//--> do not follow the struct because it does not exist then...
+bool HashVisitor::VisitIndirectFieldDecl(const IndirectFieldDecl *Node){
+    Hash() << "VisitIndirectFieldDecl";
+    for(IndirectFieldDecl::chain_iterator iter = Node->chain_begin();iter != Node->chain_end();iter++){
+       NamedDecl nd = **iter;
+       hashDecl(&nd);
+    }
+    VisitValueDecl(Node);
     return true;
 }
 

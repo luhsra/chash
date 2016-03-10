@@ -145,6 +145,8 @@ public:
 
     bool VisitImplicitParamDecl(const ImplicitParamDecl *Node);
     bool VisitParmVarDecl(const ParmVarDecl *Node);
+    //DeclaratorDecl done...
+    bool VisitIndirectFieldDecl(const IndirectFieldDecl *Node);
     
 
 	//statements
