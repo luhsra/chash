@@ -359,6 +359,7 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node){
 	Hash() << "ref";
 	hashType(vd->getType());
 	hashName(vd);
+	hashName(Node->getFoundDecl());
 	return true;
 }
 
