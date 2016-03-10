@@ -503,8 +503,17 @@ bool HashVisitor::VisitBinaryConditionalOperator(const BinaryConditionalOperator
 }
 
 bool HashVisitor::VisitCallExpr(const CallExpr *Node){
-	//TODO
-	return false;
+	Hash() << "callExpr";	
+	hashType(Node->getType());
+	hashName(Node->getDirectCallee());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = true;
+	for(Stmt *subex: ((CallExpr *)Node)->getRawSubExprs()){
+		handled &= mt_stmtvisitor::Visit(subex);
+	}
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
 }
 
 bool HashVisitor::VisitOffsetOfExpr(const OffsetOfExpr *Node){
