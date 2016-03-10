@@ -350,37 +350,6 @@ bool HashVisitor::VisitTagType(const TagType *Node){
     return true;
 }
 
-bool HashVisitor::VisitAttributedType(const AttributedType *Node){
-	Hash() << "AttributedType";
-	Hash() << Node->getAttrKind();
-	hashType(Node->getModifiedType());
-	hashType(Node->getEquivalentType());
-	return true;
-}
-
-bool HashVisitor::VisitUnaryTransformType(const UnaryTransformType *T){
-	Hash() << "UnaryTransformType";
-	hashType(T->getBaseType());
-	hashType(T->getUnderlyingType());
-	Hash() << T->getUTTKind();
-	return true;
-}
-
-bool HashVisitor::VisitDecayedType(const DecayedType *T){
-	Hash() << "DecayedType";
-	hashType(T->getOriginalType());
-	hashType(T->getAdjustedType());
-	hashType(T->getPointeeType());
-	return true;}
-
-bool HashVisitor::VisitAdjustedType(const AdjustedType *T){
-	Hash() << "AdjustedType";
-	hashType(T->getOriginalType());
-	hashType(T->getAdjustedType());
-	return true;	
-}
-
-
 bool HashVisitor::VisitType(const Type *T){
 	const sha1::digest *digest = GetHash(T);
 	if(digest){
@@ -827,7 +796,37 @@ bool HashVisitor::VisitValueDecl(const ValueDecl *Node){
 }
 
 
+bool HashVisitor::VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node){
+    Hash() << "FileScopeAsmDecl";
 
+    const StringLiteral *sl = Node->getAsmString();
+    if(sl != nullptr){
+        hashStmt(sl);
+    }
+    return true;
+
+}
+
+//???? Stmt dazu wurde gemacht, also gibts dazu auch ne Decl
+bool HashVisitor::VisitCapturedDecl(const CapturedDecl *Node){
+    Hash() << "CapturedDecl";
+    Stmt *body = Node->getBody();
+    if(body != nullptr){
+        hashStmt(body);
+    }
+    Hash() << Node->isNothrow();
+
+    for(unsigned i = 0; i < Node->getNumParams();i++){
+        ImplicitParamDecl *ipd = Node->getParam(i);
+        if(ipd == nullptr){
+            errs() << "nullptr in CapturedDecl!";
+            exit(0);
+        }
+        hashDecl(ipd);
+    }
+
+    return true;
+}
 
 
 //common statements

@@ -99,10 +99,6 @@ public:
 	bool VisitFunctionProtoType(const FunctionProtoType *T);
     bool VisitEnumType(const EnumType *Node);
     bool VisitTagType(const TagType *Node);
-	bool VisitAttributedType(const AttributedType *Node);
-	bool VisitUnaryTransformType(const UnaryTransformType *T);
-	bool VisitDecayedType(const DecayedType *T);
-	bool VisitAdjustedType(const AdjustedType *T);
 
     std::string GetHash();
 
@@ -152,6 +148,8 @@ public:
     //DeclaratorDecl done...
     bool VisitIndirectFieldDecl(const IndirectFieldDecl *Node);
     bool VisitValueDecl(const ValueDecl *Node);//maybe called by children
+    bool VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node);
+    bool VisitCapturedDecl(const CapturedDecl *Node);
     
 
 	//statements
