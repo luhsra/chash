@@ -851,7 +851,9 @@ bool HashVisitor::VisitSwitchStmt(const SwitchStmt *stmt){
 	if(stmt->getConditionVariable() != nullptr){
 		hashStmt(stmt->getConditionVariableDeclStmt());
 	}
-	hashStmt(stmt->getCond());
+	if(stmt->getCond() != nullptr){
+		hashStmt(stmt->getCond());
+	}
 	hashStmt(stmt->getBody());
 	return true;
 }
@@ -859,7 +861,9 @@ bool HashVisitor::VisitSwitchStmt(const SwitchStmt *stmt){
 bool HashVisitor::VisitCaseStmt(const CaseStmt *stmt){
 	Hash() << "case";
 	hashStmt(stmt->getLHS());
-	hashStmt(stmt->getRHS());
+	if(stmt->getRHS() != nullptr){
+		hashStmt(stmt->getRHS());
+	}
 	hashStmt(stmt->getSubStmt());
 	return true;
 }
