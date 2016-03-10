@@ -350,6 +350,37 @@ bool HashVisitor::VisitTagType(const TagType *Node){
     return true;
 }
 
+bool HashVisitor::VisitAttributedType(const AttributedType *Node){
+	Hash() << "AttributedType";
+	Hash() << Node->getAttrKind();
+	hashType(Node->getModifiedType());
+	hashType(Node->getEquivalentType());
+	return true;
+}
+
+bool HashVisitor::VisitUnaryTransformType(const UnaryTransformType *T){
+	Hash() << "UnaryTransformType";
+	hashType(T->getBaseType());
+	hashType(T->getUnderlyingType());
+	Hash() << T->getUTTKind();
+	return true;
+}
+
+bool HashVisitor::VisitDecayedType(const DecayedType *T){
+	Hash() << "DecayedType";
+	hashType(T->getOriginalType());
+	hashType(T->getAdjustedType());
+	hashType(T->getPointeeType());
+	return true;}
+
+bool HashVisitor::VisitAdjustedType(const AdjustedType *T){
+	Hash() << "AdjustedType";
+	hashType(T->getOriginalType());
+	hashType(T->getAdjustedType());
+	return true;	
+}
+
+
 bool HashVisitor::VisitType(const Type *T){
 	const sha1::digest *digest = GetHash(T);
 	if(digest){

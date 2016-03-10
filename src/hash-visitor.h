@@ -99,6 +99,10 @@ public:
 	bool VisitFunctionProtoType(const FunctionProtoType *T);
     bool VisitEnumType(const EnumType *Node);
     bool VisitTagType(const TagType *Node);
+	bool VisitAttributedType(const AttributedType *Node);
+	bool VisitUnaryTransformType(const UnaryTransformType *T);
+	bool VisitDecayedType(const DecayedType *T);
+	bool VisitAdjustedType(const AdjustedType *T);
 
     std::string GetHash();
 

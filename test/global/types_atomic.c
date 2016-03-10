@@ -1,7 +1,7 @@
 _Atomic double a; {{A}}
 double a; {{B}}
 /*
- * check-name: Complex Types
+ * check-name: Atomic Types
  * obj-not-diff: vll.
  * B != A
  */
