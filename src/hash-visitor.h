@@ -180,7 +180,7 @@ public:
 	bool VisitSEHTryStmt(const SEHTryStmt *stmt);
 	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
 	bool VisitMSAsmStmt(const MSAsmStmt * stmt);
-	//TODO: nochmal ueber Stmt schauen
+	//TODO: OMPExecutableDirective visiten (mit exit)
 
 	//calls exit()
 	bool VisitIndirectGotoStmt(const IndirectGotoStmt *stmt);
