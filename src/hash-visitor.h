@@ -140,8 +140,9 @@ public:
     bool VisitBlockDecl(const BlockDecl *Node);
     bool VisitStmt(const Stmt *Node);
     bool VisitLabelDecl(const LabelDecl *Node);
-    bool VisitEnumDecl(const EnumDecl *Node){return true;}
-    bool VisitEnumConstantDecl(const EnumConstantDecl *Node){return true;}
+    bool VisitEnumDecl(const EnumDecl *Node);
+    bool VisitEnumConstantDecl(const EnumConstantDecl *Node);
+    
 
 	//statements
 	bool VisitCompoundStmt(const CompoundStmt *stmt);
