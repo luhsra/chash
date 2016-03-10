@@ -149,7 +149,7 @@ void HashVisitor::hashType(QualType T) {
     StoreHash(type, digest);
 
     // DEBUG OUTPUT
-    // type->dump();
+     type->dump();
     // errs() << digest.getHexDigest() << "\n";
 }
 
@@ -254,6 +254,49 @@ bool HashVisitor::VisitFunctionProtoType(const FunctionProtoType *T){
 	return true;
 }
 
+bool HashVisitor::VisitEnumType(const EnumType *Node){
+    Hash() << "Enum Type";
+    if(Node->isSugared()){
+        hashType(Node->desugar());
+    }
+
+    EnumDecl *ed = Node->getDecl();
+    hashType(ed->getIntegerType());
+    hashType(ed->getPromotionType());
+
+
+    for(EnumConstantDecl *ecd: ed->enumerators()){
+        hashStmt(ecd->getInitExpr());
+        Hash() << ecd->getInitVal().getExtValue();
+        hashName(ecd);
+    }
+    hashName(ed);
+
+    return true;
+}
+
+bool HashVisitor::VisitTagType(const TagType *Node){
+    Hash() << "Tag Type";
+    /*
+    if(Node->isSugared()){
+        hashType(Node->desugar());
+    }
+
+    EnumDecl *ed = Node->getDecl();
+    hashType(ed->getIntegerType());
+    hashType(ed->getPromotionType());
+
+
+    for(EnumConstantDecl *ecd: ed->enumerators()){
+        hashStmt(ecd->getInitExpr());
+        Hash() << ecd->getInitVal().getExtValue();
+        hashName(ecd);
+    }
+    hashName(ed);
+*/
+    return true;
+}
+
 bool HashVisitor::VisitType(const Type *T){
 	const sha1::digest *digest = GetHash(T);
 	if(digest){
@@ -316,6 +359,7 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node){
 	Hash() << "ref";
 	hashType(vd->getType());
 	hashName(vd);
+	hashName(Node->getFoundDecl());
 	return true;
 }
 
@@ -637,6 +681,20 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
 
     return true;
 }
+
+bool HashVisitor::VisitLabelDecl(const LabelDecl *Node){
+    Hash() << "LabelDecl";
+    hashStmt(Node->getStmt());
+    //if location changes, then it will be recompiled there.
+    //Additionally the linker has this information--> no need to handle
+    //this here (SourceRange)
+
+    Hash() << Node->getMSAsmLabel().str();
+    return true;
+}
+
+
+
 
 //common statements
 void HashVisitor::hashStmt(const Stmt *stmt){
