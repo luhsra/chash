@@ -5,5 +5,6 @@ void a(){
 
 /*
  * check-name: incStmt on for
+ * obj-not-diff: C==D
  * all versions should differ from each other
  */

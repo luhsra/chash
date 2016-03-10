@@ -5,5 +5,6 @@ void a(){
 
 /*
  * check-name: continue im while 1
+ * obj-not-diff: yes
  * A != B
  */
