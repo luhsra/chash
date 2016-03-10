@@ -742,49 +742,99 @@ bool HashVisitor::VisitContinueStmt(const ContinueStmt *stmt){
 
 bool HashVisitor::VisitGotoStmt(const GotoStmt *stmt){
 	Hash() << "goto";
-	bool handled = mt_declvisitor::Visit(stmt->getLabel());
-	return handled;
+	hashDecl(stmt->getLabel());
+	return true;
 }
 
 bool HashVisitor::VisitLabelStmt(const LabelStmt *stmt){
 	Hash() << "label";
 	Hash() << stmt->getName();
-	bool handled = mt_stmtvisitor::Visit(stmt->getSubStmt());
-	return handled;
+	hashStmt(stmt->getSubStmt());
+	return true;
 }
 
 bool HashVisitor::VisitDoStmt(const DoStmt *stmt){
 	Hash() << "do-while";
-	bool handled = mt_stmtvisitor::Visit(stmt->getCond());
-	handled &= mt_stmtvisitor::Visit(stmt->getBody());
-	return handled;
+	hashStmt(stmt->getCond());
+	hashStmt(stmt->getBody());
+	return true;
 }
 
 bool HashVisitor::VisitForStmt(const ForStmt *stmt){
 	Hash() << "for";
-	bool handled = mt_stmtvisitor::Visit(stmt->getInit());
-	handled &= mt_stmtvisitor::Visit(stmt->getCond());
-	handled &= mt_stmtvisitor::Visit(stmt->getInc());
-	handled &= mt_stmtvisitor::Visit(stmt->getBody());
+	hashStmt(stmt->getInit());
+	hashStmt(stmt->getCond());
+	hashStmt(stmt->getInc());
+	hashStmt(stmt->getBody());
 	if(stmt->getConditionVariable() != nullptr){
-		handled &= mt_stmtvisitor::Visit(stmt->getConditionVariableDeclStmt());
+		hashStmt(stmt->getConditionVariableDeclStmt());
 	}
-	return handled;
+	return true;
 }
 
 bool HashVisitor::VisitIfStmt(const IfStmt *stmt){
 	Hash() << "if";
-	bool handled = true;
 	if(stmt->getConditionVariable() != nullptr){
-		handled &= mt_stmtvisitor::Visit(stmt->getConditionVariableDeclStmt());
+		hashStmt(stmt->getConditionVariableDeclStmt());
 	}
-	handled &= mt_stmtvisitor::Visit(stmt->getCond());
-	handled &= mt_stmtvisitor::Visit(stmt->getThen());
-	handled &= mt_stmtvisitor::Visit(stmt->getElse());
-	return handled;
+	hashStmt(stmt->getCond());
+	hashStmt(stmt->getThen());
+	hashStmt(stmt->getElse());
+	return true;
 }
 
 bool HashVisitor::VisitNullStmt(const NullStmt *stmt){
 	//macht funktional keinen Unterschied...
+	Hash() << "NullStmt";
+	return true;
+}
+
+bool HashVisitor::VisitReturnStmt(const ReturnStmt *stmt){
+	Hash() << "return";
+	if(stmt->getRetValue() != nullptr){
+		hashStmt(stmt->getRetValue());	
+	}
+	return true;
+}
+
+bool HashVisitor::VisitWhileStmt(const WhileStmt *stmt){
+	Hash() << "while";
+	if(stmt->getConditionVariable() != nullptr){
+		hashStmt(stmt->getConditionVariableDeclStmt());
+	}
+	hashStmt(stmt->getCond());
+	hashStmt(stmt->getBody());
+	return true;
+}
+
+bool HashVisitor::VisitSwitchStmt(const SwitchStmt *stmt){
+	Hash() << "switch";
+	if(stmt->getConditionVariable() != nullptr){
+		hashStmt(stmt->getConditionVariableDeclStmt());
+	}
+	hashStmt(stmt->getCond());
+	hashStmt(stmt->getBody());
+	return true;
+}
+
+bool HashVisitor::VisitCaseStmt(const CaseStmt *stmt){
+	Hash() << "case";
+	hashStmt(stmt->getLHS());
+	hashStmt(stmt->getRHS());
+	hashStmt(stmt->getSubStmt());
+	return true;
+}
+
+bool HashVisitor::VisitDefaultStmt(const DefaultStmt *stmt){
+	Hash() << "default";
+	hashStmt(stmt->getSubStmt());
+	return true;
+}
+
+bool HashVisitor::VisitDeclStmt(const DeclStmt *stmt){
+	Hash() << "DeclStmt";
+	for(DeclStmt::const_decl_iterator it = stmt->decl_begin(); it != stmt->decl_end(); it++){
+		hashDecl(*it); 
+	}
 	return true;
 }

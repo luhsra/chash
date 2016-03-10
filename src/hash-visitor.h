@@ -151,6 +151,9 @@ public:
 	bool VisitReturnStmt(const ReturnStmt *stmt);
 	bool VisitWhileStmt(const WhileStmt *stmt);
 	bool VisitSwitchStmt(const SwitchStmt *stmt);
+	bool VisitCaseStmt(const CaseStmt *stmt);
+	bool VisitDefaultStmt(const DefaultStmt *stmt);
+	bool VisitDeclStmt(const DeclStmt *stmt);
 	//TODO: spaeter: AsmStmt
 	//TODO: vllt. AttributedStmt, CapturedStmt
 
