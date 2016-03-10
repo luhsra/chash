@@ -547,8 +547,19 @@ bool HashVisitor::VisitParenExpr(const ParenExpr *Node){
 }
 
 bool HashVisitor::VisitAtomicExpr(const AtomicExpr *Node){
-	//TODO
-	return false;
+	AtomicExpr *node = (AtomicExpr *)Node;
+
+	Hash() << "atomicExpr";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = true;
+	Expr **subexprs = node->getSubExprs();
+	for(unsigned int i = 0; i < node->getNumSubExprs(); i++){
+		handled &= mt_stmtvisitor::Visit(subexprs[i]);
+	}
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
 }
 
 bool HashVisitor::VisitParenListExpr(const ParenListExpr *Node){
@@ -565,8 +576,24 @@ bool HashVisitor::VisitParenListExpr(const ParenListExpr *Node){
 }
 
 bool HashVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *Node){
-	//TODO
-	return false;
+	DesignatedInitExpr *node = (DesignatedInitExpr *)Node;
+
+	Hash() << "designatedInit";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = true;
+	for(unsigned int i = 0; i < node->getNumSubExprs(); i++){
+		handled &= mt_stmtvisitor::Visit(node->getSubExpr(i));
+	}
+	for(unsigned int i = 0; i < node->size(); i++){
+		DesignatedInitExpr::Designator *des = node->getDesignator(i);
+		Hash() << "designator";
+		hashType(des->getField()->getType());
+		hashName(des->getField());
+	}
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
 }
 
 bool HashVisitor::VisitStmtExpr(const StmtExpr *Node){
