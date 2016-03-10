@@ -152,6 +152,7 @@ public:
     bool VisitParmVarDecl(const ParmVarDecl *Node);
     //DeclaratorDecl done...
     bool VisitIndirectFieldDecl(const IndirectFieldDecl *Node);
+    bool VisitValueDecl(const ValueDecl *Node);//maybe called by children
     
 
 	//statements
@@ -170,17 +171,8 @@ public:
 	bool VisitCaseStmt(const CaseStmt *stmt);
 	bool VisitDefaultStmt(const DefaultStmt *stmt);
 	bool VisitDeclStmt(const DeclStmt *stmt);
-
-	bool VisitAttributedStmt(const AttributedStmt *stmt);
-	bool VisitCapturedStmt(const CapturedStmt *stmt);
-	bool VisitSEHExceptStmt(const SEHExceptStmt *stmt);
-	bool VisitSEHFinallyStmt(const SEHFinallyStmt *stmt);
-	bool VisitSEHLeaveStmt(const SEHLeaveStmt *stmt);
-	bool VisitSEHTryStmt(const SEHTryStmt *stmt);
 	//TODO: spaeter: AsmStmt
-	//TODO: vllt. IndirectGotoStmt
-
-	//TODO TODO: vllt. IndirectGotoStmt
+	//TODO: vllt. AttributedStmt, CapturedStmt, IndirectGotoStmt, SEH*Stmts
 
 protected:
 	std::map<const void *, const Type *> seen_types;
