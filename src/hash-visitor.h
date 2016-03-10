@@ -155,7 +155,7 @@ public:
 	bool VisitDefaultStmt(const DefaultStmt *stmt);
 	bool VisitDeclStmt(const DeclStmt *stmt);
 	//TODO: spaeter: AsmStmt
-	//TODO: vllt. AttributedStmt, CapturedStmt
+	//TODO: vllt. AttributedStmt, CapturedStmt, IndirectGotoStmt, SEH*Stmts
 
 protected:
 	std::map<const void *, const Type *> seen_types;
