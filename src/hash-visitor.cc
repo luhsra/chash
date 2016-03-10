@@ -918,6 +918,18 @@ bool HashVisitor::VisitDeclStmt(const DeclStmt *stmt){
 	return true;
 }
 
+bool HashVisitor::VisitGCCAsmStmt(const GCCAsmStmt *stmt){
+	Hash() << "gcc asm";
+	Hash() << stmt->getAsmString()->getString().str();
+	return true;
+}
+
+bool HashVisitor::VisitMSAsmStmt(const MSAsmStmt *stmt){
+	Hash() << "MS asm";
+	Hash() << stmt->getAsmString().str();
+	return true;
+}
+
 bool HashVisitor::VisitAttributedStmt(const AttributedStmt *stmt){
 	Hash() << "AttributedStmt";
 	for(const Attr * attr: stmt->getAttrs()){
@@ -935,6 +947,7 @@ bool HashVisitor::VisitCapturedStmt(const CapturedStmt *stmt){
 	return true;
 }
 
+//not tested
 bool HashVisitor::VisitSEHExceptStmt(const SEHExceptStmt *stmt){
 	Hash() << "__except";
 	hashStmt(stmt->getFilterExpr());
@@ -942,17 +955,20 @@ bool HashVisitor::VisitSEHExceptStmt(const SEHExceptStmt *stmt){
 	return true;
 }
 
+//not tested
 bool HashVisitor::VisitSEHFinallyStmt(const SEHFinallyStmt *stmt){
 	Hash() << "__finally";
 	hashStmt(stmt->getBlock());
 	return true;
 }
 
+//not tested
 bool HashVisitor::VisitSEHLeaveStmt(const SEHLeaveStmt *stmt){
 	Hash() << "__leave";
 	return true;
 }
 
+//not tested
 bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *stmt){
 	Hash() << "__try";
 	hashStmt(stmt->getTryBlock());

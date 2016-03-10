@@ -170,7 +170,9 @@ public:
 	bool VisitSEHFinallyStmt(const SEHFinallyStmt *stmt);
 	bool VisitSEHLeaveStmt(const SEHLeaveStmt *stmt);
 	bool VisitSEHTryStmt(const SEHTryStmt *stmt);
-	//TODO: spaeter: AsmStmt
+	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
+	bool VisitMSAsmStmt(const MSAsmStmt * stmt);
+	//TODO: nochmal ueber Stmt schauen
 	//TODO: vllt. IndirectGotoStmt
 
 	//TODO TODO: vllt. IndirectGotoStmt
