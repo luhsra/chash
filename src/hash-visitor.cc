@@ -503,13 +503,37 @@ bool HashVisitor::VisitBinaryConditionalOperator(const BinaryConditionalOperator
 }
 
 bool HashVisitor::VisitCallExpr(const CallExpr *Node){
-	//TODO
-	return false;
+	Hash() << "callExpr";	
+	hashType(Node->getType());
+	hashName(Node->getDirectCallee());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = true;
+	for(Stmt *subex: ((CallExpr *)Node)->getRawSubExprs()){
+		handled &= mt_stmtvisitor::Visit(subex);
+	}
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
 }
 
 bool HashVisitor::VisitOffsetOfExpr(const OffsetOfExpr *Node){
-	//TODO
-	return false;
+	Hash() << "offsetof";	
+	hashType(Node->getType());
+	const sha1::SHA1 *hash = PushHash();
+	bool handled = true;
+	for(unsigned int i = 0; i < Node->getNumExpressions(); i++){
+		handled &= mt_stmtvisitor::Visit(Node->getIndexExpr(i));
+	}
+	for(unsigned int i = 0; i < Node->getNumComponents(); i++){
+		OffsetOfNode off = Node->getComponent(i);
+		Hash() << "offsetnode";
+		Hash() << off.getKind();
+		hashType(off.getField()->getType());
+		hashName(off.getField());
+	}
+	const sha1::digest digest = PopHash(hash);
+	Hash() << digest;
+	return handled;
 }
 
 bool HashVisitor::VisitParenExpr(const ParenExpr *Node){
