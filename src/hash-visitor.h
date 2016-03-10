@@ -142,6 +142,9 @@ public:
     bool VisitLabelDecl(const LabelDecl *Node);
     bool VisitEnumDecl(const EnumDecl *Node);
     bool VisitEnumConstantDecl(const EnumConstantDecl *Node);
+
+    bool VisitImplicitParamDecl(const ImplicitParamDecl *Node);
+    bool VisitParmVarDecl(const ParmVarDecl *Node);
     
 
 	//statements

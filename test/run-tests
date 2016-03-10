@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import fnmatch
+import glob
 import threading
 from subprocess import Popen, PIPE
 import hashlib
@@ -21,8 +22,14 @@ QUIET = False
 
 FAILURES = 0
 
+console_lock = threading.Lock()
+
+def to_console(string):
+    console_lock.acquire()
+    sys.stdout.write(string)
+    console_lock.release()
+
 class Future:
-    import threading
     def __init__(self):
         self.value = None
         self.__set = False
@@ -48,7 +55,7 @@ def test_case_open(test_case):
     try:
         fd = open(test_case);
     except:
-        print " Couldn't open test case: " + test_case
+        to_console(" Couldn't open test case: " + test_case + "\n")
         sys.exit(2)
     return fd
 
@@ -110,7 +117,10 @@ def run_testcase_cleaner(basename):
     cruftfiles.extend(glob.glob(basename + "*.o"))
     cruftfiles.extend(glob.glob(basename + "*.var.c"))
     for cruft in cruftfiles:
-        os.unlink(cruft)
+        try:
+            os.unlink(cruft)
+        except OSError:
+            pass
     return len(cruftfiles)
 
 def run_command(cmd, stdin=None):
@@ -134,7 +144,7 @@ def run_testcase_helper(test_case, check_name, future):
     exit_value = get_tag(test_case, "check-exit-value", "0")
     compile_command = get_tag(test_case, "compile-command", default_compile_command)
     hash_command = get_tag(test_case, "hash-command", default_hash_command)
-    
+
     object_files_might_not_differ = get_tag(test_case, "obj-not-diff")
 
     compile_flags = get_tag(test_case, "compile-flags", default_compile_flags)
@@ -144,7 +154,7 @@ def run_testcase_helper(test_case, check_name, future):
 
     cruft = run_testcase_cleaner(basename)
 
-    output = "\n\n  TEST %s (%s, %d leftovers removed)\n" % (check_name, test_case, cruft)
+    output = "TEST %s (%s, %d leftovers removed)\n" % (check_name, test_case, cruft)
 
     failed = False
 
@@ -173,8 +183,9 @@ def run_testcase_helper(test_case, check_name, future):
 
         # Hash Object File
         object_hash = hashlib.sha1()
-        with open(object_file) as fd:
-            object_hash.update(fd.read())
+        if ret_compiler == 0:
+            with open(object_file) as fd:
+                object_hash.update(fd.read())
         object_hash = object_hash.hexdigest()
 
         cmd = "{cmd} {source_file} {flags}".format(
@@ -186,10 +197,11 @@ def run_testcase_helper(test_case, check_name, future):
             output += x
         ast_hash = None
         for line in stderr.split("\n"):
-            print line #TODO: DEBUG entfernen
             if line.startswith("top-level-hash"):
                 ast_hash = line.split(":")[1].strip()
-        assert ast_hash, "Did not find top-level-hash in stderr"
+        if not ast_hash:
+            output += "Did not find top-level-hash in stderr\n"
+            failed = True
 
         # Call clang-hash
         if not QUIET:
@@ -199,8 +211,8 @@ def run_testcase_helper(test_case, check_name, future):
                 ast_hash=ast_hash)
 
         if int(exit_value) != ret_compiler:
-            assert ret_hasher == ret_compiler
-            output += "    Exit code was %d (%s exptected)" % (compiler.returncode, exit_value)
+            assert (ret_hasher == 0) == (ret_compiler == 0)
+            output += "    Exit code was %d (%s exptected)" % (ret_compiler, exit_value)
             failed = True
 
         results[variant] = (object_hash, ast_hash)
@@ -231,6 +243,8 @@ def run_testcase_helper(test_case, check_name, future):
     if failed:
         output += "  Failed\n"
 
+    to_console(output)
+
     future.set(tuple([not failed, output]))
 
 
@@ -245,7 +259,7 @@ def run_testcase(test_case, check_name):
         t.start()
     return future
 
-def run_test_suite(tests = sorted(fnmatch.filter(os.listdir("."), testcase_pattern))):
+def run_test_suite(tests = sorted(fnmatch.filter(glob.glob("**/*"), testcase_pattern))):
     global FAILURES
     tests = filter(lambda x: not "var.c" in x, tests)
     tests_run = 0
@@ -257,21 +271,20 @@ def run_test_suite(tests = sorted(fnmatch.filter(os.listdir("."), testcase_patte
     for test_case in tests:
         check_name = get_tag(test_case, "check-name")
         if not check_name:
-            print "warning: test '%s' unhandled" % test_case
+            to_console("warning: test '%s' unhandled\n" % test_case)
             continue
         failed_tests.append((run_testcase(test_case, check_name),
                        get_tag(test_case, "check-known-to-fail")))
 
     for (future, expected) in failed_tests:
         (passed, output) = future.get()
-        sys.stdout.write(output)
         if not passed:
             tests_failed += 1
             if expected:
                 tests_known_fail += 1
         tests_run += 1
-    print "Out of %d tests, %d passed, %d failed (%d of them are known to fail). There were %d FAILURES." \
-          % (tests_run, tests_run - tests_failed, tests_failed, tests_known_fail, FAILURES)
+    to_console("Out of %d tests, %d passed, %d failed (%d of them are known to fail). There were %d FAILURES.\n" \
+               % (tests_run, tests_run - tests_failed, tests_failed, tests_known_fail, FAILURES))
 
     return tests_failed <= tests_known_fail
 
@@ -287,7 +300,7 @@ if __name__ == '__main__':
 
     for opt,arg in opts:
         if opt in ('-c', '--clean'):
-            tests = sorted(fnmatch.filter(os.listdir("."), testcase_pattern))
+            tests = sorted(fnmatch.filter(glob.glob("**/*"), testcase_pattern))
             for test in tests:
                 basename,_ = os.path.splitext(test)
                 run_testcase_cleaner(basename)
