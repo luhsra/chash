@@ -22,18 +22,26 @@ void HashVisitor::hashDecl(const Decl *D) {
     if (!D) {
         return;
     }
+    errs() << "hashDECL\n";
     const sha1::digest * saved_digest = GetHash(D);
+    errs() << "GETHASH ";
+    D->dump();
     if(saved_digest){
+        errs() << saved_digest;
+        D->dump();
+        //errs() << *saved_digest;
+        errs() << "HASHSTACKSIZE " << HashStack.size() << "\n";
         Hash() << *saved_digest;
+        errs() << "GOOD\n";
         return;
     }
     
 
     // Visit in Pre-Order
     unsigned Depth = beforeDescent();
-/*
+
     const sha1::SHA1 *hash = PushHash();
-*/    
+
     bool handled = mt_declvisitor::Visit(D);
     if (!handled) {
         errs() << "---- START unhandled -----\n";
@@ -47,15 +55,16 @@ void HashVisitor::hashDecl(const Decl *D) {
         hashDeclContext(cast<DeclContext>(D));
 
     afterDescent(Depth);
-/*
-    const sha1::digest digest = PopHash(hash);
 
-    // Hash into Parent
-    Hash() << digest;
+    const sha1::digest digest = PopHash(hash);
 
     // Store hash for underlying type
     StoreHash(D, digest);
-*/
+
+    // Hash into Parent
+    if (!isa<TranslationUnitDecl>(D)) {
+        Hash() << digest;
+    }
 }
 
 bool HashVisitor::hasNodes(const DeclContext *DC) {
@@ -90,6 +99,7 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 }
 
 bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
+    Hash() << "VarDecl";
     hashName(Decl);
     hashType(Decl->getType());
 
@@ -112,6 +122,7 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
         	errs() << "---- END unhandled Expr -----\n";
     	}
 	}
+    Hash() << "END VarDecl";
 
     return true;
 }
@@ -377,6 +388,7 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node){
 	Hash() << "ref";
 	hashDecl(vd);
 	hashName(Node->getFoundDecl());
+    Hash() << "after ref";
 	return true;
 }
 
