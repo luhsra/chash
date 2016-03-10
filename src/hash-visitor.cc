@@ -786,6 +786,18 @@ bool HashVisitor::VisitIndirectFieldDecl(const IndirectFieldDecl *Node){
     return true;
 }
 
+//called by children
+bool HashVisitor::VisitValueDecl(const ValueDecl *Node){
+
+    Hash() << "VisitValueDecl";
+    hashType(Node->getType());
+    hashName(Node);
+    return true;
+}
+
+
+
+
 
 //common statements
 void HashVisitor::hashStmt(const Stmt *stmt){
@@ -930,47 +942,5 @@ bool HashVisitor::VisitDeclStmt(const DeclStmt *stmt){
 	for(DeclStmt::const_decl_iterator it = stmt->decl_begin(); it != stmt->decl_end(); it++){
 		hashDecl(*it); 
 	}
-	return true;
-}
-
-bool HashVisitor::VisitAttributedStmt(const AttributedStmt *stmt){
-	Hash() << "AttributedStmt";
-	for(const Attr * attr: stmt->getAttrs()){
-		//TODO: Attribute behandeln
-	}
-
-	hashStmt(stmt->getSubStmt());
-	return true;
-}
-
-bool HashVisitor::VisitCapturedStmt(const CapturedStmt *stmt){
-	Hash() << "CaptureStmt";
-	hashStmt(stmt->getCapturedStmt());
-	hashDecl(stmt->getCapturedDecl());
-	return true;
-}
-
-bool HashVisitor::VisitSEHExceptStmt(const SEHExceptStmt *stmt){
-	Hash() << "__except";
-	hashStmt(stmt->getFilterExpr());
-	hashStmt(stmt->getBlock());
-	return true;
-}
-
-bool HashVisitor::VisitSEHFinallyStmt(const SEHFinallyStmt *stmt){
-	Hash() << "__finally";
-	hashStmt(stmt->getBlock());
-	return true;
-}
-
-bool HashVisitor::VisitSEHLeaveStmt(const SEHLeaveStmt *stmt){
-	Hash() << "__leave";
-	return true;
-}
-
-bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *stmt){
-	Hash() << "__try";
-	hashStmt(stmt->getTryBlock());
-	hashStmt(stmt->getHandler());
 	return true;
 }
