@@ -4,7 +4,7 @@ void a(){
 }
 
 /*
- * check-name: ReturnStatement 1
+ * check-name: empty return
  * obj-not-diff: true
  * A != B
  */
