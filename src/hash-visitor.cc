@@ -769,3 +769,16 @@ bool HashVisitor::VisitSwitchStmt(const SwitchStmt *stmt){
 	handled &= mt_stmtvisitor::Visit(stmt->getBody());
 	return handled;
 }
+
+bool HashVisitor::VisitCaseStmt(const CaseStmt *stmt){
+	Hash() << "case";
+	bool handled = mt_stmtvisitor::Visit(stmt->getLHS());
+	handled &= mt_stmtvisitor::Visit(stmt->getRHS());
+	handled &= mt_stmtvisitor::Visit(stmt->getSubStmt());
+	return handled;
+}
+
+bool HashVisitor::VisitDefaultStmt(const DefaultStmt *stmt){
+	Hash() << "default";
+	return mt_stmtvisitor::Visit(stmt->getSubStmt());
+}
