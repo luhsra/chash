@@ -268,6 +268,7 @@ bool HashVisitor::VisitEnumType(const EnumType *Node){
     for(EnumConstantDecl *ecd: ed->enumerators()){
         hashStmt(ecd->getInitExpr());
         Hash() << ecd->getInitVal().getExtValue();
+        hashName(ecd);
     }
     hashName(ed);
 
