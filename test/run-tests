@@ -197,7 +197,6 @@ def run_testcase_helper(test_case, check_name, future):
             output += x
         ast_hash = None
         for line in stderr.split("\n"):
-            print line #TODO: DEBUG entfernen
             if line.startswith("top-level-hash"):
                 ast_hash = line.split(":")[1].strip()
         if not ast_hash:
