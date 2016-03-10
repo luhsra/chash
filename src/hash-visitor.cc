@@ -975,3 +975,8 @@ bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *stmt){
 	hashStmt(stmt->getHandler());
 	return true;
 }
+
+bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *stmt){
+	errs() << "IndirectGotoStmt\n";
+	exit(1);
+}

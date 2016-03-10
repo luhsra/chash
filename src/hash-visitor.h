@@ -173,9 +173,9 @@ public:
 	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
 	bool VisitMSAsmStmt(const MSAsmStmt * stmt);
 	//TODO: nochmal ueber Stmt schauen
-	//TODO: vllt. IndirectGotoStmt
 
-	//TODO TODO: vllt. IndirectGotoStmt
+	//calls exit()
+	bool VisitIndirectGotoStmt(const IndirectGotoStmt *stmt);
 
 protected:
 	std::map<const void *, const Type *> seen_types;
