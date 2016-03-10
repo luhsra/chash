@@ -88,7 +88,6 @@ public:
 	bool VisitPointerType(const PointerType *T);
 	bool VisitArrayType(const ArrayType *T);
 	bool VisitConstantArrayType(const ConstantArrayType *T);
-	bool VisitVariableArrayType(const VariableArrayType *T);
 	bool VisitType(const Type *T);
 	bool VisitTypedefType(const TypedefType *T);
 	bool VisitComplexType(const ComplexType *T);
@@ -100,7 +99,6 @@ public:
 	bool VisitFunctionProtoType(const FunctionProtoType *T);
     bool VisitEnumType(const EnumType *Node);
     bool VisitTagType(const TagType *Node);
-	
 
     std::string GetHash();
 
@@ -144,6 +142,9 @@ public:
     bool VisitLabelDecl(const LabelDecl *Node);
     bool VisitEnumDecl(const EnumDecl *Node);
     bool VisitEnumConstantDecl(const EnumConstantDecl *Node);
+
+    bool VisitImplicitParamDecl(const ImplicitParamDecl *Node);
+    bool VisitParmVarDecl(const ParmVarDecl *Node);
     
 
 	//statements
