@@ -1,7 +1,9 @@
 void a(){
 	int b = 0;
+	int i = 0; {{B}}
 	int i = 0; {{C}}
-	for({{A: int i = 0;}} {{B: b}} {{C:  }}; i < 100; i++){}
+	int c = 0;
+	for({{A: int i = 0}} {{B: b}} {{C:  }}; i < 100; i++){}
 }
 
 /*

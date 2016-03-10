@@ -5,6 +5,5 @@ void a(){
 
 /*
  * check-name: continue in for
- * obj-not-diff: optimisation
  * A != B
  */

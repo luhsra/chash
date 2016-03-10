@@ -795,13 +795,35 @@ bool HashVisitor::VisitDoStmt(const DoStmt *stmt){
 
 bool HashVisitor::VisitForStmt(const ForStmt *stmt){
 	Hash() << "for";
-	hashStmt(stmt->getInit());
-	hashStmt(stmt->getCond());
-	hashStmt(stmt->getInc());
-	hashStmt(stmt->getBody());
-	if(stmt->getConditionVariable() != nullptr){
-		hashStmt(stmt->getConditionVariableDeclStmt());
+	if(stmt->getInit() != nullptr){
+		hashStmt(stmt->getInit());
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
+	if(stmt->getConditionVariable() != nullptr){
+                hashStmt(stmt->getConditionVariableDeclStmt());
+        }
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
+	if(stmt->getCond() != nullptr){
+		hashStmt(stmt->getCond());
+	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
+	if(stmt->getInc() != nullptr){
+		hashStmt(stmt->getInc());
+	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
+	hashStmt(stmt->getBody());
 	return true;
 }
 
@@ -810,11 +832,19 @@ bool HashVisitor::VisitIfStmt(const IfStmt *stmt){
 	if(stmt->getConditionVariable() != nullptr){
 		hashStmt(stmt->getConditionVariableDeclStmt());
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
 	hashStmt(stmt->getCond());
 	hashStmt(stmt->getThen());
 	if(stmt->getElse() != nullptr){
 		hashStmt(stmt->getElse());
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
 	return true;
 }
 
@@ -829,6 +859,10 @@ bool HashVisitor::VisitReturnStmt(const ReturnStmt *stmt){
 	if(stmt->getRetValue() != nullptr){
 		hashStmt(stmt->getRetValue());	
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
 	return true;
 }
 
@@ -837,6 +871,10 @@ bool HashVisitor::VisitWhileStmt(const WhileStmt *stmt){
 	if(stmt->getConditionVariable() != nullptr){
 		hashStmt(stmt->getConditionVariableDeclStmt());
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
 	hashStmt(stmt->getCond());
 	hashStmt(stmt->getBody());
 	return true;
@@ -847,9 +885,17 @@ bool HashVisitor::VisitSwitchStmt(const SwitchStmt *stmt){
 	if(stmt->getConditionVariable() != nullptr){
 		hashStmt(stmt->getConditionVariableDeclStmt());
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
 	if(stmt->getCond() != nullptr){
 		hashStmt(stmt->getCond());
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
 	hashStmt(stmt->getBody());
 	return true;
 }
@@ -860,6 +906,10 @@ bool HashVisitor::VisitCaseStmt(const CaseStmt *stmt){
 	if(stmt->getRHS() != nullptr){
 		hashStmt(stmt->getRHS());
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
 	hashStmt(stmt->getSubStmt());
 	return true;
 }
