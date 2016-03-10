@@ -17,14 +17,23 @@ string HashVisitor::GetHash() {
 
 /// Declarations
 
+//Only called, if Decl should be visited
 void HashVisitor::hashDecl(const Decl *D) {
     if (!D) {
         return;
     }
+    const sha1::digest * saved_digest = GetHash(D);
+    if(saved_digest){
+        Hash() << *saved_digest;
+        return;
+    }
+    
 
     // Visit in Pre-Order
     unsigned Depth = beforeDescent();
-
+/*
+    const sha1::SHA1 *hash = PushHash();
+*/    
     bool handled = mt_declvisitor::Visit(D);
     if (!handled) {
         errs() << "---- START unhandled -----\n";
@@ -38,6 +47,15 @@ void HashVisitor::hashDecl(const Decl *D) {
         hashDeclContext(cast<DeclContext>(D));
 
     afterDescent(Depth);
+/*
+    const sha1::digest digest = PopHash(hash);
+
+    // Hash into Parent
+    Hash() << digest;
+
+    // Store hash for underlying type
+    StoreHash(D, digest);
+*/
 }
 
 bool HashVisitor::hasNodes(const DeclContext *DC) {
@@ -149,7 +167,7 @@ void HashVisitor::hashType(QualType T) {
     StoreHash(type, digest);
 
     // DEBUG OUTPUT
-     type->dump();
+    // type->dump();
     // errs() << digest.getHexDigest() << "\n";
 }
 
@@ -357,8 +375,7 @@ bool HashVisitor::VisitCastExpr(const CastExpr *Node){
 bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node){
 	const ValueDecl *vd = Node->getDecl();
 	Hash() << "ref";
-	hashType(vd->getType());
-	hashName(vd);
+	hashDecl(vd);
 	hashName(Node->getFoundDecl());
 	return true;
 }
@@ -515,7 +532,6 @@ bool HashVisitor::VisitCallExpr(const CallExpr *Node){
 	Hash() << "callExpr";	
 	hashType(Node->getType());
 	hashName(Node->getDirectCallee());
-	bool handled = true;
 	for(Stmt *subex: ((CallExpr *)Node)->getRawSubExprs()){
 		hashStmt(subex);
 	}
@@ -693,7 +709,31 @@ bool HashVisitor::VisitLabelDecl(const LabelDecl *Node){
     return true;
 }
 
-
+bool HashVisitor::VisitEnumDecl(const EnumDecl *Node){
+    const sha1::SHA1 *hash = PushHash();
+    Hash() << "EnumDecl";
+    hashName(Node);
+    bool handled = true;
+    for(EnumConstantDecl *ecd: Node->enumerators()){
+        handled &= mt_declvisitor::Visit(ecd);
+        StoreHash(ecd, getDigest());
+    }
+    PopHash(hash);
+    return handled;
+}
+bool HashVisitor::VisitEnumConstantDecl(const EnumConstantDecl *Node){
+    Hash() << "EnumConstant";
+    const Expr *expr = Node->getInitExpr();
+    hashName(Node);
+    if(expr){
+        hashStmt(expr);
+    }else{
+        Hash() << "NULL in InitExpr";
+    }
+    Hash() << Node->getInitVal().getExtValue(); //TODO: gebraucht?
+    
+    return true;
+}
 
 
 //common statements
