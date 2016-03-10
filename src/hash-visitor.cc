@@ -149,7 +149,7 @@ void HashVisitor::hashType(QualType T) {
     StoreHash(type, digest);
 
     // DEBUG OUTPUT
-    // type->dump();
+     type->dump();
     // errs() << digest.getHexDigest() << "\n";
 }
 
@@ -272,6 +272,28 @@ bool HashVisitor::VisitEnumType(const EnumType *Node){
     }
     hashName(ed);
 
+    return true;
+}
+
+bool HashVisitor::VisitTagType(const TagType *Node){
+    Hash() << "Tag Type";
+    /*
+    if(Node->isSugared()){
+        hashType(Node->desugar());
+    }
+
+    EnumDecl *ed = Node->getDecl();
+    hashType(ed->getIntegerType());
+    hashType(ed->getPromotionType());
+
+
+    for(EnumConstantDecl *ecd: ed->enumerators()){
+        hashStmt(ecd->getInitExpr());
+        Hash() << ecd->getInitVal().getExtValue();
+        hashName(ecd);
+    }
+    hashName(ed);
+*/
     return true;
 }
 

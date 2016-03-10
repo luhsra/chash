@@ -98,6 +98,7 @@ public:
 	bool VisitFunctionType(const FunctionType *T);
 	bool VisitFunctionProtoType(const FunctionProtoType *T);
     bool VisitEnumType(const EnumType *Node);
+    bool VisitTagType(const TagType *Node);
 
     std::string GetHash();
 
@@ -140,7 +141,7 @@ public:
     bool VisitStmt(const Stmt *Node);
     bool VisitLabelDecl(const LabelDecl *Node);
     bool VisitEnumDecl(const EnumDecl *Node){return true;}
-    bool VisitEnumConstDecl(const EnumConstantDecl *Node){return true;}
+    bool VisitEnumConstantDecl(const EnumConstantDecl *Node){return true;}
 
 	//statements
 	bool VisitCompoundStmt(const CompoundStmt *stmt);
