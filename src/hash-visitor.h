@@ -88,6 +88,7 @@ public:
 	bool VisitPointerType(const PointerType *T);
 	bool VisitArrayType(const ArrayType *T);
 	bool VisitConstantArrayType(const ConstantArrayType *T);
+	bool VisitVariableArrayType(const VariableArrayType *T);
 	bool VisitType(const Type *T);
 	bool VisitTypedefType(const TypedefType *T);
 	bool VisitComplexType(const ComplexType *T);
