@@ -22,17 +22,17 @@ void HashVisitor::hashDecl(const Decl *D) {
     if (!D) {
         return;
     }
-    errs() << "hashDECL\n";
+    //errs() << "hashDECL\n";
     const sha1::digest * saved_digest = GetHash(D);
-    errs() << "GETHASH ";
+    //errs() << "GETHASH ";
     D->dump();
     if(saved_digest){
-        errs() << saved_digest;
-        D->dump();
+        //errs() << saved_digest;
+        //D->dump();
         //errs() << *saved_digest;
-        errs() << "HASHSTACKSIZE " << HashStack.size() << "\n";
+        //errs() << "HASHSTACKSIZE " << HashStack.size() << "\n";
         Hash() << *saved_digest;
-        errs() << "GOOD\n";
+        //errs() << "GOOD\n";
         return;
     }
     
