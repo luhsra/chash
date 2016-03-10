@@ -1,8 +1,12 @@
 void a(){
-label: ; {{A}}
-{{B}}
+label1: ; {{A}}
+label2:	; {{C}}
+	; {{B}}
 }
+
+
 /*
- * check-name: LabelStmt 1
- * A != B
+ * check-name: label empty, not used
+ * obj-not-diff: why should they?
+ * A != B, B != C, c != A
  */
