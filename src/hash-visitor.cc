@@ -208,14 +208,25 @@ bool HashVisitor::VisitPointerType(const PointerType *T) {
 }
 
 bool HashVisitor::VisitArrayType(const ArrayType *T){
+	Hash() << "Arraytype";
 	hashType(T->getElementType());
 	Hash() << "[" << "*" << "]";
 	return true;
 }
 
 bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T){
+	Hash() << "ArraytypeC";
 	hashType(T->getElementType());
 	Hash() << "[" << T->getSize().getZExtValue() << "]";
+	return true;
+}
+
+bool HashVisitor::VisitVariableArrayType(const VariableArrayType *T){
+	Hash() << "ArraytypeV";
+	hashType(T->getElementType());
+	Hash() << "[";
+	hashStmt(T->getSizeExpr());
+	Hash() << "]";
 	return true;
 }
 
@@ -293,25 +304,10 @@ bool HashVisitor::VisitEnumType(const EnumType *Node){
     return true;
 }
 
+//TODO: Needed: ?
 bool HashVisitor::VisitTagType(const TagType *Node){
     Hash() << "Tag Type";
-    /*
-    if(Node->isSugared()){
-        hashType(Node->desugar());
-    }
-
-    EnumDecl *ed = Node->getDecl();
-    hashType(ed->getIntegerType());
-    hashType(ed->getPromotionType());
-
-
-    for(EnumConstantDecl *ecd: ed->enumerators()){
-        hashStmt(ecd->getInitExpr());
-        Hash() << ecd->getInitVal().getExtValue();
-        hashName(ecd);
-    }
-    hashName(ed);
-*/
+    hashDecl(Node->getDecl());
     return true;
 }
 
