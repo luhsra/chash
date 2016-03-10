@@ -1,10 +1,11 @@
 void a(){
+	if(0){}
 	; {{A}}
-	if(0){} {{B}}
+	else{} {{B}}
 }
 
 /*
- * check-name: if block 1
+ * check-name: else block 1
  * obj-not-diff: blame optimisation
  * A != B
  */

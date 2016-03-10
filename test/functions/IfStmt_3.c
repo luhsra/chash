@@ -5,6 +5,7 @@ void a(){
 }
 
 /*
- * check-name: if mit leerem Block
+ * check-name: if block 3
+ * obj-not-diff: blame optimisation
  * A != B, B != C, C != A
  */

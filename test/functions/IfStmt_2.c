@@ -4,7 +4,7 @@ void a(){
 }
 
 /*
- * check-name: if mit Bedingung wahr und leerem Block
+ * check-name: if block 2
  * obj-not-diff: blame optimisation
  * A != B
  */

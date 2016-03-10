@@ -724,7 +724,7 @@ bool HashVisitor::VisitStmt(const Stmt *Node)
 
 bool HashVisitor::VisitCompoundStmt(const CompoundStmt *stmt){
 	Hash() << "compound";
-	for(Stmt::const_child_iterator iter = stmt->child_begin(); iter != stmt->child_end(); iter++){
+	for(CompoundStmt::const_body_iterator iter = stmt->body_begin(); iter != stmt->body_end(); iter++){
 		hashStmt(*iter);
 	}
 	return true;
