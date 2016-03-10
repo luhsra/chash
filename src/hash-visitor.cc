@@ -735,5 +735,37 @@ bool HashVisitor::VisitIfStmt(const IfStmt *stmt){
 
 bool HashVisitor::VisitNullStmt(const NullStmt *stmt){
 	//macht funktional keinen Unterschied...
+	Hash() << "NullStmt";
 	return true;
+}
+
+bool HashVisitor::VisitReturnStmt(const ReturnStmt *stmt){
+	Hash() << "return";
+	bool handled = true;
+	if(stmt->getRetValue() != nullptr){
+		handled = mt_stmtvisitor::Visit(stmt->getRetValue());	
+	}
+	return handled;
+}
+
+bool HashVisitor::VisitWhileStmt(const WhileStmt *stmt){
+	Hash() << "while";
+	bool handled = true;
+	if(stmt->getConditionVariable() != nullptr){
+		handled &= mt_stmtvisitor::Visit(stmt->getConditionVariableDeclStmt());
+	}
+	handled &= mt_stmtvisitor::Visit(stmt->getCond());
+	handled &= mt_stmtvisitor::Visit(stmt->getBody());
+	return handled;
+}
+
+bool HashVisitor::VisitSwitchStmt(const SwitchStmt *stmt){
+	Hash() << "switch";
+	bool handled = true;
+	if(stmt->getConditionVariable() != nullptr){
+		handled &= mt_stmtvisitor::Visit(stmt->getConditionVariableDeclStmt());
+	}
+	handled &= mt_stmtvisitor::Visit(stmt->getCond());
+	handled &= mt_stmtvisitor::Visit(stmt->getBody());
+	return handled;
 }
