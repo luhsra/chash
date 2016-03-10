@@ -88,7 +88,6 @@ public:
 	bool VisitPointerType(const PointerType *T);
 	bool VisitArrayType(const ArrayType *T);
 	bool VisitConstantArrayType(const ConstantArrayType *T);
-	bool VisitVariableArrayType(const VariableArrayType *T);
 	bool VisitType(const Type *T);
 	bool VisitTypedefType(const TypedefType *T);
 	bool VisitComplexType(const ComplexType *T);
@@ -147,6 +146,11 @@ public:
     bool VisitLabelDecl(const LabelDecl *Node);
     bool VisitEnumDecl(const EnumDecl *Node);
     bool VisitEnumConstantDecl(const EnumConstantDecl *Node);
+
+    bool VisitImplicitParamDecl(const ImplicitParamDecl *Node);
+    bool VisitParmVarDecl(const ParmVarDecl *Node);
+    //DeclaratorDecl done...
+    bool VisitIndirectFieldDecl(const IndirectFieldDecl *Node);
     
 
 	//statements
@@ -165,8 +169,17 @@ public:
 	bool VisitCaseStmt(const CaseStmt *stmt);
 	bool VisitDefaultStmt(const DefaultStmt *stmt);
 	bool VisitDeclStmt(const DeclStmt *stmt);
+
+	bool VisitAttributedStmt(const AttributedStmt *stmt);
+	bool VisitCapturedStmt(const CapturedStmt *stmt);
+	bool VisitSEHExceptStmt(const SEHExceptStmt *stmt);
+	bool VisitSEHFinallyStmt(const SEHFinallyStmt *stmt);
+	bool VisitSEHLeaveStmt(const SEHLeaveStmt *stmt);
+	bool VisitSEHTryStmt(const SEHTryStmt *stmt);
 	//TODO: spaeter: AsmStmt
-	//TODO: vllt. AttributedStmt, CapturedStmt, IndirectGotoStmt, SEH*Stmts
+	//TODO: vllt. IndirectGotoStmt
+
+	//TODO TODO: vllt. IndirectGotoStmt
 
 protected:
 	std::map<const void *, const Type *> seen_types;
