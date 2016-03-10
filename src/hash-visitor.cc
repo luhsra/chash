@@ -931,3 +931,45 @@ bool HashVisitor::VisitDeclStmt(const DeclStmt *stmt){
 	}
 	return true;
 }
+
+bool HashVisitor::VisitAttributedStmt(const AttributedStmt *stmt){
+	Hash() << "AttributedStmt";
+	for(const Attr * attr: stmt->getAttrs()){
+		//TODO: Attribute behandeln
+	}
+
+	hashStmt(stmt->getSubStmt());
+	return true;
+}
+
+bool HashVisitor::VisitCapturedStmt(const CapturedStmt *stmt){
+	Hash() << "CaptureStmt";
+	hashStmt(stmt->getCapturedStmt());
+	hashDecl(stmt->getCapturedDecl());
+	return true;
+}
+
+bool HashVisitor::VisitSEHExceptStmt(const SEHExceptStmt *stmt){
+	Hash() << "__except";
+	hashStmt(stmt->getFilterExpr());
+	hashStmt(stmt->getBlock());
+	return true;
+}
+
+bool HashVisitor::VisitSEHFinallyStmt(const SEHFinallyStmt *stmt){
+	Hash() << "__finally";
+	hashStmt(stmt->getBlock());
+	return true;
+}
+
+bool HashVisitor::VisitSEHLeaveStmt(const SEHLeaveStmt *stmt){
+	Hash() << "__leave";
+	return true;
+}
+
+bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *stmt){
+	Hash() << "__try";
+	hashStmt(stmt->getTryBlock());
+	hashStmt(stmt->getHandler());
+	return true;
+}
