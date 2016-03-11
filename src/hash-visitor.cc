@@ -624,8 +624,8 @@ bool HashVisitor::VisitCallExpr(const CallExpr *Node){
 	Hash() << "callExpr";	
 	hashType(Node->getType());
 	hashName(Node->getDirectCallee());
-	for(Stmt *subex: ((CallExpr *)Node)->getRawSubExprs()){
-		hashStmt(subex);
+	for(unsigned int i = 0; i < Node->getNumArgs(); i++){
+		hashStmt(Node->getArg(i));
 	}
 	return true;
 }
