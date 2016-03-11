@@ -6,7 +6,6 @@ import threading
 from subprocess import Popen, PIPE
 import hashlib
 import sys
-import glob
 import os
 import re
 import getopt
@@ -16,17 +15,51 @@ testcase_pattern = "*.c"
 default_path = ".."
 default_compile_command = "clang"
 default_compile_flags = "-Wall"
-default_hash_command = "../build/clang-hash"
+default_hash_command = os.path.join(os.path.dirname(__file__), "../build/clang-hash")
 
-QUIET = False
-
-FAILURES = 0
+LOGLEVEL = 1
+LOGLEVEL_DEBUG = 2
+LOGLEVEL_NORMAL = 1
+LOGLEVEL_QUIET = 0
 
 console_lock = threading.Lock()
 
-def to_console(string):
+class COLOR:
+    codes = ["BLACK", "RED", "GREEN", "YELLOW", "BLUE", "MAGENTA", "CYAN", "WHITE"]
+
+    #following from Python cookbook, #475186
+    @staticmethod
+    def has_colours(stream):
+        if not hasattr(stream, "isatty"):
+            return False
+        if not stream.isatty():
+            return False # auto color only on TTYs
+        try:
+            import curses
+            curses.setupterm()
+            return curses.tigetnum("colors") > 2
+        except:
+            # guess false in case of error
+            return False
+
+
+    @staticmethod
+    def format(text, colour="WHITE", bold = False):
+        if type(COLOR.has_colours) is not bool:
+            COLOR.has_colours = COLOR.has_colours(sys.stdout)
+
+        """Colorize a string"""
+        colour = COLOR.codes.index(colour.upper())
+        bold = {True: 1, False: 0}[bold]
+        if COLOR.has_colours:
+            seq = "\x1b[%d;%dm" % (bold, 30+colour) + text + "\x1b[0m"
+            return seq
+        else:
+            return text
+
+def to_console(text):
     console_lock.acquire()
-    sys.stdout.write(string)
+    sys.stdout.write(text)
     console_lock.release()
 
 class Future:
@@ -114,8 +147,8 @@ def get_variants(test_case):
 
 def run_testcase_cleaner(basename):
     cruftfiles=list()
-    cruftfiles.extend(glob.glob(basename + "*.o"))
-    cruftfiles.extend(glob.glob(basename + "*.var.c"))
+    cruftfiles.extend(glob.glob(basename + ".*.o"))
+    cruftfiles.extend(glob.glob(basename + ".*.var.c"))
     for cruft in cruftfiles:
         try:
             os.unlink(cruft)
@@ -135,12 +168,11 @@ def run_command(cmd, stdin=None):
         output += stdout
     if stderr:
         output += "----- stderr -----\n"
-        output += stderr
+        output += COLOR.format(stderr, "yellow")
     p.wait()
     return p.returncode, output, stdout, stderr
 
 def run_testcase_helper(test_case, check_name, future):
-    global FAILURES
     exit_value = get_tag(test_case, "check-exit-value", "0")
     compile_command = get_tag(test_case, "compile-command", default_compile_command)
     hash_command = get_tag(test_case, "hash-command", default_hash_command)
@@ -173,12 +205,18 @@ def run_testcase_helper(test_case, check_name, future):
         with open(source_file, "w+") as fd:
             fd.write(variants[variant])
 
+        assert os.path.exists(source_file)
+
         cmd = "{compiler} -c -xc - -o {object_file} {flags}".format(
             compiler=compile_command,
             object_file=object_file,
             flags=compile_flags)
         (ret_compiler, x, _, __) = run_command(cmd, stdin=variants[variant])
-        if not QUIET:
+        assert os.path.exists(source_file)
+
+        if ret_compiler != 0:
+            output += x
+        elif LOGLEVEL >= LOGLEVEL_DEBUG:
             output += x
 
         # Hash Object File
@@ -186,25 +224,36 @@ def run_testcase_helper(test_case, check_name, future):
         if ret_compiler == 0:
             with open(object_file) as fd:
                 object_hash.update(fd.read())
+        else:
+            output += COLOR.format("!!! Failed: compile failed with %d\n" % ret_compiler,
+                                   "red", bold=True)
+            failed = True
         object_hash = object_hash.hexdigest()
+
+        #### Run Clang-Hash
 
         cmd = "{cmd} {source_file} {flags}".format(
             cmd=hash_command,
             source_file=source_file,
             flags=compile_flags)
         (ret_hasher, x, _, stderr) = run_command(cmd)
-        if not QUIET:
+        if ret_hasher != 0 or LOGLEVEL >= LOGLEVEL_DEBUG:
             output += x
         ast_hash = None
         for line in stderr.split("\n"):
             if line.startswith("top-level-hash"):
                 ast_hash = line.split(":")[1].strip()
-        if not ast_hash:
-            output += "Did not find top-level-hash in stderr\n"
+        if ret_hasher != 0:
+            output += COLOR.format("!!! Failure: clang-hash failed with %d\n" % ret_hasher,
+                                   "red", bold=True)
+            failed = True
+        elif not ast_hash:
+            output += COLOR.format("!!! Failure: Did not find top-level-hash in stderr\n",
+                                   "red", bold=True)
             failed = True
 
         # Call clang-hash
-        if not QUIET:
+        if LOGLEVEL >= LOGLEVEL_NORMAL:
             output += " {source_file} {object_hash} {ast_hash}\n".format(
                 source_file=source_file,
                 object_hash=object_hash,
@@ -212,7 +261,8 @@ def run_testcase_helper(test_case, check_name, future):
 
         if int(exit_value) != ret_compiler:
             assert (ret_hasher == 0) == (ret_compiler == 0)
-            output += "    Exit code was %d (%s exptected)" % (ret_compiler, exit_value)
+            output += COLOR.format("!!! Failure: Exit code was %d (%s exptected)" % (ret_compiler, exit_value),
+                                   "red", bold=True)
             failed = True
 
         results[variant] = (object_hash, ast_hash)
@@ -234,14 +284,14 @@ def run_testcase_helper(test_case, check_name, future):
             if object_files_might_not_differ and obj == other_obj:
                 continue
 
-            output += "!!! Failure:\n"
+            output += COLOR.format("!!! Failure: Different hashes\n", "red", True)
             output += " {var_1} {obj} {ast}\n".format(**locals())
             output += " {var_2} {other_obj} {other_ast}\n".format(**locals())
-            FAILURES += 1
 
+            failed = True
 
     if failed:
-        output += "  Failed\n"
+        output += " Failed\n"
 
     to_console(output)
 
@@ -259,9 +309,7 @@ def run_testcase(test_case, check_name):
         t.start()
     return future
 
-def run_test_suite(tests = sorted(fnmatch.filter(glob.glob("**/*"), testcase_pattern))):
-    global FAILURES
-    tests = filter(lambda x: not "var.c" in x, tests)
+def run_test_suite(tests):
     tests_run = 0
     tests_failed = 0
     tests_known_fail = 0
@@ -283,24 +331,31 @@ def run_test_suite(tests = sorted(fnmatch.filter(glob.glob("**/*"), testcase_pat
             if expected:
                 tests_known_fail += 1
         tests_run += 1
-    to_console("Out of %d tests, %d passed, %d failed (%d of them are known to fail). There were %d FAILURES.\n" \
-               % (tests_run, tests_run - tests_failed, tests_failed, tests_known_fail, FAILURES))
+    to_console("Out of %d tests, %d passed, %d failed (%d of them are known to fail).\n" \
+               % (tests_run, tests_run - tests_failed, tests_failed, tests_known_fail))
 
     return tests_failed <= tests_known_fail
-
 
 def usage():
     print "%s [-c] [-t threads] [-q] [test-cases...]" % sys.argv[0]
     print " if no test-cases are given, all in current directory are run"
 
-if __name__ == '__main__':
-    opts, args = getopt.getopt(sys.argv[1:], "ht:qc")
+def get_testcases():
+    all_files = []
+    for root, subFolders, files in os.walk("."):
+        for file in files:
+            path = os.path.join(root, file)
+            if fnmatch.fnmatch(path, testcase_pattern) and not "var.c" in file:
+                all_files.append(path)
 
-    FAILURES = 0
+    return sorted(all_files)
+
+if __name__ == '__main__':
+    opts, args = getopt.getopt(sys.argv[1:], "ht:qcv")
 
     for opt,arg in opts:
         if opt in ('-c', '--clean'):
-            tests = sorted(fnmatch.filter(glob.glob("**/*"), testcase_pattern))
+            tests = get_testcases()
             for test in tests:
                 basename,_ = os.path.splitext(test)
                 run_testcase_cleaner(basename)
@@ -315,7 +370,9 @@ if __name__ == '__main__':
             usage()
             sys.exit(0)
         elif opt in ('-q', '--quiet'):
-            QUIET = True
+            LOGLEVEL = 0
+        elif opt in ('-v', '--verbose'):
+            LOGLEVEL = 2
         else:
             print "unkown option"
             assert False
@@ -323,7 +380,7 @@ if __name__ == '__main__':
     if len(args) > 0:
         ret = run_test_suite(args)
     else:
-        ret = run_test_suite()
+        ret = run_test_suite(get_testcases())
 
     if ret:
         sys.exit(0)
