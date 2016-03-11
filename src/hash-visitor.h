@@ -88,6 +88,7 @@ public:
 	bool VisitPointerType(const PointerType *T);
 	bool VisitArrayType(const ArrayType *T);
 	bool VisitConstantArrayType(const ConstantArrayType *T);
+	bool VisitVariableArrayType(const VariableArrayType *T);
 	bool VisitType(const Type *T);
 	bool VisitTypedefType(const TypedefType *T);
 	bool VisitComplexType(const ComplexType *T);
@@ -168,8 +169,19 @@ public:
 	bool VisitCaseStmt(const CaseStmt *stmt);
 	bool VisitDefaultStmt(const DefaultStmt *stmt);
 	bool VisitDeclStmt(const DeclStmt *stmt);
-	//TODO: spaeter: AsmStmt
-	//TODO: vllt. AttributedStmt, CapturedStmt, IndirectGotoStmt, SEH*Stmts
+
+	bool VisitAttributedStmt(const AttributedStmt *stmt);
+	bool VisitCapturedStmt(const CapturedStmt *stmt);
+	bool VisitSEHExceptStmt(const SEHExceptStmt *stmt);
+	bool VisitSEHFinallyStmt(const SEHFinallyStmt *stmt);
+	bool VisitSEHLeaveStmt(const SEHLeaveStmt *stmt);
+	bool VisitSEHTryStmt(const SEHTryStmt *stmt);
+	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
+	bool VisitMSAsmStmt(const MSAsmStmt * stmt);
+	//TODO: OMPExecutableDirective visiten (mit exit)
+
+	//calls exit()
+	bool VisitIndirectGotoStmt(const IndirectGotoStmt *stmt);
 
 protected:
 	std::map<const void *, const Type *> seen_types;

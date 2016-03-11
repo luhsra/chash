@@ -892,13 +892,35 @@ bool HashVisitor::VisitDoStmt(const DoStmt *stmt){
 
 bool HashVisitor::VisitForStmt(const ForStmt *stmt){
 	Hash() << "for";
-	hashStmt(stmt->getInit());
-	hashStmt(stmt->getCond());
-	hashStmt(stmt->getInc());
-	hashStmt(stmt->getBody());
+	if(stmt->getInit() != nullptr){
+		hashStmt(stmt->getInit());
+	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
 	if(stmt->getConditionVariable() != nullptr){
 		hashStmt(stmt->getConditionVariableDeclStmt());
+        }
+	else{
+		//TODO: hier irgendwas hashen?
 	}
+
+	if(stmt->getCond() != nullptr){
+		hashStmt(stmt->getCond());
+	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
+	if(stmt->getInc() != nullptr){
+		hashStmt(stmt->getInc());
+	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+
+	hashStmt(stmt->getBody());
 	return true;
 }
 
@@ -907,10 +929,16 @@ bool HashVisitor::VisitIfStmt(const IfStmt *stmt){
 	if(stmt->getConditionVariable() != nullptr){
 		hashStmt(stmt->getConditionVariableDeclStmt());
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
 	hashStmt(stmt->getCond());
 	hashStmt(stmt->getThen());
 	if(stmt->getElse() != nullptr){
 		hashStmt(stmt->getElse());
+	}
+	else{
+		//TODO: hier irgendwas hashen?
 	}
 	return true;
 }
@@ -926,6 +954,9 @@ bool HashVisitor::VisitReturnStmt(const ReturnStmt *stmt){
 	if(stmt->getRetValue() != nullptr){
 		hashStmt(stmt->getRetValue());	
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
 	return true;
 }
 
@@ -933,6 +964,9 @@ bool HashVisitor::VisitWhileStmt(const WhileStmt *stmt){
 	Hash() << "while";
 	if(stmt->getConditionVariable() != nullptr){
 		hashStmt(stmt->getConditionVariableDeclStmt());
+	}
+	else{
+		//TODO: hier irgendwas hashen?
 	}
 	hashStmt(stmt->getCond());
 	hashStmt(stmt->getBody());
@@ -944,8 +978,14 @@ bool HashVisitor::VisitSwitchStmt(const SwitchStmt *stmt){
 	if(stmt->getConditionVariable() != nullptr){
 		hashStmt(stmt->getConditionVariableDeclStmt());
 	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
 	if(stmt->getCond() != nullptr){
 		hashStmt(stmt->getCond());
+	}
+	else{
+		//TODO: hier irgendwas hashen?
 	}
 	hashStmt(stmt->getBody());
 	return true;
@@ -956,6 +996,9 @@ bool HashVisitor::VisitCaseStmt(const CaseStmt *stmt){
 	hashStmt(stmt->getLHS());
 	if(stmt->getRHS() != nullptr){
 		hashStmt(stmt->getRHS());
+	}
+	else{
+		//TODO: hier irgendwas hashen?
 	}
 	hashStmt(stmt->getSubStmt());
 	return true;
@@ -973,4 +1016,67 @@ bool HashVisitor::VisitDeclStmt(const DeclStmt *stmt){
 		hashDecl(*it); 
 	}
 	return true;
+}
+
+bool HashVisitor::VisitGCCAsmStmt(const GCCAsmStmt *stmt){
+	Hash() << "gcc asm";
+	Hash() << stmt->getAsmString()->getString().str();
+	return true;
+}
+
+bool HashVisitor::VisitMSAsmStmt(const MSAsmStmt *stmt){
+	Hash() << "MS asm";
+	Hash() << stmt->getAsmString().str();
+	return true;
+}
+
+bool HashVisitor::VisitAttributedStmt(const AttributedStmt *stmt){
+	Hash() << "AttributedStmt";
+	for(const Attr * attr: stmt->getAttrs()){
+		//TODO: Attribute behandeln
+	}
+
+	hashStmt(stmt->getSubStmt());
+	return true;
+}
+
+bool HashVisitor::VisitCapturedStmt(const CapturedStmt *stmt){
+	Hash() << "CaptureStmt";
+	hashStmt(stmt->getCapturedStmt());
+	hashDecl(stmt->getCapturedDecl());
+	return true;
+}
+
+//not tested
+bool HashVisitor::VisitSEHExceptStmt(const SEHExceptStmt *stmt){
+	Hash() << "__except";
+	hashStmt(stmt->getFilterExpr());
+	hashStmt(stmt->getBlock());
+	return true;
+}
+
+//not tested
+bool HashVisitor::VisitSEHFinallyStmt(const SEHFinallyStmt *stmt){
+	Hash() << "__finally";
+	hashStmt(stmt->getBlock());
+	return true;
+}
+
+//not tested
+bool HashVisitor::VisitSEHLeaveStmt(const SEHLeaveStmt *stmt){
+	Hash() << "__leave";
+	return true;
+}
+
+//not tested
+bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *stmt){
+	Hash() << "__try";
+	hashStmt(stmt->getTryBlock());
+	hashStmt(stmt->getHandler());
+	return true;
+}
+
+bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *stmt){
+	errs() << "IndirectGotoStmt\n";
+	exit(1);
 }
