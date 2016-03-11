@@ -126,6 +126,7 @@ public:
 	bool VisitAddrLabelExpr(const AddrLabelExpr *Node);
 	bool VisitBlockExpr(const BlockExpr *Node);
 	bool VisitArraySubscriptExpr(const ArraySubscriptExpr *Node);
+	bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *Node);
 	/* might not be needed: */
 	bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node);
 	bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);
