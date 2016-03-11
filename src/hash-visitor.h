@@ -68,6 +68,7 @@ public:
     void hashDecl(const Decl *);
     void hashStmt(const Stmt *);
     void hashType(QualType);
+    void hashAttr(const Attr *);
 
     void hashName(const NamedDecl *);
 
@@ -124,6 +125,7 @@ public:
 	bool VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
 	bool VisitAddrLabelExpr(const AddrLabelExpr *Node);
 	bool VisitBlockExpr(const BlockExpr *Node);
+	bool VisitArraySubscriptExpr(const ArraySubscriptExpr *Node);
 	/* might not be needed: */
 	bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node);
 	bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);
@@ -155,7 +157,14 @@ public:
     bool VisitValueDecl(const ValueDecl *Node);//maybe called by children
     bool VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node);
     bool VisitCapturedDecl(const CapturedDecl *Node);
-    
+
+    //Attrs
+    //uncommented Attr not found in namespace
+    bool VisitAttr(const Attr *attr);
+    bool VisitInheritableAttr(const InheritableAttr *attr);
+    //bool VisitStmtAttr(const StmtAttr *attr);
+    bool VisitInheritableParamAttr(const InheritableParamAttr *attr);
+    //bool VisitParameterABIAttr(const ParameterABIAttr *attr);
 
 	//statements
 	bool VisitCompoundStmt(const CompoundStmt *stmt);
@@ -173,8 +182,6 @@ public:
 	bool VisitCaseStmt(const CaseStmt *stmt);
 	bool VisitDefaultStmt(const DefaultStmt *stmt);
 	bool VisitDeclStmt(const DeclStmt *stmt);
-	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
-	bool VisitMSAsmStmt(const MSAsmStmt * stmt);
 
 	//not sure if we need this
 	bool VisitAttributedStmt(const AttributedStmt *stmt);

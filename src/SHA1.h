@@ -1,4 +1,4 @@
-// #define DEBUG
+#define DEBUG
 
 /*
  *
@@ -170,7 +170,6 @@ namespace sha1
 
         SHA1& operator<<(const sha1::digest & x) {
 #ifdef DEBUG
-			/*DEBUG:*/std::cerr << "I was here" << std::endl;
 			/*DEBUG:*/std::cerr << "Hash<<" << x.getHexDigest() << std::endl;
 #else
 			x.getHexDigest();

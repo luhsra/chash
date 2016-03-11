@@ -22,17 +22,17 @@ void HashVisitor::hashDecl(const Decl *D) {
     if (!D) {
         return;
     }
-    errs() << "hashDECL\n";
+    //errs() << "hashDECL\n";
     const sha1::digest * saved_digest = GetHash(D);
-    errs() << "GETHASH ";
-    D->dump();
+    //errs() << "GETHASH ";
+    //D->dump();
     if(saved_digest){
-        errs() << saved_digest;
-        D->dump();
+        //errs() << saved_digest;
+        //D->dump();
         //errs() << *saved_digest;
-        errs() << "HASHSTACKSIZE " << HashStack.size() << "\n";
+        //errs() << "HASHSTACKSIZE " << HashStack.size() << "\n";
         Hash() << *saved_digest;
-        errs() << "GOOD\n";
+        //errs() << "GOOD\n";
         return;
     }
     
@@ -94,6 +94,8 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
             toplevel_hash << *hash;
             // errs() << "TU " << Decl << " " << hash->getHexDigest() << "\n";
         });
+
+	Unit->dump();
 
     return true;
 }
@@ -668,6 +670,15 @@ bool HashVisitor::VisitStmtExpr(const StmtExpr *Node){
 	return true;
 }
 
+bool HashVisitor::VisitArraySubscriptExpr(const ArraySubscriptExpr *Node){
+	Hash() << "ArrayAccess";
+	hashStmt(Node->getLHS());
+	hashStmt(Node->getRHS());
+	hashStmt(Node->getBase());
+	hashStmt(Node->getIdx());
+	return true;
+}
+
 bool HashVisitor::VisitBlockExpr(const BlockExpr *Node){
     Hash() << "block expr";
     hashDecl(Node->getBlockDecl());
@@ -853,6 +864,96 @@ bool HashVisitor::VisitCapturedDecl(const CapturedDecl *Node){
 
     return true;
 }
+
+//similar to hashDecl...
+void HashVisitor::hashAttr(const Attr *attr){
+
+    if (!attr) {
+        return;
+    }
+    const sha1::digest * saved_digest = GetHash(attr);
+    if(saved_digest){
+        Hash() << *saved_digest;
+        return;
+    }
+
+
+    // Visit in Pre-Order
+    unsigned Depth = beforeDescent();
+
+    const sha1::SHA1 *hash = PushHash();
+
+
+    //No visitor exists. do it per hand
+    //TODO ParmeterABIAttr & StmtAttr
+    if(isa<InheritableParamAttr>(attr)){
+        VisitInheritableParamAttr(  (InheritableParamAttr*) attr);
+    }
+    else if(isa<InheritableAttr>(attr)){
+        VisitInheritableAttr(  (InheritableAttr*) attr);
+    }
+    else{
+        VisitAttr(attr);
+    }
+
+
+    afterDescent(Depth);
+
+    const sha1::digest digest = PopHash(hash);
+
+    // Store hash for underlying type
+    StoreHash(attr, digest);
+}
+
+
+
+
+
+//Attrs
+//uncommented Attr not found in namespace
+bool HashVisitor::VisitAttr(const Attr *attr){
+    Hash() << "Attr";
+    Hash() << attr->getKind();//hash enum
+    Hash() << attr->isPackExpansion();
+
+
+    return true;
+}
+
+bool HashVisitor::VisitInheritableAttr(const InheritableAttr *attr){
+    Hash() << "Inheritable Attr";
+    VisitAttr(attr);
+
+    return true;
+}
+/*
+bool HashVisitor::VisitStmtAttr(const StmtAttr *attr){
+    Hash() << "Stmt Attr";
+    VisitAttr(attr);
+
+    return true;
+}
+*/
+
+bool HashVisitor::VisitInheritableParamAttr(const InheritableParamAttr *attr){
+
+    Hash() << "InheritableParamAttr";
+    VisitAttr(attr);
+    return true;
+}
+
+/*
+bool HashVisitor::VisitParameterABIAttr(const ParameterABIAttr *attr){
+
+    Hash() << "ParameterABAttr";
+    const ParameterABI pabi = getABI();
+    Hash() << pabi;//struct
+    VisitAttr(attr);
+
+    return true;
+}
+*/
+
 
 
 //statements
@@ -1059,7 +1160,7 @@ bool HashVisitor::VisitMSAsmStmt(const MSAsmStmt *stmt){
 bool HashVisitor::VisitAttributedStmt(const AttributedStmt *stmt){
 	Hash() << "AttributedStmt";
 	for(const Attr * attr: stmt->getAttrs()){
-		//TODO: Attribute behandeln
+        hashAttr(attr);
 	}
 
 	hashStmt(stmt->getSubStmt());
