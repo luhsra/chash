@@ -77,8 +77,14 @@ bool HashVisitor::hasNodes(const DeclContext *DC) {
 void HashVisitor::hashDeclContext(const DeclContext *DC) {
     if (!DC) return;
 
-    for (auto *D : DC->noload_decls())
-        hashDecl(D);
+    for (auto *D : DC->noload_decls()){
+		if(!(isa<TagDecl>(D) || isa<TypedefDecl>(D))){ //We don't need typedefs, Enums and Records here TODO: Do we need to exclude more?        
+			hashDecl(D);
+		}else{
+			errs() << "\tNot using\n";
+			D->dump();
+		}
+	}
 }
 
 
