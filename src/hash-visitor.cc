@@ -170,6 +170,9 @@ void HashVisitor::hashType(QualType T) {
 		//weitere qualifier?
     }
 
+	//errs() << "\t<hashType>\n";
+	//T->dump();
+
     const Type *type = T.getTypePtr();
     assert (type != nullptr);
 
@@ -195,13 +198,22 @@ void HashVisitor::hashType(QualType T) {
 
     // Hash into Parent
     Hash() << digest;
-	
+
     // This will be the root of a future optimization
     const sha1::digest * saved_digest = GetHash(type);
+/*
+	if(saved_digest && digest != *saved_digest){
+		errs() << "\t\tDifferent hashes for\n";
+		T->dump();
+	}
+*/
+
     assert(!saved_digest || digest == *saved_digest && "Hashes do not match");
 
     // Store hash for underlying type
     StoreHash(type, digest);
+
+	//errs() << "\t</hashType>\n";
 
     // DEBUG OUTPUT
     // type->dump();
@@ -376,6 +388,13 @@ bool HashVisitor::VisitAdjustedType(const AdjustedType *T){
 	hashType(T->getOriginalType());
 	hashType(T->getAdjustedType());
 	return true;	
+}
+
+bool HashVisitor::VisitElaboratedType(const ElaboratedType *T){
+	Hash() << "ElaboratedType";
+	hashType(T->getNamedType());
+	Hash() << T->getKeyword();
+	return true;
 }
 
 bool HashVisitor::VisitType(const Type *T){

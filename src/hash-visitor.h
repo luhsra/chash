@@ -105,6 +105,7 @@ public:
 	bool VisitUnaryTransformType(const UnaryTransformType *T);
 	bool VisitDecayedType(const DecayedType *T);
 	bool VisitAdjustedType(const AdjustedType *T);
+	bool VisitElaboratedType(const ElaboratedType *T);
 
     std::string GetHash();
 
