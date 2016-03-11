@@ -68,6 +68,7 @@ public:
     void hashDecl(const Decl *);
     void hashStmt(const Stmt *);
     void hashType(QualType);
+    void hashAttr(const Attr *);
 
     void hashName(const NamedDecl *);
 
@@ -155,7 +156,14 @@ public:
     bool VisitValueDecl(const ValueDecl *Node);//maybe called by children
     bool VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node);
     bool VisitCapturedDecl(const CapturedDecl *Node);
-    
+
+    //Attrs
+    //uncommented Attr not found in namespace
+    bool VisitAttr(const Attr *attr);
+    bool VisitInheritableAttr(const InheritableAttr *attr);
+    //bool VisitStmtAttr(const StmtAttr *attr);
+    bool VisitInheritableParamAttr(const InheritableParamAttr *attr);
+    //bool VisitParameterABIAttr(const ParameterABIAttr *attr);
 
 	//statements
 	bool VisitCompoundStmt(const CompoundStmt *stmt);

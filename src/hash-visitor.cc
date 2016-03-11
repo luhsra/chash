@@ -854,6 +854,96 @@ bool HashVisitor::VisitCapturedDecl(const CapturedDecl *Node){
     return true;
 }
 
+//similar to hashDecl...
+void HashVisitor::hashAttr(const Attr *attr){
+
+    if (!attr) {
+        return;
+    }
+    const sha1::digest * saved_digest = GetHash(attr);
+    if(saved_digest){
+        Hash() << *saved_digest;
+        return;
+    }
+
+
+    // Visit in Pre-Order
+    unsigned Depth = beforeDescent();
+
+    const sha1::SHA1 *hash = PushHash();
+
+
+    //No visitor exists. do it per hand
+    //TODO ParmeterABIAttr & StmtAttr
+    if(isa<InheritableParamAttr>(attr)){
+        VisitInheritableParamAttr(  (InheritableParamAttr*) attr);
+    }
+    else if(isa<InheritableAttr>(attr)){
+        VisitInheritableAttr(  (InheritableAttr*) attr);
+    }
+    else{
+        VisitAttr(attr);
+    }
+
+
+    afterDescent(Depth);
+
+    const sha1::digest digest = PopHash(hash);
+
+    // Store hash for underlying type
+    StoreHash(attr, digest);
+}
+
+
+
+
+
+//Attrs
+//uncommented Attr not found in namespace
+bool HashVisitor::VisitAttr(const Attr *attr){
+    Hash() << "Attr";
+    Hash() << attr->getKind();//hash enum
+    Hash() << attr->isPackExpansion();
+
+
+    return true;
+}
+
+bool HashVisitor::VisitInheritableAttr(const InheritableAttr *attr){
+    Hash() << "Inheritable Attr";
+    VisitAttr(attr);
+
+    return true;
+}
+/*
+bool HashVisitor::VisitStmtAttr(const StmtAttr *attr){
+    Hash() << "Stmt Attr";
+    VisitAttr(attr);
+
+    return true;
+}
+*/
+
+bool HashVisitor::VisitInheritableParamAttr(const InheritableParamAttr *attr){
+
+    Hash() << "InheritableParamAttr";
+    VisitAttr(attr);
+    return true;
+}
+
+/*
+bool HashVisitor::VisitParameterABIAttr(const ParameterABIAttr *attr){
+
+    Hash() << "ParameterABAttr";
+    const ParameterABI pabi = getABI();
+    Hash() << pabi;//struct
+    VisitAttr(attr);
+
+    return true;
+}
+*/
+
+
 
 //common statements
 void HashVisitor::hashStmt(const Stmt *stmt){
@@ -1059,7 +1149,7 @@ bool HashVisitor::VisitMSAsmStmt(const MSAsmStmt *stmt){
 bool HashVisitor::VisitAttributedStmt(const AttributedStmt *stmt){
 	Hash() << "AttributedStmt";
 	for(const Attr * attr: stmt->getAttrs()){
-		//TODO: Attribute behandeln
+        hashAttr(attr);
 	}
 
 	hashStmt(stmt->getSubStmt());
