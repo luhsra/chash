@@ -173,7 +173,6 @@ def run_command(cmd, stdin=None):
     return p.returncode, output, stdout, stderr
 
 def run_testcase_helper(test_case, check_name, future):
-    exit_value = get_tag(test_case, "check-exit-value", "0")
     compile_command = get_tag(test_case, "compile-command", default_compile_command)
     hash_command = get_tag(test_case, "hash-command", default_hash_command)
 
@@ -186,7 +185,8 @@ def run_testcase_helper(test_case, check_name, future):
 
     cruft = run_testcase_cleaner(basename)
 
-    output = "TEST %s (%s, %d leftovers removed)\n" % (check_name, test_case, cruft)
+    output = COLOR.format("TEST", "blue", True) + " %s: %s (%d leftovers removed)\n" % \
+             (COLOR.format(test_case, "cyan"), COLOR.format(check_name, "yellow"), cruft)
 
     failed = False
 
@@ -214,7 +214,7 @@ def run_testcase_helper(test_case, check_name, future):
         (ret_compiler, x, _, __) = run_command(cmd, stdin=variants[variant])
         assert os.path.exists(source_file)
 
-        if ret_compiler != 0:
+        if (LOGLEVEL >= LOGLEVEL_NORMAL and ret_compiler != 0) and ret_compiler != 0:
             output += x
         elif LOGLEVEL >= LOGLEVEL_DEBUG:
             output += x
@@ -225,7 +225,7 @@ def run_testcase_helper(test_case, check_name, future):
             with open(object_file) as fd:
                 object_hash.update(fd.read())
         else:
-            output += COLOR.format("!!! Failed: compile failed with %d\n" % ret_compiler,
+            output += COLOR.format("!!! Failed: compile (%s) failed with %d\n" % (variant, ret_compiler),
                                    "red", bold=True)
             failed = True
         object_hash = object_hash.hexdigest()
@@ -237,14 +237,14 @@ def run_testcase_helper(test_case, check_name, future):
             source_file=source_file,
             flags=compile_flags)
         (ret_hasher, x, _, stderr) = run_command(cmd)
-        if ret_hasher != 0 or LOGLEVEL >= LOGLEVEL_DEBUG:
+        if (LOGLEVEL >= LOGLEVEL_NORMAL and ret_hasher != 0) or LOGLEVEL >= LOGLEVEL_DEBUG:
             output += x
         ast_hash = None
         for line in stderr.split("\n"):
             if line.startswith("top-level-hash"):
                 ast_hash = line.split(":")[1].strip()
         if ret_hasher != 0:
-            output += COLOR.format("!!! Failure: clang-hash failed with %d\n" % ret_hasher,
+            output += COLOR.format("!!! Failure: clang-hash (%s) failed with %d\n" % (variant, ret_hasher),
                                    "red", bold=True)
             failed = True
         elif not ast_hash:
@@ -258,12 +258,6 @@ def run_testcase_helper(test_case, check_name, future):
                 source_file=source_file,
                 object_hash=object_hash,
                 ast_hash=ast_hash)
-
-        if int(exit_value) != ret_compiler:
-            assert (ret_hasher == 0) == (ret_compiler == 0)
-            output += COLOR.format("!!! Failure: Exit code was %d (%s exptected)" % (ret_compiler, exit_value),
-                                   "red", bold=True)
-            failed = True
 
         results[variant] = (object_hash, ast_hash)
 
@@ -319,7 +313,7 @@ def run_test_suite(tests):
     for test_case in tests:
         check_name = get_tag(test_case, "check-name")
         if not check_name:
-            to_console("warning: test '%s' unhandled\n" % test_case)
+            to_console(COLOR.format("WARN", 'yellow', True) + " test '%s' unhandled\n" % test_case)
             continue
         failed_tests.append((run_testcase(test_case, check_name),
                        get_tag(test_case, "check-known-to-fail")))
@@ -337,7 +331,7 @@ def run_test_suite(tests):
     return tests_failed <= tests_known_fail
 
 def usage():
-    print "%s [-c] [-t threads] [-q] [test-cases...]" % sys.argv[0]
+    print "%s [-c] [-t threads] [-q] [-v] [test-cases...]" % sys.argv[0]
     print " if no test-cases are given, all in current directory are run"
 
 def get_testcases():
