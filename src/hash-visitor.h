@@ -183,6 +183,8 @@ public:
 	bool VisitCaseStmt(const CaseStmt *stmt);
 	bool VisitDefaultStmt(const DefaultStmt *stmt);
 	bool VisitDeclStmt(const DeclStmt *stmt);
+	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
+	bool VisitMSAsmStmt(const MSAsmStmt *stmt);
 
 	//not sure if we need this
 	bool VisitAttributedStmt(const AttributedStmt *stmt);
@@ -191,8 +193,6 @@ public:
 	bool VisitSEHFinallyStmt(const SEHFinallyStmt *stmt);
 	bool VisitSEHLeaveStmt(const SEHLeaveStmt *stmt);
 	bool VisitSEHTryStmt(const SEHTryStmt *stmt);
-	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
-	bool VisitMSAsmStmt(const MSAsmStmt * stmt);
 
 	//calls exit()
 	bool VisitIndirectGotoStmt(const IndirectGotoStmt *stmt);
