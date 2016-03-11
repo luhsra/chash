@@ -181,8 +181,6 @@ public:
 	bool VisitCaseStmt(const CaseStmt *stmt);
 	bool VisitDefaultStmt(const DefaultStmt *stmt);
 	bool VisitDeclStmt(const DeclStmt *stmt);
-	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
-	bool VisitMSAsmStmt(const MSAsmStmt * stmt);
 
 	//not sure if we need this
 	bool VisitAttributedStmt(const AttributedStmt *stmt);
