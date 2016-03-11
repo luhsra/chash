@@ -201,31 +201,32 @@ namespace sha1
         }
 
 
-        const uint32_t* getDigest(digest32_t digest) {
-            size_t bitCount = this->m_byteCount * 8;
-            processByte(0x80);
-            if (this->m_blockByteIndex > 56) {
-                while (m_blockByteIndex != 0) {
-                    processByte(0);
+        const uint32_t* getDigest(digest32_t digest) const {
+            SHA1 copy(*this);
+            size_t bitCount = copy.m_byteCount * 8;
+            copy.processByte(0x80);
+            if (copy.m_blockByteIndex > 56) {
+                while (copy.m_blockByteIndex != 0) {
+                    copy.processByte(0);
                 }
-                while (m_blockByteIndex < 56) {
-                    processByte(0);
+                while (copy.m_blockByteIndex < 56) {
+                    copy.processByte(0);
                 }
             } else {
-                while (m_blockByteIndex < 56) {
-                    processByte(0);
+                while (copy.m_blockByteIndex < 56) {
+                    copy.processByte(0);
                 }
             }
-            processByte(0);
-            processByte(0);
-            processByte(0);
-            processByte(0);
-            processByte( static_cast<unsigned char>((bitCount>>24) & 0xFF));
-            processByte( static_cast<unsigned char>((bitCount>>16) & 0xFF));
-            processByte( static_cast<unsigned char>((bitCount>>8 ) & 0xFF));
-            processByte( static_cast<unsigned char>((bitCount)     & 0xFF));
+            copy.processByte(0);
+            copy.processByte(0);
+            copy.processByte(0);
+            copy.processByte(0);
+            copy.processByte( static_cast<unsigned char>((bitCount>>24) & 0xFF));
+            copy.processByte( static_cast<unsigned char>((bitCount>>16) & 0xFF));
+            copy.processByte( static_cast<unsigned char>((bitCount>>8 ) & 0xFF));
+            copy.processByte( static_cast<unsigned char>((bitCount)     & 0xFF));
 
-            memcpy(digest, m_digest, 5 * sizeof(uint32_t));
+            memcpy(digest, copy.m_digest, 5 * sizeof(uint32_t));
             return digest;
         }
 
