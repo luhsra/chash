@@ -183,8 +183,6 @@ public:
 	bool VisitSEHFinallyStmt(const SEHFinallyStmt *stmt);
 	bool VisitSEHLeaveStmt(const SEHLeaveStmt *stmt);
 	bool VisitSEHTryStmt(const SEHTryStmt *stmt);
-	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
-	bool VisitMSAsmStmt(const MSAsmStmt * stmt);
 
 	//calls exit()
 	bool VisitIndirectGotoStmt(const IndirectGotoStmt *stmt);

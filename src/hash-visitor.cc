@@ -1103,8 +1103,15 @@ bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *stmt){
 }
 
 bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *stmt){
-	errs() << "IndirectGotoStmt\n";
-	exit(1);
+	Hash() << "IndirectGotoStmt";
+	hashStmt(stmt->getTarget());
+	if(stmt->getConstantTarget()){
+		hashDecl(stmt->getConstantTarget());
+	}
+	else{
+		//TODO: hier irgendwas hashen?
+	}
+	return true;
 }
 
 bool HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *stmt){
