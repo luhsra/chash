@@ -243,14 +243,25 @@ bool HashVisitor::VisitPointerType(const PointerType *T) {
 }
 
 bool HashVisitor::VisitArrayType(const ArrayType *T){
+	Hash() << "Arraytype";
 	hashType(T->getElementType());
 	Hash() << "[" << "*" << "]";
 	return true;
 }
 
 bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T){
+	Hash() << "ArraytypeC";
 	hashType(T->getElementType());
 	Hash() << "[" << T->getSize().getZExtValue() << "]";
+	return true;
+}
+
+bool HashVisitor::VisitVariableArrayType(const VariableArrayType *T){
+	Hash() << "ArraytypeV";
+	hashType(T->getElementType());
+	Hash() << "[";
+	hashStmt(T->getSizeExpr());
+	Hash() << "]";
 	return true;
 }
 
@@ -328,25 +339,10 @@ bool HashVisitor::VisitEnumType(const EnumType *Node){
     return true;
 }
 
+//TODO: Needed: ?
 bool HashVisitor::VisitTagType(const TagType *Node){
     Hash() << "Tag Type";
-    /*
-    if(Node->isSugared()){
-        hashType(Node->desugar());
-    }
-
-    EnumDecl *ed = Node->getDecl();
-    hashType(ed->getIntegerType());
-    hashType(ed->getPromotionType());
-
-
-    for(EnumConstantDecl *ecd: ed->enumerators()){
-        hashStmt(ecd->getInitExpr());
-        Hash() << ecd->getInitVal().getExtValue();
-        hashName(ecd);
-    }
-    hashName(ed);
-*/
+    hashDecl(Node->getDecl());
     return true;
 }
 
@@ -379,7 +375,6 @@ bool HashVisitor::VisitAdjustedType(const AdjustedType *T){
 	hashType(T->getAdjustedType());
 	return true;	
 }
-
 
 bool HashVisitor::VisitType(const Type *T){
 	const sha1::digest *digest = GetHash(T);
@@ -827,7 +822,37 @@ bool HashVisitor::VisitValueDecl(const ValueDecl *Node){
 }
 
 
+bool HashVisitor::VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node){
+    Hash() << "FileScopeAsmDecl";
 
+    const StringLiteral *sl = Node->getAsmString();
+    if(sl != nullptr){
+        hashStmt(sl);
+    }
+    return true;
+
+}
+
+//???? Stmt dazu wurde gemacht, also gibts dazu auch ne Decl
+bool HashVisitor::VisitCapturedDecl(const CapturedDecl *Node){
+    Hash() << "CapturedDecl";
+    Stmt *body = Node->getBody();
+    if(body != nullptr){
+        hashStmt(body);
+    }
+    Hash() << Node->isNothrow();
+
+    for(unsigned i = 0; i < Node->getNumParams();i++){
+        ImplicitParamDecl *ipd = Node->getParam(i);
+        if(ipd == nullptr){
+            errs() << "nullptr in CapturedDecl!";
+            exit(0);
+        }
+        hashDecl(ipd);
+    }
+
+    return true;
+}
 
 
 //statements

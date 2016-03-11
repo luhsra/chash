@@ -153,6 +153,8 @@ public:
     //DeclaratorDecl done...
     bool VisitIndirectFieldDecl(const IndirectFieldDecl *Node);
     bool VisitValueDecl(const ValueDecl *Node);//maybe called by children
+    bool VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node);
+    bool VisitCapturedDecl(const CapturedDecl *Node);
     
 
 	//statements
