@@ -125,6 +125,7 @@ public:
 	bool VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
 	bool VisitAddrLabelExpr(const AddrLabelExpr *Node);
 	bool VisitBlockExpr(const BlockExpr *Node);
+	bool VisitArraySubscriptExpr(const ArraySubscriptExpr *Node);
 	/* might not be needed: */
 	bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node);
 	bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);

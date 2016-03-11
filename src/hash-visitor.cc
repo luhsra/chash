@@ -95,6 +95,8 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
             // errs() << "TU " << Decl << " " << hash->getHexDigest() << "\n";
         });
 
+	Unit->dump();
+
     return true;
 }
 
@@ -665,6 +667,15 @@ bool HashVisitor::VisitStmtExpr(const StmtExpr *Node){
 	Hash() << "stmtExpr";	
 	hashType(Node->getType());
 	hashStmt(Node->getSubStmt());
+	return true;
+}
+
+bool HashVisitor::VisitArraySubscriptExpr(const ArraySubscriptExpr *Node){
+	Hash() << "ArrayAccess";
+	hashStmt(Node->getLHS());
+	hashStmt(Node->getRHS());
+	hashStmt(Node->getBase());
+	hashStmt(Node->getIdx());
 	return true;
 }
 
