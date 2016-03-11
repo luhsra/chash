@@ -606,7 +606,7 @@ bool HashVisitor::VisitCallExpr(const CallExpr *Node){
 }
 
 bool HashVisitor::VisitOffsetOfExpr(const OffsetOfExpr *Node){
-	Hash() << "offsetof";	
+	Hash() << "offsetof";
 	hashType(Node->getType());
 	for(unsigned int i = 0; i < Node->getNumExpressions(); i++){
 		hashStmt(Node->getIndexExpr(i));
@@ -615,8 +615,15 @@ bool HashVisitor::VisitOffsetOfExpr(const OffsetOfExpr *Node){
 		OffsetOfNode off = Node->getComponent(i);
 		Hash() << "offsetnode";
 		Hash() << off.getKind();
-		hashType(off.getField()->getType());
-		hashName(off.getField());
+		FieldDecl *fd;
+
+		if(off.getKind() ==  OffsetOfNode::Kind::Field){
+			fd = off.getField();
+			QualType t = fd->getType();
+			hashType(t);
+
+			hashName(off.getField());
+		}
 	}
 	return true;
 }
