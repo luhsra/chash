@@ -491,6 +491,9 @@ bool HashVisitor::VisitInitListExpr(const InitListExpr *ILE){
 	for(unsigned int i = 0; i < ILE->getNumInits(); i++){
 		hashStmt(ILE->getInit(i));
 	}
+	if(ILE->hasArrayFiller()){
+		hashStmt(ILE->getArrayFiller());
+	}
 	Hash() << "list";
 	return true;
 }
@@ -676,6 +679,12 @@ bool HashVisitor::VisitArraySubscriptExpr(const ArraySubscriptExpr *Node){
 	hashStmt(Node->getRHS());
 	hashStmt(Node->getBase());
 	hashStmt(Node->getIdx());
+	return true;
+}
+
+bool HashVisitor::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *Node){
+	Hash() << "implicitInit";
+	hashType(Node->getType());
 	return true;
 }
 
