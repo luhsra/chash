@@ -945,7 +945,7 @@ bool HashVisitor::VisitParameterABIAttr(const ParameterABIAttr *attr){
 
 
 
-//common statements
+//statements
 void HashVisitor::hashStmt(const Stmt *stmt){
 	//TODO: stimmt das so?
 	unsigned depth = beforeDescent();
@@ -960,11 +960,11 @@ void HashVisitor::hashStmt(const Stmt *stmt){
 	const sha1::digest digest = PopHash(hash);
 	Hash() << digest;
 }
-//TODO: ueberlagern :D
+
+//TODO: default-case
 bool HashVisitor::VisitStmt(const Stmt *Node)
 {
     errs() << "StatementNotHandled";
-    //TODO
     return false;
 }
 
@@ -1194,5 +1194,10 @@ bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *stmt){
 
 bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *stmt){
 	errs() << "IndirectGotoStmt\n";
+	exit(1);
+}
+
+bool HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *stmt){
+	errs() << "OMPExecutableDirective";
 	exit(1);
 }

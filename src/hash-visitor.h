@@ -181,7 +181,10 @@ public:
 	bool VisitCaseStmt(const CaseStmt *stmt);
 	bool VisitDefaultStmt(const DefaultStmt *stmt);
 	bool VisitDeclStmt(const DeclStmt *stmt);
+	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
+	bool VisitMSAsmStmt(const MSAsmStmt * stmt);
 
+	//not sure if we need this
 	bool VisitAttributedStmt(const AttributedStmt *stmt);
 	bool VisitCapturedStmt(const CapturedStmt *stmt);
 	bool VisitSEHExceptStmt(const SEHExceptStmt *stmt);
@@ -190,10 +193,10 @@ public:
 	bool VisitSEHTryStmt(const SEHTryStmt *stmt);
 	bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
 	bool VisitMSAsmStmt(const MSAsmStmt * stmt);
-	//TODO: OMPExecutableDirective visiten (mit exit)
 
 	//calls exit()
 	bool VisitIndirectGotoStmt(const IndirectGotoStmt *stmt);
+	bool VisitOMPExecutableDirective(const OMPExecutableDirective *stmt);
 
 protected:
 	std::map<const void *, const Type *> seen_types;
