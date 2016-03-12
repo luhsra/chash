@@ -54,6 +54,11 @@ void HashVisitor::hashDecl(const Decl *D) {
     if (!isa<FunctionDecl>(*D) && hasNodes(dyn_cast<DeclContext>(D)))
         hashDeclContext(cast<DeclContext>(D));
 
+    // visit Attributes of the Decl
+    for(Attr *attr: D->attrs()){
+        hashAttr(attr);
+    }
+
     afterDescent(Depth);
 
     const sha1::digest digest = PopHash(hash);
@@ -414,6 +419,12 @@ bool HashVisitor::VisitType(const Type *T){
 		Hash() << "struct";
 		const RecordType *rt = T->getAsStructureType();
 		RecordDecl *rd = rt->getDecl();
+
+		// visit Attributes of the Decl (needed because RecordDecl shouldn't be not called from hashDecl)
+		for(Attr *attr: rd->attrs()){
+			hashAttr(attr);
+		}
+
 		for(RecordDecl::field_iterator iter=rd->field_begin(); iter != rd->field_end(); iter++){
 			FieldDecl fd = **iter;
 			Hash() << "member";
@@ -427,6 +438,12 @@ bool HashVisitor::VisitType(const Type *T){
 		Hash() << "union";
 		const RecordType *rt = T->getAsUnionType();
 		RecordDecl *rd = rt->getDecl();
+
+		// visit Attributes of the Decl (needed because RecordDecl shouldn't be not called from hashDecl)
+		for(Attr *attr: rd->attrs()){
+			hashAttr(attr);
+		}
+
 		for(RecordDecl::field_iterator iter=rd->field_begin(); iter != rd->field_end(); iter++){
 			FieldDecl fd = **iter;
 			Hash() << "member";
