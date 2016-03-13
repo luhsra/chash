@@ -9,5 +9,6 @@ struct IOAPICID a;
 
 /*
  * check-name: attribute packed
+ * obj-not-diff: object file isn't changed indeed!
  * A != B
  */

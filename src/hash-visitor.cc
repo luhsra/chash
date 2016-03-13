@@ -959,6 +959,9 @@ void HashVisitor::hashAttr(const Attr *attr){
 
     const sha1::digest digest = PopHash(hash);
 
+    //Hash into parent
+    Hash() << digest;
+
     // Store hash for underlying type
     StoreHash(attr, digest);
 }
