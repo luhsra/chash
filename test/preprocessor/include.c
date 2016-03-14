@@ -8,6 +8,6 @@ int foo() {
 
 /*
  * check-name: Include with function extern
- * obj-not-diff: yes
- * B != A
+ * obj-not-diff: void parameter != no parameter
+ * B == A
  */
