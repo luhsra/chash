@@ -200,6 +200,7 @@ public:
 	bool VisitOMPExecutableDirective(const OMPExecutableDirective *stmt);
 
 protected:
+	bool doNotHashThis = false; // Flag used to ignore Nodes such as extern Decls
 	std::map<const void *, const Type *> seen_types;
 		
 	bool haveSeen(const void *key, const Type *type){

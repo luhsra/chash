@@ -6,5 +6,5 @@ float a = 1.0F;	{{C}}
 /*
  * check-name: same value but different float literals
  * A == B == C
- * fails because 1.0 is double...
+ * obj-not-diff: because 1.0 is double...
  */

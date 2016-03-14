@@ -63,6 +63,12 @@ void HashVisitor::hashDecl(const Decl *D) {
 
     const sha1::digest digest = PopHash(hash);
 
+	// Do not store or hash if flag is set
+	if(doNotHashThis){
+		doNotHashThis = false;
+		return;
+	}
+
     // Store hash for underlying type
     StoreHash(D, digest);
 
@@ -112,6 +118,12 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 }
 
 bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
+	//Ignore extern declarations
+	if(Decl->hasExternalStorage()){
+		errs() << "ignoring extern VarDecl\n";
+		doNotHashThis = true;
+		return true;
+	}
     Hash() << "VarDecl";
     hashName(Decl);
     hashType(Decl->getType());
@@ -766,6 +778,12 @@ bool HashVisitor::VisitBlockDecl(const BlockDecl *Node)
 }
 
 bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
+	//Ignore extern declarations
+	if(Node->getStorageClass() == StorageClass::SC_Extern || Node->getStorageClass() == StorageClass::SC_PrivateExtern){
+		errs() << "Ignoring extern FunctionDecl\n";
+		doNotHashThis = true;
+		return true;
+	}
 
     bool handled = true;
 

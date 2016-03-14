@@ -6,5 +6,5 @@ double a = 1.0F;	{{C}}
 /*
  * check-name: same value but different float literals
  * A == B == C
- * fails because *f has to be casted to double
+ * obj-not-diff: because *f has to be casted to double
  */
