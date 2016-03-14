@@ -1292,7 +1292,9 @@ bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *stmt){
 	return true;
 }
 
+
+//OpenMP directives, not tested
 bool HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *stmt){
-	errs() << "OMPExecutableDirective";
+	errs() << "OMPExecutableDirectives are not implemented yet.\n";
 	exit(1);
 }
