@@ -183,6 +183,10 @@ def run_testcase_helper(test_case, check_name, future):
 
     basename, ext = os.path.splitext(test_case)
 
+    # Add the testcase directory
+    dirname = os.path.dirname(test_case)
+    compile_flags += " -I %s" % (dirname)
+
     cruft = run_testcase_cleaner(basename)
 
     output = COLOR.format("TEST", "blue", True) + " %s: %s (%d leftovers removed)\n" % \

@@ -3,6 +3,5 @@
 
 /*
  * check-name: unused Decls in include
- * check-known-to-fail: (in Unterordner ausfuehren!)
  * B == A
  */
