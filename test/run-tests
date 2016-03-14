@@ -192,13 +192,39 @@ def run_testcase_helper(test_case, check_name, future):
 
     results = {}
 
+    #hier sieht man, dass WIR etwas machen, weil dumm
+    #print "basename ist:"
+    #print basename
+    #dateipfad = ''.join(basename)
+    #print "dateipfad" + dateipfad
+    #B = dateipfad.split('/')
+    #print B
+    #print len(B)
+    #for dings in range(0,len(B) - 1):
+    #    print B[dings]
+    #wiederaufbau=''
+    #for mauer in range(0,len(B) - 1):
+    #    wiederaufbau += B[mauer]
+    #    wiederaufbau += '/'
+#
+#    print wiederaufbau
+#    altes_Verzeichnis = os.getcwd()
+#    os.chdir(wiederaufbau)
+#
+#    basename_new = B[len(B)-1]
+
+    #jetzt wird es wieder vernuenftig
+
+
+
+
     for variant in variants:
         source_file = "{basename}.{variant}.var{ext}".format(
-            basename=basename,
+            basename=basename_new,
             variant=variant,
             ext=ext)
         object_file = "{basename}.{variant}.var.o".format(
-            basename=basename,
+            basename=basename_new,
             variant=variant)
 
         # Dump variant file
@@ -290,6 +316,9 @@ def run_testcase_helper(test_case, check_name, future):
     to_console(output)
 
     future.set(tuple([not failed, output]))
+
+    #wieder auf alten Pfad zuruecksetzten
+ #   os.chdir(altes_Verzeichnis)
 
 
 def run_testcase(test_case, check_name):
