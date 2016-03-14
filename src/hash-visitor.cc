@@ -181,19 +181,27 @@ void HashVisitor::hashType(QualType T) {
 		//weitere qualifier?
     }
 
-	//errs() << "\t<hashType>\n";
-	//T->dump();
+	if(qualifiers) {
+		Hash() << qualifiers;
+	}
 
-    const Type *type = T.getTypePtr();
+
+	const Type *type = T.getTypePtr();
     assert (type != nullptr);
+
+
+	const sha1::digest * saved_digest = GetHash(type);
+/*
+	if(saved_digest){
+		Hash() << *saved_digest;
+		return;
+	}    
+*/
 
     // Visit in Pre-Order
     unsigned Depth = beforeDescent();
     const sha1::SHA1 *hash = PushHash();
 
-	if(qualifiers) {
-		Hash() << qualifiers;
-	}
 
     bool handled = mt_typevisitor::Visit(type);
     if (!handled) {
@@ -207,20 +215,10 @@ void HashVisitor::hashType(QualType T) {
 
     const sha1::digest digest = PopHash(hash);
 
+	assert(!saved_digest || digest == *saved_digest && "Hashes do not match");
     // Hash into Parent
     Hash() << digest;
-
-    // This will be the root of a future optimization
-    const sha1::digest * saved_digest = GetHash(type);
-/*
-	if(saved_digest && digest != *saved_digest){
-		errs() << "\t\tDifferent hashes for\n";
-		T->dump();
-	}
-*/
-
-    assert(!saved_digest || digest == *saved_digest && "Hashes do not match");
-
+	
     // Store hash for underlying type
     StoreHash(type, digest);
 
