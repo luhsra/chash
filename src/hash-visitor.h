@@ -194,9 +194,9 @@ public:
 	bool VisitSEHFinallyStmt(const SEHFinallyStmt *stmt);
 	bool VisitSEHLeaveStmt(const SEHLeaveStmt *stmt);
 	bool VisitSEHTryStmt(const SEHTryStmt *stmt);
-
-	//calls exit()
 	bool VisitIndirectGotoStmt(const IndirectGotoStmt *stmt);
+
+	//not implemented
 	bool VisitOMPExecutableDirective(const OMPExecutableDirective *stmt);
 
 protected:
