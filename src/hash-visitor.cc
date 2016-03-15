@@ -193,27 +193,27 @@ void HashVisitor::hashType(QualType T) {
 		//weitere qualifier?
     }
 
+	const Type *type = T.getUnqualifiedType().getTypePtr();
+    assert (type != nullptr);
+
+
 	if(qualifiers) {
 		Hash() << qualifiers;
 	}
 
 
-	const Type *type = T.getTypePtr();
-    assert (type != nullptr);
-
-
 	const sha1::digest * saved_digest = GetHash(type);
-/*
+
+	// Optimierung verdeckt aktuell noch Probleme mit Qualifiern
 	if(saved_digest){
 		Hash() << *saved_digest;
 		return;
-	}    
-*/
+	}
+  
 
     // Visit in Pre-Order
     unsigned Depth = beforeDescent();
     const sha1::SHA1 *hash = PushHash();
-
 
     bool handled = mt_typevisitor::Visit(type);
     if (!handled) {
@@ -226,6 +226,13 @@ void HashVisitor::hashType(QualType T) {
     afterDescent(Depth);
 
     const sha1::digest digest = PopHash(hash);
+
+	if(saved_digest && digest != *saved_digest){
+		errs() << "Different hashes for\n";
+		T->dump();
+		errs() << "\t(saved hash for)\n";
+		type->dump();
+	}
 
 	assert(!saved_digest || digest == *saved_digest && "Hashes do not match");
     // Hash into Parent
@@ -1036,6 +1043,12 @@ bool HashVisitor::VisitParameterABIAttr(const ParameterABIAttr *attr){
 //statements
 void HashVisitor::hashStmt(const Stmt *stmt){
 	//TODO: stimmt das so?
+
+	//Falls wir Nullpointer reinstecken
+	if(!stmt){
+		return;
+	}
+
 	unsigned depth = beforeDescent();
 	const sha1::SHA1 *hash = PushHash();
 	bool handled = mt_stmtvisitor::Visit(stmt);
