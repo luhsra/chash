@@ -225,10 +225,19 @@ protected:
 
     sha1::SHA1 * PushHash() {
         HashStack.push_back(sha1::SHA1());
+		
+		llvm::errs() << "  PushHash mit Groesse: " << HashStack.size() << " und Rueckgabewert: " << (&HashStack.back()) << "\n";
+
         return &HashStack.back();
     }
 
     sha1::digest PopHash(const sha1::SHA1 *should_be = nullptr) {
+
+		llvm::errs() << "  PopHash mit Groesse: " << HashStack.size() << " und Parameter: " << (should_be) << "\n";
+		if(should_be != &HashStack.back()){
+			llvm::errs() << "   but Stack-Level is: " << &HashStack.back() << "\n";
+		}
+
         assert(!should_be || should_be == &HashStack.back());
 
         // Finalize the Hash

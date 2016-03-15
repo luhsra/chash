@@ -493,7 +493,7 @@ bool HashVisitor::VisitCastExpr(const CastExpr *Node){
 bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node){
 	const ValueDecl *Decl = Node->getDecl();
 	Hash() << "ref";
-	if(haveSeen(Decl, Decl)){
+	if(/*isa<VarDecl>(Decl) && */haveSeen(Decl, Decl)){
 		const sha1::digest *digest = GetHash(Decl);
 		if(digest){
 			Hash() << *digest;
@@ -871,13 +871,17 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
 }
 
 bool HashVisitor::VisitLabelDecl(const LabelDecl *Node){
-    Hash() << "LabelDecl";
-    hashStmt(Node->getStmt());
+    Hash() << "labeldecl";
+    hashName(Node);
     //if location changes, then it will be recompiled there.
     //Additionally the linker has this information--> no need to handle
     //this here (SourceRange)
 
-    Hash() << Node->getMSAsmLabel().str();
+	Hash() << Node->isGnuLocal();
+	Hash() << Node->isMSAsmLabel();
+    if (Node->isMSAsmLabel()) {
+	    Hash() << Node->getMSAsmLabel().str();
+	}	
     return true;
 }
 
@@ -1067,17 +1071,12 @@ void HashVisitor::hashStmt(const Stmt *stmt){
 		return;
 	}
 
-	unsigned depth = beforeDescent();
-	const sha1::SHA1 *hash = PushHash();
 	bool handled = mt_stmtvisitor::Visit(stmt);
 	if(!handled){
 		errs() << "---- START unhandled statement ----\n";
 		stmt->dump();
 		errs() << "----- END unhandled statement -----\n";
 	}
-	afterDescent(depth);
-	const sha1::digest digest = PopHash(hash);
-	Hash() << digest;
 }
 
 //TODO: default-case
@@ -1113,7 +1112,7 @@ bool HashVisitor::VisitGotoStmt(const GotoStmt *stmt){
 
 bool HashVisitor::VisitLabelStmt(const LabelStmt *stmt){
 	Hash() << "label";
-	Hash() << stmt->getName();
+    hashDecl(stmt->getDecl()); // LabelDecl
 	hashStmt(stmt->getSubStmt());
 	return true;
 }
