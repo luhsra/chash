@@ -138,11 +138,8 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
 
 	if(Decl->hasInit()){
 		const Expr *expr = Decl->getInit();
-		const sha1::SHA1 *hash = PushHash();
-		handled &= mt_stmtvisitor::Visit(expr);
-		const sha1::digest digest = PopHash(hash);
 		Hash() << "init";
-		Hash() << digest;
+		hashStmt(expr);
 		if (!handled) {
         	errs() << "---- START unhandled Expr -----\n";
         	expr->dump();
