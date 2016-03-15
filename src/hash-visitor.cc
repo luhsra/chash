@@ -91,7 +91,7 @@ void HashVisitor::hashDeclContext(const DeclContext *DC) {
     for (auto *D : DC->noload_decls()){
 		if(!(isa<TagDecl>(D) || isa<TypedefDecl>(D))){ //We don't need typedefs, Enums and Records here TODO: Do we need to exclude more?
 			//FIXME: wirklich most recent, evtl. Mehrfachauswertung verhindern        
-			hashDecl(D->getMostRecentDecl());
+			hashDecl(D/*->getMostRecentDecl()*/);
 		}else{
 			errs() << "\t<Not using>\n";
 			D->getMostRecentDecl()->dump();
