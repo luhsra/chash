@@ -1,0 +1,42 @@
+#!/usr/bin/python
+
+import sys
+import logging
+from subprocess import *
+
+
+if __name__ == "__main__":
+   args = sys.argv[1:]
+   logging.basicConfig(filename = "clang-hash.log", level=logging.DEBUG)
+   logging.debug(str(sys.argv))
+
+   x = Popen(["/usr/bin/gcc"] + args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
+   retcode = x.wait()
+
+   filter_flags = (
+      "-fno-guess-branch-probability",
+      "-finline-limit=",
+      "-falign-functions=",
+      "-falign-labels=",
+      "-falign-loops="
+      )
+
+   kconfig = "kconfig" in "".join(args)
+
+   if "-c" in args and "-o" in args and "/dev/null" not in args and not kconfig:
+      logging.debug("Call clang-hash %s", " ".join(args))
+      A = []
+      for x in args:
+         ignore = False
+         for pattern in filter_flags:
+            if x.startswith(pattern):
+               ignore = True
+         if not ignore:
+            A.append(x)
+
+      p = Popen(["clang-hash"] + A, stdin=PIPE)
+      p.stdin.close()
+      p.communicate()
+      p.wait()
+
+   sys.exit(retcode)

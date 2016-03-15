@@ -1,0 +1,9 @@
+
+gcc wrapper aufnehmen:  export PATH=$CLANG_HASH/build/wrappers/:$PATH
+
+Git repository: https://github.com/waweber/busybox-clang.git
+
+> make menuconfig
+> make shell/random.o
+
+
