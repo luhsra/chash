@@ -493,20 +493,25 @@ bool HashVisitor::VisitCastExpr(const CastExpr *Node){
 bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node){
 	const ValueDecl *Decl = Node->getDecl();
 	Hash() << "ref";
-	if(/*isa<VarDecl>(Decl) && */haveSeen(Decl, Decl)){
+	//FIXME: spaeter auskommentiertes einkommentieren (oder Problem anders beheben)
+	if(/*(isa<VarDecl>(Decl) || isa<FunctionDecl>(Decl)) && */ haveSeen(Decl, Decl)){
 		const sha1::digest *digest = GetHash(Decl);
 		if(digest){
 			Hash() << *digest;
 		}else{
-			assert(isa<VarDecl>(Decl));
-			VarDecl *vd = (VarDecl *)Decl;
-			Hash() << "VarDeclDummy";
-			hashName(vd);
-			hashType(vd->getType());
-			Hash() << vd->getStorageClass();
-    		Hash() << vd->getTLSKind();
-    		Hash() << vd->isModulePrivate();
-    		Hash() << vd->isNRVOVariable();
+			if(!isa<VarDecl>(Decl) && !isa<FunctionDecl>(Decl)){
+				errs() << "Not a VarDecl or FunctionDecl:\n";
+				Decl->dump();
+			}
+			assert(isa<VarDecl>(Decl) || isa<FunctionDecl>(Decl));
+			if(isa<VarDecl>(Decl)){
+				VarDecl *vd = (VarDecl *)Decl;
+				Hash() << "VarDeclDummy";
+				dummyVarDecl(vd);
+			}else{
+				FunctionDecl *fd = (FunctionDecl *) Decl;
+				dummyFunctionDecl(fd);
+			}
 		}
 	}else{
 		hashDecl(Decl);
@@ -809,6 +814,8 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
 		doNotHashThis = true;
 		return true;
 	}
+
+	haveSeen(Node, Node);
 
     bool handled = true;
 

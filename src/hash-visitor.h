@@ -211,6 +211,77 @@ protected:
 		return false;
 	}
 
+	bool dummyFunctionDecl(FunctionDecl *fd){
+		//Ignore extern declarations
+		if(fd->getStorageClass() == StorageClass::SC_Extern || fd->getStorageClass() == StorageClass::SC_PrivateExtern){
+			llvm::errs() << "Ignoring extern FunctionDecl\n";
+			doNotHashThis = true;
+			return true;
+		}
+
+		Hash() << "FunctionDecl";
+		Hash() << fd->getNameInfo().getName().getAsString();
+		//Hash() << fd->containsUnexpandedParameterPack();
+
+		Hash() << fd->isDefined();
+		Hash() << fd->isThisDeclarationADefinition();
+		Hash() << fd->isVariadic();
+		Hash() << fd->isVirtualAsWritten();
+		Hash() << fd->isPure();
+		Hash() << fd->hasImplicitReturnZero();
+		Hash() << fd->hasPrototype();
+		Hash() << fd->hasWrittenPrototype();
+		Hash() << fd->hasInheritedPrototype();
+		Hash() << fd->isMain();
+		Hash() << fd->isExternC();
+		Hash() << fd->isGlobal();
+		Hash() << fd->isNoReturn();
+		Hash() << fd->hasSkippedBody();//???
+		Hash() << fd->getBuiltinID();
+
+		Hash() << fd->getStorageClass();//static and stuff
+		Hash() << fd->isInlineSpecified();
+		Hash() << fd->isInlined();
+
+
+
+		//hash all parameters
+		for(ParmVarDecl *decl: fd->parameters()){
+			//handled &= mt_declvisitor::Visit(decl);
+			hashDecl(decl);
+		}
+
+		//vielleicht will man das ja auch:
+		for(NamedDecl *decl: fd->getDeclsInPrototypeScope()){
+			//handled &= mt_declvisitor::Visit(decl);
+			hashDecl(decl);
+		}
+
+		//visit QualType
+		hashType(fd->getReturnType());
+
+		//here an error (propably nullptr) occured
+		const IdentifierInfo *ident = fd->getLiteralIdentifier();
+		if(ident != nullptr){
+			const char *str = ident->getNameStart();
+			if(str != nullptr)
+				Hash() << str;
+		}
+
+
+		Hash() << fd->getMemoryFunctionKind();//maybe needed
+		return true;
+	}
+
+	void dummyVarDecl(VarDecl *vd){
+		hashName(vd);
+		hashType(vd->getType());
+		Hash() << vd->getStorageClass();
+    	Hash() << vd->getTLSKind();
+    	Hash() << vd->isModulePrivate();
+    	Hash() << vd->isNRVOVariable();
+	}
+
     // Hash Silo
     void StoreHash(const void *obj, sha1::digest digest) {
         silo[obj] = digest;
