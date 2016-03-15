@@ -777,6 +777,14 @@ bool HashVisitor::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *Node){
 	return true;
 }
 
+bool HashVisitor::VisitVAArgExpr(const VAArgExpr *Node){
+	Hash() << "va_stuff";
+	hashType(Node->getType());	//ok?
+	hashStmt(Node->getSubExpr()); //ok?
+	Hash() << Node->isMicrosoftABI();
+	return true;
+}
+
 bool HashVisitor::VisitBlockExpr(const BlockExpr *Node){
     Hash() << "block expr";
     hashDecl(Node->getBlockDecl());

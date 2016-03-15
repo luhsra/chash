@@ -140,6 +140,7 @@ public:
 	bool VisitParenListExpr(const ParenListExpr *Node);
 	bool VisitDesignatedInitExpr(const DesignatedInitExpr *Node);
 	bool VisitStmtExpr(const StmtExpr *Node);
+	bool VisitVAArgExpr(const VAArgExpr *Node);
 	
 	//TODO: evtl. ImplicitValueInitExpr, GenericSelectionExpr, ArraySubscriptExpr
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
