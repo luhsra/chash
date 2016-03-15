@@ -126,6 +126,8 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
 		doNotHashThis = true;
 		return true;
 	}
+	haveSeen(Decl, Decl);
+
     Hash() << "VarDecl";
     hashName(Decl);
     hashType(Decl->getType());
@@ -134,19 +136,12 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
     Hash() << Decl->getTLSKind();
     Hash() << Decl->isModulePrivate();
     Hash() << Decl->isNRVOVariable();
-	bool handled = true;
 
 	if(Decl->hasInit()){
 		const Expr *expr = Decl->getInit();
 		Hash() << "init";
 		hashStmt(expr);
-		if (!handled) {
-        	errs() << "---- START unhandled Expr -----\n";
-        	expr->dump();
-        	errs() << "---- END unhandled Expr -----\n";
-    	}
 	}
-    Hash() << "END VarDecl";
 
     return true;
 }
@@ -496,11 +491,27 @@ bool HashVisitor::VisitCastExpr(const CastExpr *Node){
 }
 
 bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node){
-	const ValueDecl *vd = Node->getDecl();
+	const ValueDecl *Decl = Node->getDecl();
 	Hash() << "ref";
-	hashDecl(vd);
+	if(haveSeen(Decl, Decl)){
+		const sha1::digest *digest = GetHash(Decl);
+		if(digest){
+			Hash() << *digest;
+		}else{
+			assert(isa<VarDecl>(Decl));
+			VarDecl *vd = (VarDecl *)Decl;
+			Hash() << "VarDeclDummy";
+			hashName(vd);
+			hashType(vd->getType());
+			Hash() << vd->getStorageClass();
+    		Hash() << vd->getTLSKind();
+    		Hash() << vd->isModulePrivate();
+    		Hash() << vd->isNRVOVariable();
+		}
+	}else{
+		hashDecl(Decl);
+	}
 	hashName(Node->getFoundDecl());
-    Hash() << "after ref";
 	return true;
 }
 

@@ -201,9 +201,9 @@ public:
 
 protected:
 	bool doNotHashThis = false; // Flag used to ignore Nodes such as extern Decls
-	std::map<const void *, const Type *> seen_types;
+	std::map<const void *, const void *> seen_types;
 		
-	bool haveSeen(const void *key, const Type *type){
+	bool haveSeen(const void *key, const void *type){
 		if (seen_types.find(key) != seen_types.end()){
 			return true;
 		}
