@@ -4,12 +4,16 @@ import sys
 import os
 import hashlib
 import logging
+import re
 from subprocess import *
 
 
 if __name__ == "__main__":
    args = sys.argv[1:]
-   logging.basicConfig(filename = "clang-hash.log", level=logging.DEBUG)
+   level = logging.INFO
+   if "V" in os.environ:
+      level = logging.DEBUG
+   logging.basicConfig(filename = "clang-hash.log", level=level)
    logging.debug(str(sys.argv))
 
    x = Popen(["/usr/bin/gcc"] + args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
@@ -45,10 +49,17 @@ if __name__ == "__main__":
          for pattern in filter_flags:
             if x.startswith(pattern):
                ignore = True
+
          if not ignore:
+            if x.startswith("-D"):
+               if "KBUILD_STR" in x:
+                  (x, _) = re.subn("=KBUILD_STR\(([^)]*)\)", '=', x)
+                  logging.info(x)
             A.append(x)
 
-      p = Popen(["clang-hash"] + A, stdin=PIPE)
+      logging.info("%s", A)
+      stderr_fd = open("%s.clang-hash-stderr" % objectfile, "w+")
+      p = Popen(["clang-hash"] + A, stdin=PIPE, stderr = stderr_fd)
       p.stdin.close()
       p.communicate()
       p.wait()
@@ -64,7 +75,7 @@ if __name__ == "__main__":
                ast_hash = None
       else:
          ast_hash = None
-      logging.debug("clang-hash %s obj:%s ast:%s", objectfile, objectfile_hash, ast_hash)
+      logging.info("clang-hash %s obj:%s ast:%s", objectfile, objectfile_hash, ast_hash)
 
 
    sys.exit(retcode)
