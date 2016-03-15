@@ -1,0 +1,81 @@
+#!/usr/bin/python
+
+import sys
+import os
+import hashlib
+import logging
+import re
+from subprocess import *
+
+
+if __name__ == "__main__":
+   args = sys.argv[1:]
+   level = logging.INFO
+   if "V" in os.environ:
+      level = logging.DEBUG
+   logging.basicConfig(filename = "clang-hash.log", level=level)
+   logging.debug(str(sys.argv))
+
+   x = Popen(["/usr/bin/gcc"] + args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
+   retcode = x.wait()
+
+   filter_flags = (
+      "-fno-guess-branch-probability",
+      "-finline-limit=",
+      "-falign-functions=",
+      "-falign-labels=",
+      "-falign-loops=",
+      "-falign-jumps="
+      )
+
+   kconfig = "kconfig" in "".join(args)
+
+   if "-c" in args and "-o" in args and "/dev/null" not in args and not kconfig:
+      # Save Objectfile data
+      objectfile = args[args.index("-o")+1]
+      objectfile_hash = None
+      if os.path.exists(objectfile):
+         with open(objectfile, "rb") as fd:
+            objectfile_data = fd.read()
+            objectfile_hash = hashlib.sha1()
+            objectfile_hash.update(objectfile_data)
+            objectfile_hash = objectfile_hash.hexdigest()
+      else:
+         objectfile_data = None
+
+      A = []
+      for x in args:
+         ignore = False
+         for pattern in filter_flags:
+            if x.startswith(pattern):
+               ignore = True
+
+         if not ignore:
+            if x.startswith("-D"):
+               if "KBUILD_STR" in x:
+                  (x, _) = re.subn("=KBUILD_STR\(([^)]*)\)", '=', x)
+                  logging.info(x)
+            A.append(x)
+
+      logging.info("%s", A)
+      stderr_fd = open("%s.clang-hash-stderr" % objectfile, "w+")
+      p = Popen(["clang-hash"] + A, stdin=PIPE, stderr = stderr_fd)
+      p.stdin.close()
+      p.communicate()
+      p.wait()
+
+      if objectfile_data:
+         with open(objectfile, "wb+") as fd:
+            fd.write(objectfile_data)
+
+      if os.path.exists(objectfile +  ".hash"):
+         with open(objectfile +  ".hash") as fd:
+            ast_hash = fd.read()
+            if ast_hash == "":
+               ast_hash = None
+      else:
+         ast_hash = None
+      logging.info("clang-hash %s obj:%s ast:%s", objectfile, objectfile_hash, ast_hash)
+
+
+   sys.exit(retcode)

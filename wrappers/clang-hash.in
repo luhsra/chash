@@ -1,0 +1,6 @@
+#!/bin/bash
+
+
+printf -v ARGS "%q " "$@"
+
+${CMAKE_C_COMPILER} -Xclang -load -Xclang ${PROJECT_BINARY_DIR}/src/libclang-hash.so -Xclang -plugin -Xclang hash-unit  $ARGS

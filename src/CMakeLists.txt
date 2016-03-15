@@ -24,5 +24,3 @@ add_library(clang-hash SHARED
   hash-visitor.cc)
 
 SET_TARGET_PROPERTIES(clang-hash PROPERTIES LINK_FLAGS ${LLVM_LDFLAGS})
-
-configure_file(clang-hash.in ${PROJECT_BINARY_DIR}/clang-hash)

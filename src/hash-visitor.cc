@@ -89,11 +89,13 @@ void HashVisitor::hashDeclContext(const DeclContext *DC) {
     if (!DC) return;
 
     for (auto *D : DC->noload_decls()){
-		if(!(isa<TagDecl>(D) || isa<TypedefDecl>(D))){ //We don't need typedefs, Enums and Records here TODO: Do we need to exclude more?        
-			hashDecl(D);
+		if(!(isa<TagDecl>(D) || isa<TypedefDecl>(D))){ //We don't need typedefs, Enums and Records here TODO: Do we need to exclude more?
+			//FIXME: wirklich most recent, evtl. Mehrfachauswertung verhindern        
+			hashDecl(D->getMostRecentDecl());
 		}else{
-			errs() << "\tNot using\n";
-			D->dump();
+			errs() << "\t<Not using>\n";
+			D->getMostRecentDecl()->dump();
+			errs() << "\t</Not using>\n";
 		}
 	}
 }
@@ -478,7 +480,9 @@ bool HashVisitor::VisitType(const Type *T){
 
 // Other Utilities
 void HashVisitor::hashName(const NamedDecl *ND) {
-    if (ND->getDeclName()) {
+	errs() << "\thashName\n";
+	ND->dump();
+    if (ND->getIdentifier() && ND->getDeclName()) {
         Hash() << ND->getNameAsString();
     } else {
         Hash() << 0;
@@ -657,7 +661,13 @@ bool HashVisitor::VisitBinaryConditionalOperator(const BinaryConditionalOperator
 bool HashVisitor::VisitCallExpr(const CallExpr *Node){
 	Hash() << "callExpr";	
 	hashType(Node->getType());
-	hashName(Node->getDirectCallee());
+	const FunctionDecl *fd = Node->getDirectCallee();
+	if(fd){
+		hashName(fd);
+	}else{
+		errs() << "We're calling something that's not a function\n";
+		hashStmt(Node->getCallee());
+	}
 	for(unsigned int i = 0; i < Node->getNumArgs(); i++){
 		hashStmt(Node->getArg(i));
 	}
