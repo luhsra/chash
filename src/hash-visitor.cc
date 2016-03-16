@@ -174,6 +174,7 @@ bool HashVisitor::VisitParmVarDecl(const ParmVarDecl *Node){
 void HashVisitor::hashType(QualType T) {
 	uint64_t qualifiers = 0;
 	if(T.hasQualifiers()){
+		errs() << "has Qualifiers\n";
 		//TODO evtl. CVRMASK benutzen
 		if(T.isLocalConstQualified()){
 			qualifiers |= 1;
@@ -186,24 +187,29 @@ void HashVisitor::hashType(QualType T) {
 		}
 		//weitere qualifier?
 	}
+	else
+		errs() << "no qualifiers\n";
+	
 
-	const Type *type = T.getUnqualifiedType().getTypePtr();
+	const Type *type = T./*getUnqualifiedType().*/getTypePtr();
 	assert (type != nullptr);
 
 
 	if(qualifiers) {
 		Hash() << qualifiers;
 	}
+	T->dump();
+	errs() << type<< " " << qualifiers << " qualifiers\n";
 
 
 	const sha1::digest * saved_digest = GetHash(type);
-
+/*
 	// Optimierung verdeckt aktuell noch Probleme mit Qualifiern
 	if(saved_digest){
 		Hash() << *saved_digest;
 		return;
 	}
-  
+*/
 
 	// Visit in Pre-Order
 	unsigned Depth = beforeDescent();
@@ -228,7 +234,7 @@ void HashVisitor::hashType(QualType T) {
 		type->dump();
 	}
 
-	assert(!saved_digest || digest == *saved_digest && "Hashes do not match");
+	assert((!saved_digest || digest == *saved_digest) && "Hashes do not match");
 	// Hash into Parent
 	Hash() << digest;
 	
@@ -252,8 +258,8 @@ bool HashVisitor::VisitPointerType(const PointerType *T) {
 	Hash() << "pointer";
 	const sha1::digest *digest = GetHash(T->getPointeeType().getTypePtr());
 	if(digest){
-		Hash() << *digest;
-		return true;
+		//Hash() << *digest;
+		//return true;
 	}
 	//FIXME: evtl. FunctionPointerType (erst Testsysteme)
 	if((T->getPointeeType()).getTypePtr()->isStructureType()){
@@ -483,8 +489,8 @@ void HashVisitor::hashName(const NamedDecl *ND) {
 
 //Expressions
 bool HashVisitor::VisitCastExpr(const CastExpr *Node){
-	hashStmt(Node->getSubExpr());
 	Hash() << "cast";
+	hashStmt(Node->getSubExpr());
 	Hash() << Node->getCastKind();
 	hashType(Node->getType());
 	return true;	
