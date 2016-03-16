@@ -17,75 +17,75 @@
 using namespace clang;
 
 class TranslationUnitHashVisitor
-    : public ConstDeclVisitor<TranslationUnitHashVisitor, bool>,
-      public ConstStmtVisitor<TranslationUnitHashVisitor, bool>,
-      public TypeVisitor<TranslationUnitHashVisitor, bool> {
+	: public ConstDeclVisitor<TranslationUnitHashVisitor, bool>,
+	  public ConstStmtVisitor<TranslationUnitHashVisitor, bool>,
+	  public TypeVisitor<TranslationUnitHashVisitor, bool> {
 
-    typedef ConstDeclVisitor<TranslationUnitHashVisitor, bool> mt_declvisitor;
-    typedef ConstStmtVisitor<TranslationUnitHashVisitor, bool> mt_stmtvisitor;
-    typedef TypeVisitor<TranslationUnitHashVisitor, bool>      mt_typevisitor;
+	typedef ConstDeclVisitor<TranslationUnitHashVisitor, bool> mt_declvisitor;
+	typedef ConstStmtVisitor<TranslationUnitHashVisitor, bool> mt_stmtvisitor;
+	typedef TypeVisitor<TranslationUnitHashVisitor, bool>	   mt_typevisitor;
 
-    sha1::SHA1 toplevel_hash;
+	sha1::SHA1 toplevel_hash;
 
-    // In this storage we save hashes for various memory objects
-    std::map<const void *, sha1::digest> silo;
+	// In this storage we save hashes for various memory objects
+	std::map<const void *, sha1::digest> silo;
 
-    // /// Pending[i] is an action to hash an entity at level i.
-    bool FirstChild;
-    llvm::SmallVector<std::function<void()>, 32> Pending;
+	// /// Pending[i] is an action to hash an entity at level i.
+	bool FirstChild;
+	llvm::SmallVector<std::function<void()>, 32> Pending;
 
-    /// Hash a child of the current node.
-    unsigned beforeDescent() {
-        FirstChild = true;
-        return Pending.size();
-    }
+	/// Hash a child of the current node.
+	unsigned beforeDescent() {
+		FirstChild = true;
+		return Pending.size();
+	}
 
-    template<typename Fn> void afterChildren(Fn func) {
-        if (FirstChild) {
-            Pending.push_back(std::move(func));
-        } else {
-            Pending.back()();
-            Pending.back() = std::move(func);
-        }
-        FirstChild = false;
-    }
+	template<typename Fn> void afterChildren(Fn func) {
+		if (FirstChild) {
+			Pending.push_back(std::move(func));
+		} else {
+			Pending.back()();
+			Pending.back() = std::move(func);
+		}
+		FirstChild = false;
+	}
 
-    void afterDescent(unsigned Depth) {
-        // If any children are left, they're the last at their nesting level.
-        // Hash those ones out now.
-        while (Depth < Pending.size()) {
-            Pending.back()();
-            this->Pending.pop_back();
-        }
-    }
+	void afterDescent(unsigned Depth) {
+		// If any children are left, they're the last at their nesting level.
+		// Hash those ones out now.
+		while (Depth < Pending.size()) {
+			Pending.back()();
+			this->Pending.pop_back();
+		}
+	}
 
-    llvm::SmallVector<sha1::SHA1, 32> HashStack;
+	llvm::SmallVector<sha1::SHA1, 32> HashStack;
 public:
-    // Utilities
-    bool hasNodes(const DeclContext *DC);
-    void hashDeclContext(const DeclContext *DC);
+	// Utilities
+	bool hasNodes(const DeclContext *DC);
+	void hashDeclContext(const DeclContext *DC);
 
-    void hashDecl(const Decl *);
-    void hashStmt(const Stmt *);
-    void hashType(QualType);
-    void hashAttr(const Attr *);
+	void hashDecl(const Decl *);
+	void hashStmt(const Stmt *);
+	void hashType(QualType);
+	void hashAttr(const Attr *);
 
-    void hashName(const NamedDecl *);
+	void hashName(const NamedDecl *);
 
 
-    // C Declarations
-    bool VisitTranslationUnitDecl(const TranslationUnitDecl *);
-    bool VisitVarDecl(const VarDecl *);
-    /// Not interesting
-    bool VisitTypedefDecl(const TypedefDecl *) { return true; };
+	// C Declarations
+	bool VisitTranslationUnitDecl(const TranslationUnitDecl *);
+	bool VisitVarDecl(const VarDecl *);
+	/// Not interesting
+	bool VisitTypedefDecl(const TypedefDecl *) { return true; };
 
 	/* Wird erst in Aufrufen geprueft */	
 	bool VisitRecordDecl(const RecordDecl *D){ return true; };
 	bool VisitFieldDecl(const FieldDecl *D){ return true; };
 
 
-    // C Types
-    bool VisitBuiltinType(const BuiltinType *);
+	// C Types
+	bool VisitBuiltinType(const BuiltinType *);
 	bool VisitPointerType(const PointerType *T);
 	bool VisitArrayType(const ArrayType *T);
 	bool VisitConstantArrayType(const ConstantArrayType *T);
@@ -99,15 +99,15 @@ public:
 	bool VisitParenType(const ParenType *T);
 	bool VisitFunctionType(const FunctionType *T);
 	bool VisitFunctionProtoType(const FunctionProtoType *T);
-    bool VisitEnumType(const EnumType *Node);
-    bool VisitTagType(const TagType *Node);
+	bool VisitEnumType(const EnumType *Node);
+	bool VisitTagType(const TagType *Node);
 	bool VisitAttributedType(const AttributedType *Node);
 	bool VisitUnaryTransformType(const UnaryTransformType *T);
 	bool VisitDecayedType(const DecayedType *T);
 	bool VisitAdjustedType(const AdjustedType *T);
 	bool VisitElaboratedType(const ElaboratedType *T);
 
-    std::string GetHash();
+	std::string GetHash();
 
 	//C Exprs (no clang-builtins, ...)
 	bool VisitExpr(const Expr *Node);	//vielleicht nicht
@@ -145,29 +145,29 @@ public:
 	//TODO: evtl. ImplicitValueInitExpr, GenericSelectionExpr, ArraySubscriptExpr
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
 
-    //functions and statements
-    bool VisitFunctionDecl(const FunctionDecl *D);
-    bool VisitBlockDecl(const BlockDecl *Node);
-    bool VisitStmt(const Stmt *Node);
-    bool VisitLabelDecl(const LabelDecl *Node);
-    bool VisitEnumDecl(const EnumDecl *Node);
-    bool VisitEnumConstantDecl(const EnumConstantDecl *Node);
+	//functions and statements
+	bool VisitFunctionDecl(const FunctionDecl *D);
+	bool VisitBlockDecl(const BlockDecl *Node);
+	bool VisitStmt(const Stmt *Node);
+	bool VisitLabelDecl(const LabelDecl *Node);
+	bool VisitEnumDecl(const EnumDecl *Node);
+	bool VisitEnumConstantDecl(const EnumConstantDecl *Node);
 
-    bool VisitImplicitParamDecl(const ImplicitParamDecl *Node);
-    bool VisitParmVarDecl(const ParmVarDecl *Node);
-    //DeclaratorDecl done...
-    bool VisitIndirectFieldDecl(const IndirectFieldDecl *Node);
-    bool VisitValueDecl(const ValueDecl *Node);//maybe called by children
-    bool VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node);
-    bool VisitCapturedDecl(const CapturedDecl *Node);
+	bool VisitImplicitParamDecl(const ImplicitParamDecl *Node);
+	bool VisitParmVarDecl(const ParmVarDecl *Node);
+	//DeclaratorDecl done...
+	bool VisitIndirectFieldDecl(const IndirectFieldDecl *Node);
+	bool VisitValueDecl(const ValueDecl *Node);//maybe called by children
+	bool VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node);
+	bool VisitCapturedDecl(const CapturedDecl *Node);
 
-    //Attrs
-    //uncommented Attr not found in namespace
-    bool VisitAttr(const Attr *attr);
-    bool VisitInheritableAttr(const InheritableAttr *attr);
-    //bool VisitStmtAttr(const StmtAttr *attr);
-    bool VisitInheritableParamAttr(const InheritableParamAttr *attr);
-    //bool VisitParameterABIAttr(const ParameterABIAttr *attr);
+	//Attrs
+	//uncommented Attr not found in namespace
+	bool VisitAttr(const Attr *attr);
+	bool VisitInheritableAttr(const InheritableAttr *attr);
+	//bool VisitStmtAttr(const StmtAttr *attr);
+	bool VisitInheritableParamAttr(const InheritableParamAttr *attr);
+	//bool VisitParameterABIAttr(const ParameterABIAttr *attr);
 
 	//statements
 	bool VisitCompoundStmt(const CompoundStmt *stmt);
@@ -278,54 +278,54 @@ protected:
 		hashName(vd);
 		hashType(vd->getType());
 		Hash() << vd->getStorageClass();
-    	Hash() << vd->getTLSKind();
-    	Hash() << vd->isModulePrivate();
-    	Hash() << vd->isNRVOVariable();
+		Hash() << vd->getTLSKind();
+		Hash() << vd->isModulePrivate();
+		Hash() << vd->isNRVOVariable();
 	}
 
-    // Hash Silo
-    void StoreHash(const void *obj, sha1::digest digest) {
-        silo[obj] = digest;
-    }
+	// Hash Silo
+	void StoreHash(const void *obj, sha1::digest digest) {
+		silo[obj] = digest;
+	}
 
-    const sha1::digest * GetHash(const void *obj) {
-        if (silo.find(obj) != silo.end()) {
-            return &silo[obj];
-        }
-        return nullptr;
-    }
+	const sha1::digest * GetHash(const void *obj) {
+		if (silo.find(obj) != silo.end()) {
+			return &silo[obj];
+		}
+		return nullptr;
+	}
 
-    sha1::SHA1 * PushHash() {
-        HashStack.push_back(sha1::SHA1());
+	sha1::SHA1 * PushHash() {
+		HashStack.push_back(sha1::SHA1());
 		
 		llvm::errs() << "  PushHash mit Groesse: " << HashStack.size() << " und Rueckgabewert: " << (&HashStack.back()) << "\n";
 
-        return &HashStack.back();
-    }
+		return &HashStack.back();
+	}
 
-    sha1::digest PopHash(const sha1::SHA1 *should_be = nullptr) {
+	sha1::digest PopHash(const sha1::SHA1 *should_be = nullptr) {
 
 		llvm::errs() << "  PopHash mit Groesse: " << HashStack.size() << " und Parameter: " << (should_be) << "\n";
 		if(should_be != &HashStack.back()){
-			llvm::errs() << "   but Stack-Level is: " << &HashStack.back() << "\n";
+			llvm::errs() << "	but Stack-Level is: " << &HashStack.back() << "\n";
 		}
 
-        assert(!should_be || should_be == &HashStack.back());
+		assert(!should_be || should_be == &HashStack.back());
 
-        // Finalize the Hash
-        sha1::digest digest;
-        HashStack.back().getDigest(digest.value);
-        HashStack.pop_back();
-        return digest;
-    }
+		// Finalize the Hash
+		sha1::digest digest;
+		HashStack.back().getDigest(digest.value);
+		HashStack.pop_back();
+		return digest;
+	}
 
-    sha1::SHA1 &Hash() {
-        return HashStack.back();
-    }
+	sha1::SHA1 &Hash() {
+		return HashStack.back();
+	}
 
 	sha1::digest getDigest(){
 		sha1::digest digest;
-        HashStack.back().getDigest(digest.value);
+		HashStack.back().getDigest(digest.value);
 		return digest;
 	}
 };
