@@ -110,7 +110,7 @@ public:
 	std::string GetHash();
 
 	//C Exprs (no clang-builtins, ...)
-	bool VisitExpr(const Expr *Node);	//vielleicht nicht
+	/*bool VisitExpr(const Expr *Node);*/
 	bool VisitCastExpr(const CastExpr *Node);
 	bool VisitDeclRefExpr(const DeclRefExpr *Node);
 	bool VisitPredefinedExpr(const PredefinedExpr *Node);
@@ -128,7 +128,6 @@ public:
 	bool VisitBlockExpr(const BlockExpr *Node);
 	bool VisitArraySubscriptExpr(const ArraySubscriptExpr *Node);
 	bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *Node);
-	/* might not be needed: */
 	bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node);
 	bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);
 	bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node);
@@ -145,14 +144,12 @@ public:
 	//TODO: evtl. ImplicitValueInitExpr, GenericSelectionExpr, ArraySubscriptExpr
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
 
-	//functions and statements
+	//declarations
 	bool VisitFunctionDecl(const FunctionDecl *D);
 	bool VisitBlockDecl(const BlockDecl *Node);
-	bool VisitStmt(const Stmt *Node);
 	bool VisitLabelDecl(const LabelDecl *Node);
 	bool VisitEnumDecl(const EnumDecl *Node);
 	bool VisitEnumConstantDecl(const EnumConstantDecl *Node);
-
 	bool VisitImplicitParamDecl(const ImplicitParamDecl *Node);
 	bool VisitParmVarDecl(const ParmVarDecl *Node);
 	//DeclaratorDecl done...
@@ -170,6 +167,7 @@ public:
 	//bool VisitParameterABIAttr(const ParameterABIAttr *attr);
 
 	//statements
+	bool VisitStmt(const Stmt *Node);
 	bool VisitCompoundStmt(const CompoundStmt *stmt);
 	bool VisitBreakStmt(const BreakStmt *stmt);
 	bool VisitContinueStmt(const ContinueStmt *stmt);
@@ -215,14 +213,12 @@ protected:
 	bool dummyFunctionDecl(FunctionDecl *fd){
 		//Ignore extern declarations
 		if(fd->getStorageClass() == StorageClass::SC_Extern || fd->getStorageClass() == StorageClass::SC_PrivateExtern){
-			llvm::errs() << "Ignoring extern FunctionDecl\n";
 			doNotHashThis = true;
 			return true;
 		}
 
 		Hash() << "FunctionDecl";
 		Hash() << fd->getNameInfo().getName().getAsString();
-		//Hash() << fd->containsUnexpandedParameterPack();
 
 		Hash() << fd->isDefined();
 		Hash() << fd->isThisDeclarationADefinition();
@@ -248,13 +244,11 @@ protected:
 
 		//hash all parameters
 		for(ParmVarDecl *decl: fd->parameters()){
-			//handled &= mt_declvisitor::Visit(decl);
 			hashDecl(decl);
 		}
 
 		//vielleicht will man das ja auch:
 		for(NamedDecl *decl: fd->getDeclsInPrototypeScope()){
-			//handled &= mt_declvisitor::Visit(decl);
 			hashDecl(decl);
 		}
 
@@ -298,17 +292,17 @@ protected:
 	sha1::SHA1 * PushHash() {
 		HashStack.push_back(sha1::SHA1());
 		
-		llvm::errs() << "  PushHash mit Groesse: " << HashStack.size() << " und Rueckgabewert: " << (&HashStack.back()) << "\n";
+		//llvm::errs() << "  PushHash mit Groesse: " << HashStack.size() << " und Rueckgabewert: " << (&HashStack.back()) << "\n";
 
 		return &HashStack.back();
 	}
 
 	sha1::digest PopHash(const sha1::SHA1 *should_be = nullptr) {
 
-		llvm::errs() << "  PopHash mit Groesse: " << HashStack.size() << " und Parameter: " << (should_be) << "\n";
-		if(should_be != &HashStack.back()){
-			llvm::errs() << "	but Stack-Level is: " << &HashStack.back() << "\n";
-		}
+		//llvm::errs() << "  PopHash mit Groesse: " << HashStack.size() << " und Parameter: " << (should_be) << "\n";
+		//if(should_be != &HashStack.back()){
+			//llvm::errs() << "	but Stack-Level is: " << &HashStack.back() << "\n";
+		//}
 
 		assert(!should_be || should_be == &HashStack.back());
 

@@ -22,17 +22,9 @@ void HashVisitor::hashDecl(const Decl *D) {
 	if (!D) {
 		return;
 	}
-	//errs() << "hashDECL\n";
 	const sha1::digest * saved_digest = GetHash(D);
-	//errs() << "GETHASH ";
-	//D->dump();
 	if(saved_digest){
-		//errs() << saved_digest;
-		//D->dump();
-		//errs() << *saved_digest;
-		//errs() << "HASHSTACKSIZE " << HashStack.size() << "\n";
 		Hash() << *saved_digest;
-		//errs() << "GOOD\n";
 		return;
 	}
 	
@@ -89,13 +81,10 @@ void HashVisitor::hashDeclContext(const DeclContext *DC) {
 	if (!DC) return;
 
 	for (auto *D : DC->noload_decls()){
-		if(!(isa<TagDecl>(D) || isa<TypedefDecl>(D))){ //We don't need typedefs, Enums and Records here TODO: Do we need to exclude more?
-			//FIXME: wirklich most recent, evtl. Mehrfachauswertung verhindern		  
-			hashDecl(D/*->getMostRecentDecl()*/);
-		}else{
-			errs() << "\t<Not using>\n";
-			D->getMostRecentDecl()->dump();
-			errs() << "\t</Not using>\n";
+		// We don't need typedefs, Enums and Records here
+		// TODO: Do we need to exclude more?
+		if(!(isa<TagDecl>(D) || isa<TypedefDecl>(D))){	  
+			hashDecl(D);
 		}
 	}
 }
@@ -105,13 +94,11 @@ void HashVisitor::hashDeclContext(const DeclContext *DC) {
 bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 	sha1::SHA1 *hash = PushHash();
 
-	// errs() << "TU start " << Decl << "\n";
 	// FIXME Hash Compiler Options
 
 	afterChildren([=] {
 			StoreHash(Unit, PopHash(hash));
 			toplevel_hash << *hash;
-			// errs() << "TU " << Decl << " " << hash->getHexDigest() << "\n";
 		});
 
 	Unit->dump();
@@ -122,7 +109,6 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
 	//Ignore extern declarations
 	if(Decl->hasExternalStorage()){
-		errs() << "ignoring extern VarDecl\n";
 		doNotHashThis = true;
 		return true;
 	}
@@ -147,10 +133,8 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
 }
 
 bool HashVisitor::VisitImplicitParamDecl(const ImplicitParamDecl *Node){
-
 	Hash() << "ImplicitParamDecl";
 	VisitVarDecl(Node);//important stuff done by parent
-
 
 	return true;
 }
@@ -174,7 +158,6 @@ bool HashVisitor::VisitParmVarDecl(const ParmVarDecl *Node){
 void HashVisitor::hashType(QualType T) {
 	uint64_t qualifiers = 0;
 	if(T.hasQualifiers()){
-		errs() << "has Qualifiers\n";
 		//TODO evtl. CVRMASK benutzen
 		if(T.isLocalConstQualified()){
 			qualifiers |= 1;
@@ -187,19 +170,15 @@ void HashVisitor::hashType(QualType T) {
 		}
 		//weitere qualifier?
 	}
-	else
-		errs() << "no qualifiers\n";
-	
 
-	const Type *type = T./*getUnqualifiedType().*/getTypePtr();
+	const Type *type = T.getTypePtr();
 	assert (type != nullptr);
-
 
 	if(qualifiers) {
 		Hash() << qualifiers;
 	}
-	T->dump();
-	errs() << type<< " " << qualifiers << " qualifiers\n";
+	//T->dump();
+	//errs() << type<< " " << qualifiers << " qualifiers\n";
 
 
 	const sha1::digest * saved_digest = GetHash(type);
@@ -240,12 +219,12 @@ void HashVisitor::hashType(QualType T) {
 
 	const sha1::digest digest = PopHash(hash);
 
-	if(saved_digest && digest != *saved_digest){
-		errs() << "Different hashes for\n";
-		T->dump();
-		errs() << "\t(saved hash for)\n";
-		type->dump();
-	}
+	//if(saved_digest && digest != *saved_digest){
+	//	errs() << "Different hashes for\n";
+	//	T->dump();
+	//	errs() << "\t(saved hash for)\n";
+	//	type->dump();
+	//}
 
 	assert((!saved_digest || digest == *saved_digest) && "Hashes do not match");
 	// Hash into Parent
@@ -253,12 +232,6 @@ void HashVisitor::hashType(QualType T) {
 	
 	// Store hash for underlying type
 	StoreHash(type, digest);
-
-	//errs() << "\t</hashType>\n";
-
-	// DEBUG OUTPUT
-	// type->dump();
-	// errs() << digest.getHexDigest() << "\n";
 }
 
 bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
@@ -269,29 +242,26 @@ bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
 
 bool HashVisitor::VisitPointerType(const PointerType *T) {
 	Hash() << "pointer";
-
 	hashType(T->getPointeeType());
-
-
 	return true;
 }
 
 bool HashVisitor::VisitArrayType(const ArrayType *T){
-	Hash() << "Arraytype";
+	Hash() << "ArrayType";
 	hashType(T->getElementType());
 	Hash() << "[" << "*" << "]";
 	return true;
 }
 
 bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T){
-	Hash() << "ArraytypeC";
+	Hash() << "ConstantArrayType";
 	hashType(T->getElementType());
 	Hash() << "[" << T->getSize().getZExtValue() << "]";
 	return true;
 }
 
 bool HashVisitor::VisitVariableArrayType(const VariableArrayType *T){
-	Hash() << "ArraytypeV";
+	Hash() << "VariableArrayType";
 	hashType(T->getElementType());
 	Hash() << "[";
 	hashStmt(T->getSizeExpr());
@@ -304,49 +274,49 @@ bool HashVisitor::VisitTypedefType(const TypedefType *T){
 }
 
 bool HashVisitor::VisitComplexType(const ComplexType *T){
-	hashType(T->getElementType());
 	Hash() << "complex";
+	hashType(T->getElementType());
 	return true;
 }
 
 bool HashVisitor::VisitAtomicType(const AtomicType *T){
-	hashType(T->getValueType());
 	Hash() << "atomic";
+	hashType(T->getValueType());
 	return true;
 }
 
 bool HashVisitor::VisitTypeOfExprType(const TypeOfExprType *T){
+	Hash() << "typeof";	
 	hashType(T->desugar());
-	Hash() << "typeof";
 	return true;
 }
 
 bool HashVisitor::VisitTypeOfType(const TypeOfType *T){
+	Hash() << "typeoftypetype";	
 	hashType(T->desugar());
-	Hash() << "typeoftypetype";
 	return true;
 }
 
 bool HashVisitor::VisitParenType(const ParenType *T){
-		hashType(T->desugar());
-		Hash() << "parenType";
-		return true;
+	Hash() << "parenType";
+	hashType(T->desugar());
+	return true;
 }
 
 bool HashVisitor::VisitFunctionType(const FunctionType *T){
+	Hash() << "functype";	
 	hashType(T->getReturnType());
-	Hash() << "functype";
 	Hash() << T->getRegParmType();
 	Hash() << T->getCallConv();
 	return true;
 }
 
 bool HashVisitor::VisitFunctionProtoType(const FunctionProtoType *T){
+	Hash() << "funcprototype";	
 	hashType(T->getReturnType());
 	for(QualType qt: T->getParamTypes()){
 		hashType(qt);
 	}
-	Hash() << "funcytype";
 	Hash() << T->getRegParmType();
 	Hash() << T->getCallConv();
 	return true;
@@ -373,7 +343,6 @@ bool HashVisitor::VisitEnumType(const EnumType *Node){
 	return true;
 }
 
-//TODO: Needed: ?
 bool HashVisitor::VisitTagType(const TagType *Node){
 	Hash() << "Tag Type";
 	hashDecl(Node->getDecl());
@@ -461,7 +430,7 @@ bool HashVisitor::VisitType(const Type *T){
 		}
 		return true;
 		
-	}else{ //FIXME: evtl. FunctionPointerType (erst Testsysteme)
+	}else{
 		return false;
 	}
 }
@@ -470,8 +439,6 @@ bool HashVisitor::VisitType(const Type *T){
 
 // Other Utilities
 void HashVisitor::hashName(const NamedDecl *ND) {
-	errs() << "\thashName\n";
-	ND->dump();
 	if (ND->getIdentifier() && ND->getDeclName()) {
 		Hash() << ND->getNameAsString();
 	} else {
@@ -491,16 +458,18 @@ bool HashVisitor::VisitCastExpr(const CastExpr *Node){
 bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node){
 	const ValueDecl *Decl = Node->getDecl();
 	Hash() << "ref";
-	//FIXME: spaeter auskommentiertes einkommentieren (oder Problem anders beheben)
+	//FIXME:	spaeter Auskommentiertes(isa-Zeug) einkommentieren (oder Problem anders beheben)
+	//		Andere Decls mehrfach referenzieren => Problem
+	//		evtl. auch Zyklus in anderer Decl
 	if(/*(isa<VarDecl>(Decl) || isa<FunctionDecl>(Decl)) && */ haveSeen(Decl, Decl)){
 		const sha1::digest *digest = GetHash(Decl);
 		if(digest){
 			Hash() << *digest;
 		}else{
-			if(!isa<VarDecl>(Decl) && !isa<FunctionDecl>(Decl)){
-				errs() << "Not a VarDecl or FunctionDecl:\n";
-				Decl->dump();
-			}
+			//if(!isa<VarDecl>(Decl) && !isa<FunctionDecl>(Decl)){
+			//	errs() << "Not a VarDecl or FunctionDecl:\n";
+			//	Decl->dump();
+			//}
 			assert(isa<VarDecl>(Decl) || isa<FunctionDecl>(Decl));
 			if(isa<VarDecl>(Decl)){
 				VarDecl *vd = (VarDecl *)Decl;
@@ -562,59 +531,52 @@ bool HashVisitor::VisitStringLiteral(const StringLiteral *Str){
 }
 
 bool HashVisitor::VisitInitListExpr(const InitListExpr *ILE){
+	Hash() << "initlistexpr";	
 	for(unsigned int i = 0; i < ILE->getNumInits(); i++){
 		hashStmt(ILE->getInit(i));
 	}
 	if(ILE->hasArrayFiller()){
 		hashStmt(ILE->getArrayFiller());
 	}
-	Hash() << "list";
 	return true;
 }
 
 bool HashVisitor::VisitUnaryOperator(const UnaryOperator *Node){
+	Hash() << "unary";	
 	hashStmt(Node->getSubExpr());
-	Hash() << "unary";
 	Hash() << Node->getOpcode();
 	hashType(Node->getType());
 	return true;
 }
 
 bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node){
+	Hash() << "UOTT";
+	Hash() << Node->getKind();
 	if(Node->isArgumentType()){
-		Hash() << "UOTT";
-		Hash() << Node->getKind();
 		hashType(Node->getArgumentType());
-		return true;
 	}else{
 		hashStmt(Node->getArgumentExpr());
-		Hash() << "UOTT";
-		Hash() << Node->getKind();
-		return true;
 	}
+	return true;
 }
 
 bool HashVisitor::VisitMemberExpr(const MemberExpr *Node){
-	//TODO testen
 	Hash() << "member";
 	Expr *base = Node->getBase();
 	hashStmt(base);
 
-	//hashType(Node->);
 	ValueDecl *member = Node->getMemberDecl();
 	hashDecl(member);
 
 	Hash() << Node->isArrow();
 
-
-
 	return true;
 }
 
 bool HashVisitor::VisitBinaryOperator(const BinaryOperator *Node){
+	Hash() << "binary";	
 	hashStmt(Node->getLHS());
 	hashStmt(Node->getRHS());
-	Hash() << "binary";
 	Hash() << Node->getOpcode();
 	hashType(Node->getType());
 	return true;
@@ -622,17 +584,17 @@ bool HashVisitor::VisitBinaryOperator(const BinaryOperator *Node){
 
 //erbt von BinaryOperator
 bool HashVisitor::VisitCompoundAssignOperator(const CompoundAssignOperator *Node){	
+	Hash() << "compound";	
 	hashStmt(Node->getLHS());
 	hashStmt(Node->getRHS());
-	Hash() << "compound";
 	Hash() << Node->getOpcode();
 	hashType(Node->getType());
 	return true;
 }
 
 bool HashVisitor::VisitAddrLabelExpr(const AddrLabelExpr *Node){
-	hashStmt(Node->getLabel()->getStmt());
 	Hash() << "addrlabel";
+	hashStmt(Node->getLabel()->getStmt());
 	return true;
 }
 
@@ -676,7 +638,6 @@ bool HashVisitor::VisitCallExpr(const CallExpr *Node){
 	if(fd){
 		hashName(fd);
 	}else{
-		errs() << "We're calling something that's not a function\n";
 		hashStmt(Node->getCallee());
 	}
 	for(unsigned int i = 0; i < Node->getNumArgs(); i++){
@@ -777,8 +738,8 @@ bool HashVisitor::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *Node){
 
 bool HashVisitor::VisitVAArgExpr(const VAArgExpr *Node){
 	Hash() << "va_stuff";
-	hashType(Node->getType());	//ok?
-	hashStmt(Node->getSubExpr()); //ok?
+	hashType(Node->getType());
+	hashStmt(Node->getSubExpr());
 	Hash() << Node->isMicrosoftABI();
 	return true;
 }
@@ -795,41 +756,28 @@ bool HashVisitor::VisitBlockExpr(const BlockExpr *Node){
 
 bool HashVisitor::VisitBlockDecl(const BlockDecl *Node)
 {
-	//TODO
 	Hash() << "blockDecl";
 
-/*
-	for(BlockDecl::param_iterator iterator = Node->param_begin(); iterator != Node->param_end();iterator++){
-		ParmVarDecl element = **iterator;
-		hashType(element.getOriginalType());
-		hashName(&element);
-	}
- */
 	for(ParmVarDecl* par: Node->parameters()){
 		VisitVarDecl(par);
 	}
-
-	return mt_stmtvisitor::Visit(Node->getBody());
-
+	hashStmt(Node->getBody());
+	return true;
 }
 
 bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
 	//Ignore extern declarations
 	if(Node->getStorageClass() == StorageClass::SC_Extern || Node->getStorageClass() == StorageClass::SC_PrivateExtern){
-		errs() << "Ignoring extern FunctionDecl\n";
 		doNotHashThis = true;
 		return true;
 	}
 
 	haveSeen(Node, Node);
 
-	bool handled = true;
-
 	Hash() << "FunctionDecl";
 	Hash() << Node->getNameInfo().getName().getAsString();
-	//Hash() << Node->containsUnexpandedParameterPack();
 	if(Node->hasBody()){
-		handled &= mt_stmtvisitor::Visit(Node->getBody());
+		hashStmt(Node->getBody());
 	}
 	Hash() << Node->isDefined();
 	Hash() << Node->isThisDeclarationADefinition();
@@ -855,13 +803,11 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
 
 	//hash all parameters
 	for(ParmVarDecl *decl: Node->parameters()){
-		//handled &= mt_declvisitor::Visit(decl);
 		hashDecl(decl);
 	}
 
 	//vielleicht will man das ja auch:
 	for(NamedDecl *decl: Node->getDeclsInPrototypeScope()){
-		//handled &= mt_declvisitor::Visit(decl);
 		hashDecl(decl);
 	}
 
@@ -916,10 +862,8 @@ bool HashVisitor::VisitEnumConstantDecl(const EnumConstantDecl *Node){
 	hashName(Node);
 	if(expr){
 		hashStmt(expr);
-	}else{
-		Hash() << "NULL in InitExpr";
 	}
-	Hash() << Node->getInitVal().getExtValue(); //TODO: gebraucht?
+	Hash() << Node->getInitVal().getExtValue();
 	
 	return true;
 }
@@ -960,7 +904,6 @@ bool HashVisitor::VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node){
 
 }
 
-//???? Stmt dazu wurde gemacht, also gibts dazu auch ne Decl
 bool HashVisitor::VisitCapturedDecl(const CapturedDecl *Node){
 	Hash() << "CapturedDecl";
 	Stmt *body = Node->getBody();
@@ -973,7 +916,7 @@ bool HashVisitor::VisitCapturedDecl(const CapturedDecl *Node){
 		ImplicitParamDecl *ipd = Node->getParam(i);
 		if(ipd == nullptr){
 			errs() << "nullptr in CapturedDecl!";
-			exit(0);
+			exit(1);
 		}
 		hashDecl(ipd);
 	}
@@ -987,21 +930,9 @@ void HashVisitor::hashAttr(const Attr *attr){
 	if (!attr) {
 		return;
 	}
-	const sha1::digest * saved_digest = GetHash(attr);
-	if(saved_digest){
-		Hash() << *saved_digest;
-		return;
-	}
-
-
-	// Visit in Pre-Order
-	unsigned Depth = beforeDescent();
-
-	const sha1::SHA1 *hash = PushHash();
-
 
 	//No visitor exists. do it per hand
-	//TODO ParmeterABIAttr & StmtAttr
+	//TODO ParmeterABIAttr & StmtAttr (siehe uncommented Attr...)
 	if(isa<InheritableParamAttr>(attr)){
 		VisitInheritableParamAttr(	(InheritableParamAttr*) attr);
 	}
@@ -1011,17 +942,6 @@ void HashVisitor::hashAttr(const Attr *attr){
 	else{
 		VisitAttr(attr);
 	}
-
-
-	afterDescent(Depth);
-
-	const sha1::digest digest = PopHash(hash);
-
-	//Hash into parent
-	Hash() << digest;
-
-	// Store hash for underlying type
-	StoreHash(attr, digest);
 }
 
 
@@ -1077,8 +997,6 @@ bool HashVisitor::VisitParameterABIAttr(const ParameterABIAttr *attr){
 
 //statements
 void HashVisitor::hashStmt(const Stmt *stmt){
-	//TODO: stimmt das so?
-
 	//Falls wir Nullpointer reinstecken
 	if(!stmt){
 		return;
@@ -1092,10 +1010,9 @@ void HashVisitor::hashStmt(const Stmt *stmt){
 	}
 }
 
-//TODO: default-case
 bool HashVisitor::VisitStmt(const Stmt *Node)
 {
-	errs() << "StatementNotHandled";
+	errs() << "Statement Not Handled\n";
 	return false;
 }
 
@@ -1125,7 +1042,7 @@ bool HashVisitor::VisitGotoStmt(const GotoStmt *stmt){
 
 bool HashVisitor::VisitLabelStmt(const LabelStmt *stmt){
 	Hash() << "label";
-	hashDecl(stmt->getDecl()); // LabelDecl
+	hashDecl(stmt->getDecl());
 	hashStmt(stmt->getSubStmt());
 	return true;
 }
@@ -1139,54 +1056,20 @@ bool HashVisitor::VisitDoStmt(const DoStmt *stmt){
 
 bool HashVisitor::VisitForStmt(const ForStmt *stmt){
 	Hash() << "for";
-	if(stmt->getInit() != nullptr){
-		hashStmt(stmt->getInit());
-	}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
-
-	if(stmt->getConditionVariable() != nullptr){
-		hashStmt(stmt->getConditionVariableDeclStmt());
-		}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
-
-	if(stmt->getCond() != nullptr){
-		hashStmt(stmt->getCond());
-	}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
-
-	if(stmt->getInc() != nullptr){
-		hashStmt(stmt->getInc());
-	}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
-
+	hashStmt(stmt->getInit());
+	hashStmt(stmt->getConditionVariableDeclStmt());
+	hashStmt(stmt->getCond());
+	hashStmt(stmt->getInc());
 	hashStmt(stmt->getBody());
 	return true;
 }
 
 bool HashVisitor::VisitIfStmt(const IfStmt *stmt){
-	Hash() << "if";
-	if(stmt->getConditionVariable() != nullptr){
-		hashStmt(stmt->getConditionVariableDeclStmt());
-	}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
+	Hash() << "if";	
+	hashStmt(stmt->getConditionVariableDeclStmt());
 	hashStmt(stmt->getCond());
 	hashStmt(stmt->getThen());
-	if(stmt->getElse() != nullptr){
-		hashStmt(stmt->getElse());
-	}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
+	hashStmt(stmt->getElse());
 	return true;
 }
 
@@ -1198,23 +1081,13 @@ bool HashVisitor::VisitNullStmt(const NullStmt *stmt){
 
 bool HashVisitor::VisitReturnStmt(const ReturnStmt *stmt){
 	Hash() << "return";
-	if(stmt->getRetValue() != nullptr){
-		hashStmt(stmt->getRetValue());	
-	}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
+	hashStmt(stmt->getRetValue());	
 	return true;
 }
 
 bool HashVisitor::VisitWhileStmt(const WhileStmt *stmt){
 	Hash() << "while";
-	if(stmt->getConditionVariable() != nullptr){
-		hashStmt(stmt->getConditionVariableDeclStmt());
-	}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
+	hashStmt(stmt->getConditionVariableDeclStmt());
 	hashStmt(stmt->getCond());
 	hashStmt(stmt->getBody());
 	return true;
@@ -1222,18 +1095,8 @@ bool HashVisitor::VisitWhileStmt(const WhileStmt *stmt){
 
 bool HashVisitor::VisitSwitchStmt(const SwitchStmt *stmt){
 	Hash() << "switch";
-	if(stmt->getConditionVariable() != nullptr){
-		hashStmt(stmt->getConditionVariableDeclStmt());
-	}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
-	if(stmt->getCond() != nullptr){
-		hashStmt(stmt->getCond());
-	}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
+	hashStmt(stmt->getConditionVariableDeclStmt());
+	hashStmt(stmt->getCond());
 	hashStmt(stmt->getBody());
 	return true;
 }
@@ -1241,12 +1104,7 @@ bool HashVisitor::VisitSwitchStmt(const SwitchStmt *stmt){
 bool HashVisitor::VisitCaseStmt(const CaseStmt *stmt){
 	Hash() << "case";
 	hashStmt(stmt->getLHS());
-	if(stmt->getRHS() != nullptr){
-		hashStmt(stmt->getRHS());
-	}
-	else{
-		//TODO: hier irgendwas hashen?
-	}
+	hashStmt(stmt->getRHS());
 	hashStmt(stmt->getSubStmt());
 	return true;
 }
@@ -1328,9 +1186,6 @@ bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *stmt){
 	hashStmt(stmt->getTarget());
 	if(stmt->getConstantTarget()){
 		hashDecl(stmt->getConstantTarget());
-	}
-	else{
-		//TODO: hier irgendwas hashen?
 	}
 	return true;
 }
