@@ -1,0 +1,15 @@
+# AST Hash changed unneccessary
+INFO:root:clang-hash fn:shell/ash.o obj:5cca7fd959b1e615c149c49c413cf5513145f156 ast:a2f6c0158dc52df245c6264758ef06931ecf3689
+
+# OBJECT hash did change, AST NOT (no rename)
+INFO:root:clang-hash fn:shell/ash_ptr_hack.o obj:230bf5a6629f24efc349195931e942b0fccdbe79 ast:1add7e99804e9929db7084bcd6048945c7d92a7c
+
+# OBJECT hash did change, AST NOT (rename)
+INFO:root:clang-hash fn:shell/xxxhack.o obj:2a7e952ad11f51393b422c44f5f838350dafe322 ast:74ccec1c3e49844bcdd990d7ffd8ca66ea95275a
+
+INFO:root:clang-hash fn:shell/hush.o obj:f1e972190428fdc9e10b8a7ff75d29776c340207 ast:388378548cf1bec3f1d7235fa8ba4be6ef116b10
+INFO:root:clang-hash fn:shell/match.o obj:789bd39f9007b495e796d2fa882dda7457af2a73 ast:9b0deba904e6493073f62c03027ac5b4ecdcaa81
+INFO:root:clang-hash fn:shell/math.o obj:25e58d048e188cdebe5a880167192eaed2bc4a4e ast:b2b00e77fca9659f086918ed766969ccbdbbe224
+INFO:root:clang-hash fn:shell/random.o obj:f074f8c93734a80d7b6f37d872c4f538acc81b0d ast:24065db32337c24b3b4154ee019a690905168b1a
+INFO:root:clang-hash fn:shell/shell_common.o obj:1333fb2d160e3772d59b7fba31b5b4a4b2ce3d5e ast:71f1543fae3b6cd330ce3f684b53ac15184bef75
+

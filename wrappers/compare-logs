@@ -1,0 +1,99 @@
+#!/usr/bin/python
+
+import sys
+import collections
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
+def read_log(fn, prefix="INFO:root:clang-hash"):
+    """Reads a clang-hash gcc wrapper log file and returns a dict of records"""
+    with open(fn) as fd:
+        result = {}
+        for line in fd.readlines():
+            if not line.startswith(prefix):
+                continue
+            line = line[len(prefix):].strip()
+            d = {}
+            for field in line.split():
+                if not ":" in field:
+                    continue
+                key, value = field.split(":", 1)
+                d[key] = value
+            if "fn" not in d or "ast" not in d or not "obj" in d:
+                logging.warn("Ignored line: %s", line)
+                continue
+            if d["ast"] is "None":
+                logging.warn("Ignored line (AST is None): %s", line)
+                continue
+
+            fn = d["fn"]
+            result[fn] = d
+    return result
+
+def compare_logs_seq(logs):
+    last = None
+    this = None
+    for this in logs:
+        if last is None:
+            last = this
+            continue
+        compare_logs(last, logs[last], this, logs[this])
+        last = this
+
+
+minimal_hash_length = 9
+def shorten(HASH):
+    return HASH[:minimal_hash_length]
+
+def compare_logs(name_a, a, name_b, b):
+    # Follow all files where the filename stayed equal
+    common_fns = list(set(a.keys()) & set(b.keys()))
+    for fn in common_fns:
+        # When the object hash has changed, the ast hash *MUST* also change
+        if a[fn]["obj"] != b[fn]["obj"] and a[fn]["ast"] == b[fn]["ast"]:
+            logging.error("[%s -> %s] Hash of %s (%s, %s) has changed; but AST hash remained equal (%s)",
+                          name_a, name_b, fn,
+                          shorten(a[fn]["obj"]),
+                          shorten(b[fn]["obj"]),
+                          shorten(a[fn]["ast"]))
+
+    # For all AST hashes that are equal, all obj hashes must also be equal
+    by_ast_hash = collections.defaultdict(list)
+    for fn, data in a.items():
+        by_ast_hash[data["ast"]].append((name_a, data["fn"], data["obj"]))
+    for fn, data in b.items():
+        by_ast_hash[data["ast"]].append((name_b, data["fn"], data["obj"]))
+
+    for ast_hash, records in by_ast_hash.items():
+        first_obj_hash = records[0][2]
+        first_obj_fn = records[0][1]
+
+        # This is also true, when the filename did not change
+        if any([x[2] != first_obj_hash for x in records]):
+            if any([x[1] != first_obj_fn for x in records]):
+                   logging.error("[%s -> %s] got AST hash %s, but objects differ: \n %s",
+                                 name_a, name_b, shorten(ast_hash), "\n  ".join([str(x) for x in records]))
+
+    # Give warnings for files where the object hash did not differ, but different AST hashes where produced
+    by_obj_hash = collections.defaultdict(list)
+    for fn, data in a.items():
+        by_obj_hash[data["obj"]].append((name_a, data["fn"], data["ast"]))
+    for fn, data in b.items():
+        by_obj_hash[data["obj"]].append((name_b, data["fn"], data["ast"]))
+
+    for obj_hash, records in by_obj_hash.items():
+        first_ast_hash = records[0][2]
+        first_ast_fn = records[0][1]
+
+        # This is also true, when the filename did not change
+        if any([x[2] != first_ast_hash for x in records]):
+            logging.warn("[%s -> %s] got OBJ hash %s, but AST hashes differ: \n %s",
+                         name_a, name_b, shorten(obj_hash), "\n  ".join([str(x) for x in records]))
+
+if __name__ == "__main__":
+    logs = collections.OrderedDict()
+    for fn in sys.argv[1:]:
+        logs[fn] = read_log(fn)
+
+    compare_logs_seq(logs)
