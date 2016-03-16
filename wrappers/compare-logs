@@ -49,6 +49,8 @@ def shorten(HASH):
 def compare_logs(name_a, a, name_b, b):
     # Follow all files where the filename stayed equal
     common_fns = list(set(a.keys()) & set(b.keys()))
+    ok_counter = 0
+    fail_counter = 0
     for fn in common_fns:
         # When the object hash has changed, the ast hash *MUST* also change
         if a[fn]["obj"] != b[fn]["obj"] and a[fn]["ast"] == b[fn]["ast"]:
@@ -57,6 +59,9 @@ def compare_logs(name_a, a, name_b, b):
                           shorten(a[fn]["obj"]),
                           shorten(b[fn]["obj"]),
                           shorten(a[fn]["ast"]))
+            fail_counter += 1
+        else:
+            ok_counter += 1
 
     # For all AST hashes that are equal, all obj hashes must also be equal
     by_ast_hash = collections.defaultdict(list)
@@ -72,8 +77,9 @@ def compare_logs(name_a, a, name_b, b):
         # This is also true, when the filename did not change
         if any([x[2] != first_obj_hash for x in records]):
             if any([x[1] != first_obj_fn for x in records]):
-                   logging.error("[%s -> %s] got AST hash %s, but objects differ: \n %s",
+                   logging.error("[%s -> %s] got AST hash %s, but objects differ: \n  %s",
                                  name_a, name_b, shorten(ast_hash), "\n  ".join([str(x) for x in records]))
+                   fail_counter += 1
 
     # Give warnings for files where the object hash did not differ, but different AST hashes where produced
     by_obj_hash = collections.defaultdict(list)
@@ -82,14 +88,21 @@ def compare_logs(name_a, a, name_b, b):
     for fn, data in b.items():
         by_obj_hash[data["obj"]].append((name_b, data["fn"], data["ast"]))
 
+    overapprox_counter = 0
     for obj_hash, records in by_obj_hash.items():
         first_ast_hash = records[0][2]
         first_ast_fn = records[0][1]
 
         # This is also true, when the filename did not change
         if any([x[2] != first_ast_hash for x in records]):
-            logging.warn("[%s -> %s] got OBJ hash %s, but AST hashes differ: \n %s",
+            logging.warn("[%s -> %s] got OBJ hash %s, but AST hashes differ:\n  %s",
                          name_a, name_b, shorten(obj_hash), "\n  ".join([str(x) for x in records]))
+            overapprox_counter += 1
+    logging.info("[%s -> %s] %d AST-Object hash pairs were OK!.",
+                 name_a, name_b, ok_counter)
+    logging.info("[%s -> %s] %d Problems were detected.", name_a, name_b, fail_counter)
+    logging.info("[%s -> %s] %d AST hashes could be too conservative.", name_a, name_b, overapprox_counter)
+
 
 if __name__ == "__main__":
     logs = collections.OrderedDict()
