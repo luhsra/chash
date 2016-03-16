@@ -776,9 +776,7 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
 
 	Hash() << "FunctionDecl";
 	Hash() << Node->getNameInfo().getName().getAsString();
-	if(Node->hasBody()){
-		hashStmt(Node->getBody());
-	}
+	hashStmt(Node->getBody());
 	Hash() << Node->isDefined();
 	Hash() << Node->isThisDeclarationADefinition();
 	Hash() << Node->isVariadic();
