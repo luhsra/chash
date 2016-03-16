@@ -80,4 +80,7 @@ cdcmd(int argc, char **argv)
                 out1fmt("%s\n", curdir);
         return 0;
 }
-
+{{A}}
+/*
+ * check-name: complex stuff once failed
+ */

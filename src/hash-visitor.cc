@@ -203,13 +203,26 @@ void HashVisitor::hashType(QualType T) {
 
 
 	const sha1::digest * saved_digest = GetHash(type);
-/*
-	// Optimierung verdeckt aktuell noch Probleme mit Qualifiern
+
+
 	if(saved_digest){
 		Hash() << *saved_digest;
 		return;
 	}
-*/
+
+	if(type->isStructureType()){
+		if(haveSeen(type, type)){
+			Hash() << "struct";
+			Hash() << T.getAsString();
+			return;
+		}
+	}else if(type->isUnionType()){
+		if(haveSeen(type, type)){
+			Hash() << "union";
+			Hash() << T.getAsString();
+			return;
+		}
+	}
 
 	// Visit in Pre-Order
 	unsigned Depth = beforeDescent();
@@ -256,31 +269,10 @@ bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
 
 bool HashVisitor::VisitPointerType(const PointerType *T) {
 	Hash() << "pointer";
-	const sha1::digest *digest = GetHash(T->getPointeeType().getTypePtr());
-	if(digest){
-		//Hash() << *digest;
-		//return true;
-	}
-	//FIXME: evtl. FunctionPointerType (erst Testsysteme)
-	if((T->getPointeeType()).getTypePtr()->isStructureType()){
-		if(haveSeen(T->getPointeeType().getTypePtr(), T->getPointeeType().getTypePtr())){
-			Hash() << "struct";
-			Hash() << (T->getPointeeType()).getAsString();
-		}else{
-			//rekursiv absteigen...
-			hashType(T->getPointeeType());
-		}
-	}else if((T->getPointeeType()).getTypePtr()->isUnionType()){
-		if(haveSeen(T->getPointeeType().getTypePtr(), T->getPointeeType().getTypePtr())){
-			Hash() << "union";
-			Hash() << (T->getPointeeType()).getAsString();
-		}else{
-			//rekursiv absteigen...
-			hashType(T->getPointeeType());
-		}
-	}else{
-		hashType(T->getPointeeType());
-	}
+
+	hashType(T->getPointeeType());
+
+
 	return true;
 }
 
