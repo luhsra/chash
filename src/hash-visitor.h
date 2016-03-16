@@ -212,8 +212,7 @@ protected:
 
 	bool dummyFunctionDecl(FunctionDecl *fd){
 		//Ignore extern declarations
-		if(fd->getStorageClass() == StorageClass::SC_Extern || fd->getStorageClass() == StorageClass::SC_PrivateExtern){
-			doNotHashThis = true;
+		if(fd->getStorageClass() == StorageClass::SC_Extern || fd->getStorageClass() == StorageClass::SC_PrivateExtern || !fd->hasBody()){
 			return true;
 		}
 

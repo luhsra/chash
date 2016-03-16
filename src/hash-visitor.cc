@@ -767,7 +767,7 @@ bool HashVisitor::VisitBlockDecl(const BlockDecl *Node)
 
 bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
 	//Ignore extern declarations
-	if(Node->getStorageClass() == StorageClass::SC_Extern || Node->getStorageClass() == StorageClass::SC_PrivateExtern){
+	if(Node->getStorageClass() == StorageClass::SC_Extern || Node->getStorageClass() == StorageClass::SC_PrivateExtern || !Node->hasBody()){
 		doNotHashThis = true;
 		return true;
 	}
@@ -776,9 +776,7 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node){
 
 	Hash() << "FunctionDecl";
 	Hash() << Node->getNameInfo().getName().getAsString();
-	if(Node->hasBody()){
-		hashStmt(Node->getBody());
-	}
+	hashStmt(Node->getBody());
 	Hash() << Node->isDefined();
 	Hash() << Node->isThisDeclarationADefinition();
 	Hash() << Node->isVariadic();
