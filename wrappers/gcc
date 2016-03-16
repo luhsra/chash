@@ -35,6 +35,8 @@ if __name__ == "__main__":
       objectfile = args[args.index("-o")+1]
       objectfile_hash = None
       if os.path.exists(objectfile):
+         # Strip filename symbol from binary
+         call(["strip", "-N", os.path.basename(objectfile).replace(".o", ".c"), objectfile])
          with open(objectfile, "rb") as fd:
             objectfile_data = fd.read()
             objectfile_hash = hashlib.sha1()
