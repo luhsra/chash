@@ -234,7 +234,7 @@ def run_testcase_helper(test_case, check_name, future):
 
         #### Run Clang-Hash
 
-        cmd = "{cmd} {source_file} {flags}".format(
+        cmd = "{cmd} -c {source_file} {flags}".format(
             cmd=hash_command,
             source_file=source_file,
             flags=compile_flags)
