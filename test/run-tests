@@ -336,15 +336,22 @@ def usage():
     print "%s [-c] [-t threads] [-q] [-v] [test-cases...]" % sys.argv[0]
     print " if no test-cases are given, all in current directory are run"
 
-def get_testcases():
+def get_testcases(paths = ["."]):
     all_files = []
-    for root, subFolders, files in os.walk("."):
-        for file in files:
-            path = os.path.join(root, file)
-            if fnmatch.fnmatch(path, testcase_pattern) and not "var.c" in file:
-                all_files.append(path)
+    for path in paths:
+        if os.path.isfile(path):
+            all_files.append(path)
+        else:
+            for root, subFolders, files in os.walk(path):
+                for file in files:
+                    path = os.path.join(root, file)
+                    all_files.append(path)
+    ret = []
+    for fn in all_files:
+        if fnmatch.fnmatch(fn, testcase_pattern) and not "var.c" in fn:
+            ret.append(fn)
 
-    return sorted(all_files)
+    return sorted(ret)
 
 if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], "ht:qcv")
@@ -373,10 +380,7 @@ if __name__ == '__main__':
             print "unkown option"
             assert False
 
-    if len(args) > 0:
-        ret = run_test_suite(args)
-    else:
-        ret = run_test_suite(get_testcases())
+    ret = run_test_suite(get_testcases(args))
 
     if ret:
         sys.exit(0)
