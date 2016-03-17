@@ -17,7 +17,7 @@ extern int docd(const char *, int);
 #include <unistd.h>
 
 
-static int
+int
 cdcmd(int argc, char **argv)
 {
         const char *dest;
@@ -41,7 +41,7 @@ cdcmd(int argc, char **argv)
                 goto step7;
         if (*dest == '.') {
                 c = dest[1];
- dotdot:
+{{A}} dotdot:
                 switch (c) {
                 case '\0':
                 case '/':
@@ -58,7 +58,9 @@ cdcmd(int argc, char **argv)
         if (!path) {
  step6:
  step7:
-                p = dest;
+ {{B}} dotdot:
+
+            p = dest;
                 goto docd;
         }
         do {
@@ -80,7 +82,7 @@ cdcmd(int argc, char **argv)
                 out1fmt("%s\n", curdir);
         return 0;
 }
-{{A}}
 /*
- * check-name: complex stuff once failed
+ * check-name: Forward and backward gotos
+ * assert-obj: A != B
  */
