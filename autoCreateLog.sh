@@ -16,8 +16,15 @@ git checkout HEAD~${START}
 for ((z=$START;z<$(($START + $COUNT));z++))
 do
 	git checkout HEAD~1
+	git clean -dfx
 	echo -e "\t\n" | make menuconfig
-	make clean
 	make -j 8
 	mv clang-hash.log ../${LOG_FILES}/${z}.log
+
+	clear
+
+	echo "Done # ${z}"		
+
+	clear	
+
 done
