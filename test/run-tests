@@ -15,7 +15,7 @@ testcase_pattern = "*.c"
 default_path = ".."
 default_compile_command = "clang"
 default_compile_flags = "-Wall"
-default_hash_command = os.path.join(os.path.dirname(__file__), "../build/clang-hash")
+default_hash_command = os.path.join(os.path.dirname(__file__), "../build/wrappers/clang-hash")
 
 LOGLEVEL = 1
 LOGLEVEL_DEBUG = 2
