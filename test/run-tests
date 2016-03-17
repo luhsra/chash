@@ -178,6 +178,9 @@ def run_testcase_cleaner(basename):
     cruftfiles=list()
     cruftfiles.extend(glob.glob(basename + ".*.o"))
     cruftfiles.extend(glob.glob(basename + ".*.var.c"))
+    cruftfiles.extend(glob.glob(basename + ".*.o.hash"))
+    cruftfiles.extend(glob.glob(basename + ".*.o.clang-hash-stderr"))
+
     for cruft in cruftfiles:
         try:
             os.unlink(cruft)
@@ -261,10 +264,10 @@ def run_testcase_helper(test_case, check_name, future):
             failed = True
 
         #### Run Clang-Hash
-
-        cmd = "{cmd} -c {source_file} {flags}".format(
+        cmd = "{cmd} -c {source_file} -o {object_file} {flags}".format(
             cmd=hash_command,
             source_file=source_file,
+            object_file=object_file, # Won't be overriden
             flags=compile_flags)
         (ret_hasher, x, _, stderr) = run_command(cmd)
         if (LOGLEVEL >= LOGLEVEL_NORMAL and ret_hasher != 0) or LOGLEVEL >= LOGLEVEL_DEBUG:
@@ -395,14 +398,16 @@ def get_testcases(paths = ["."]):
 
 if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], "ht:qcv")
+    if len(args) == 0:
+        args = ["."]
 
     for opt,arg in opts:
         if opt in ('-c', '--clean'):
-            tests = get_testcases()
+            tests = get_testcases(args)
             for test in tests:
                 basename,_ = os.path.splitext(test)
                 run_testcase_cleaner(basename)
-            sys.exit(1)
+            sys.exit(0)
         if opt in ('-t', '--threads'):
             threads = int(arg)
             if threads < 1:
@@ -420,8 +425,6 @@ if __name__ == '__main__':
             print "unkown option"
             assert False
 
-    if len(args) == 0:
-        args = ["."]
 
     ret = run_test_suite(get_testcases(args))
 

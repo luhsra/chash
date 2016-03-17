@@ -44,8 +44,9 @@ protected:
           std::error_code Error;
           std::string HashFile = CI.getFrontendOpts().OutputFile + ".hash";
           Out = new llvm::raw_fd_ostream(HashFile, Error, llvm::sys::fs::F_Text);
+          errs() << "dump-ast-file: " << CI.getFrontendOpts().OutputFile << " " << HashFile << "\n";
           if (Error) {
-              errs() << "Could not open ast-hash file: " << HashFile << "\n";
+              errs() << "Could not open ast-hash file: " << CI.getFrontendOpts().OutputFile << "\n";
           }
       }
       return llvm::make_unique<HashTranslationUnitConsumer>(Out);
