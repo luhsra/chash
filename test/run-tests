@@ -145,6 +145,34 @@ def get_variants(test_case):
             variants[variant] = "\n".join(text)
     return variants
 
+def check_asserts(asserts, results, idx):
+    asserts = [x.strip() for x in asserts.split(",")]
+    failed = False
+    output = ""
+    for A in asserts:
+        if "==" in A:
+            (LHS, RHS) = A.split("==")
+            LHS = results[LHS.strip()][idx]
+            RHS = results[RHS.strip()][idx]
+            if LHS != RHS:
+                output += COLOR.format(" ASSERT", "red", True) + " failed: " + A + "\n"
+                failed = True
+            elif LOGLEVEL >= LOGLEVEL_DEBUG:
+                output += COLOR.format(" ASSERT", "green") + " holds: %s\n" % A
+        elif "!=" in A:
+            (LHS, RHS) = A.split("!=")
+            LHS = results[LHS.strip()][idx]
+            RHS = results[RHS.strip()][idx]
+            if LHS == RHS:
+                output += COLOR.format(" ASSERT", "red", True) + " failed: " + A + "\n"
+                failed = True
+            elif LOGLEVEL >= LOGLEVEL_DEBUG:
+                output += COLOR.format(" ASSERT", "green") + " holds: %s\n" % A
+        else:
+            assert False, "Invalid assert: " + A
+
+    return failed, output
+
 
 def run_testcase_cleaner(basename):
     cruftfiles=list()
@@ -286,6 +314,18 @@ def run_testcase_helper(test_case, check_name, future):
 
             failed = True
 
+    assert_ast = get_tag(test_case, "assert-ast")
+    assert_obj = get_tag(test_case, "assert-obj")
+    if assert_obj:
+        (F, out) = check_asserts(assert_obj, results, 0)
+        failed = failed or F
+        output += out
+    if assert_ast:
+        (F, out) = check_asserts(assert_ast, results, 1)
+        failed = failed or F
+        output += out
+
+
     if failed:
         output += " Failed\n"
 
@@ -379,6 +419,9 @@ if __name__ == '__main__':
         else:
             print "unkown option"
             assert False
+
+    if len(args) == 0:
+        args = ["."]
 
     ret = run_test_suite(get_testcases(args))
 

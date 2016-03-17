@@ -13,5 +13,5 @@ void foo() {
  * check-name: internal linkage name changes
  * compile-command: /usr/bin/gcc
  * compile-flags: -fdata-sections -Wall
- * B == A
+ * assert-ast: A == B
  */

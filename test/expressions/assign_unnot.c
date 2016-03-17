@@ -7,5 +7,5 @@ void f(){
 }
 /*
  * check-name: NOT, L_NOT
- * B != A, B != C, C != A 
+ * assert-obj: B != A, B != C, C != A
  */
