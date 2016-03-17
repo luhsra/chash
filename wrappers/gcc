@@ -54,7 +54,7 @@ if __name__ == "__main__":
                         logging.info(x)
                 A.append(x)
 
-        logging.info("%s", A)
+        logging.info("call clang-hash %s", " ".join(A))
         stderr_fd = open("%s.clang-hash-stderr" % objectfile, "w+")
         p = Popen(["clang-hash"] + A, stdin=PIPE, stderr = stderr_fd)
         p.stdin.close()
