@@ -1,0 +1,75 @@
+#!/usr/bin/python
+
+import os
+import sys
+import subprocess
+import re
+import tempfile
+import hashlib
+
+def find_symbols(elf):
+    nm_output  = subprocess.check_output(["nm", elf])
+    ret = []
+    for line in nm_output.strip("\n").split("\n"):
+        items = line.split()
+        if len(items) < 3:
+            continue
+        ret.append(items[2])
+    return ret
+
+def find_sections(elf):
+    nm_output  = subprocess.check_output(["readelf", "--sections", "--wide", elf])
+    ret = []
+    for line in nm_output.strip("\n").split("\n"):
+        items = [x for x in line.split() if x[0] == "."]
+        if len(items) == 1:
+            ret.append(items[0])
+    return ret
+
+def normalize_names(names):
+    """Find dangerous names, that change although nothing has changed"""
+    ret = []
+    for name in names:
+        (new, count) = re.subn("\\.([0-9]{4,})", ".%04d" % len(ret), name)
+        if count:
+            ret.append( (name, new) )
+    return ret
+
+def hash_file(fn_in):
+    names = find_symbols(fn_in)
+    symbol_renames = normalize_names(names)
+    section_renames = normalize_names(find_sections(fn_in))
+
+    fn_rename = tempfile.NamedTemporaryFile()
+    for i in symbol_renames:
+        fn_rename.write("%s %s\n" % i)
+    fn_rename.flush()
+
+    extra_args = []
+    for (f, t) in section_renames:
+        extra_args += ["--rename-section", "%s=%s" % (f,t)]
+
+
+    c_file = os.path.basename(fn_in).replace(".o", ".c")
+    fn_out = tempfile.NamedTemporaryFile()
+    subprocess.check_call(["objcopy", fn_in,
+                           "--strip-symbol=%s" % c_file,
+                           "--redefine-syms=%s" % fn_rename.name] +
+                          extra_args + [fn_out.name])
+
+    H = hashlib.sha1()
+    with fn_out as fd:
+        H.update(fd.read())
+        digest = H.hexdigest()
+    fn_rename.close()
+    fn_out.close()
+
+    return digest
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.exit("Take exactly one argument: %s <ELF>" % sys.argv[1])
+    for fn_in in sys.argv[1:]:
+        digest = hash_file(fn_in)
+        print digest

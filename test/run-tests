@@ -3,8 +3,7 @@
 import fnmatch
 import glob
 import threading
-from subprocess import Popen, PIPE
-import hashlib
+from subprocess import Popen, PIPE, check_output
 import sys
 import os
 import re
@@ -16,6 +15,8 @@ default_path = ".."
 default_compile_command = "clang"
 default_compile_flags = "-Wall"
 default_hash_command = os.path.join(os.path.dirname(__file__), "../build/wrappers/clang-hash")
+default_objhash_command = os.path.join(os.path.dirname(__file__), "../build/wrappers/hash-objectfile")
+
 
 LOGLEVEL = 1
 LOGLEVEL_DEBUG = 2
@@ -184,7 +185,7 @@ def run_testcase_helper(test_case, check_name, future):
     basename, ext = os.path.splitext(test_case)
 
     # Add the testcase directory
-    dirname = os.path.dirname(test_case)
+    dirname = os.path.dirname(os.path.join(".", test_case))
     compile_flags += " -I %s" % (dirname)
 
     cruft = run_testcase_cleaner(basename)
@@ -224,15 +225,12 @@ def run_testcase_helper(test_case, check_name, future):
             output += x
 
         # Hash Object File
-        object_hash = hashlib.sha1()
         if ret_compiler == 0:
-            with open(object_file) as fd:
-                object_hash.update(fd.read())
+            object_hash = check_output([default_objhash_command, object_file]).strip()
         else:
             output += COLOR.format("!!! Failed: compile (%s) failed with %d\n" % (variant, ret_compiler),
                                    "red", bold=True)
             failed = True
-        object_hash = object_hash.hexdigest()
 
         #### Run Clang-Hash
 
@@ -258,7 +256,7 @@ def run_testcase_helper(test_case, check_name, future):
 
         # Call clang-hash
         if LOGLEVEL >= LOGLEVEL_NORMAL:
-            output += " {source_file} {object_hash} {ast_hash}\n".format(
+            output += " {source_file} obj:{object_hash} ast:{ast_hash}\n".format(
                 source_file=source_file,
                 object_hash=object_hash,
                 ast_hash=ast_hash)
@@ -283,8 +281,8 @@ def run_testcase_helper(test_case, check_name, future):
                 continue
 
             output += COLOR.format("!!! Failure: Different hashes\n", "red", True)
-            output += " {var_1} {obj} {ast}\n".format(**locals())
-            output += " {var_2} {other_obj} {other_ast}\n".format(**locals())
+            output += " {var_1} obj:{obj} ast{ast}\n".format(**locals())
+            output += " {var_2} obj:{other_obj} ast:{other_ast}\n".format(**locals())
 
             failed = True
 
