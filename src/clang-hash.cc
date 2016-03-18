@@ -28,55 +28,60 @@ public:
         }
         llvm::errs() << "top-level-hash: " << Visitor.GetHash() << "\n";
     }
-  private:
+private:
     raw_ostream *toplevel_hash_stream;
     TranslationUnitHashVisitor Visitor;
 };
 
 class HashTranslationUnitAction : public PluginASTAction {
 protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 llvm::StringRef) {
+    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                   llvm::StringRef) override {
 
-      // Write hash database to .o.hash if the compiler produces a object file
-      llvm::raw_ostream *Out = nullptr;
-      if (CI.getFrontendOpts().OutputFile != "") {
-          std::error_code Error;
-          std::string HashFile = CI.getFrontendOpts().OutputFile + ".hash";
-          Out = new llvm::raw_fd_ostream(HashFile, Error, llvm::sys::fs::F_Text);
-          errs() << "dump-ast-file: " << CI.getFrontendOpts().OutputFile << " " << HashFile << "\n";
-          if (Error) {
-              errs() << "Could not open ast-hash file: " << CI.getFrontendOpts().OutputFile << "\n";
-          }
-      }
-      return llvm::make_unique<HashTranslationUnitConsumer>(Out);
-  }
-
-  bool ParseArgs(const CompilerInstance &CI,
-                 const std::vector<std::string> &args) {
-
-    for (unsigned i = 0, e = args.size(); i != e; ++i) {
-      llvm::errs() << " arg = " << args[i] << "\n";
-
-      // Example error handling.
-      if (args[i] == "-an-error") {
-        DiagnosticsEngine &D = CI.getDiagnostics();
-        unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-                                            "invalid argument '%0'");
-        D.Report(DiagID) << args[i];
-        return false;
-      }
-    }
-    if (args.size() && args[0] == "help") {
-        // FIXME
-        PrintHelp(llvm::errs());
+        // Write hash database to .o.hash if the compiler produces a object file
+        llvm::raw_ostream *Out = nullptr;
+        if (CI.getFrontendOpts().OutputFile != "") {
+            std::error_code Error;
+            std::string HashFile = CI.getFrontendOpts().OutputFile + ".hash";
+            Out = new llvm::raw_fd_ostream(HashFile, Error, llvm::sys::fs::F_Text);
+            errs() << "dump-ast-file: " << CI.getFrontendOpts().OutputFile << " " << HashFile << "\n";
+            if (Error) {
+                errs() << "Could not open ast-hash file: " << CI.getFrontendOpts().OutputFile << "\n";
+            }
+        }
+        return llvm::make_unique<HashTranslationUnitConsumer>(Out);
     }
 
-    return true;
-  }
-  void PrintHelp(llvm::raw_ostream &ros) {
-    ros << "Help for PrintFunctionNames plugin goes here\n";
-  }
+    bool ParseArgs(const CompilerInstance &CI,
+                   const std::vector<std::string> &args) override {
+
+        for (unsigned i = 0, e = args.size(); i != e; ++i) {
+            llvm::errs() << " arg = " << args[i] << "\n";
+
+            // Example error handling.
+            if (args[i] == "-an-error") {
+                DiagnosticsEngine &D = CI.getDiagnostics();
+                unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
+                                                    "invalid argument '%0'");
+                D.Report(DiagID) << args[i];
+                return false;
+            }
+        }
+        if (args.size() && args[0] == "help") {
+            // FIXME
+            PrintHelp(llvm::errs());
+        }
+
+        return true;
+    }
+
+    PluginASTAction::ActionType getActionType() override {
+        return AddBeforeMainAction;
+    }
+
+    void PrintHelp(llvm::raw_ostream &ros) {
+        ros << "Help for PrintFunctionNames plugin goes here\n";
+    }
 };
 
 static FrontendPluginRegistry::Add<HashTranslationUnitAction>
