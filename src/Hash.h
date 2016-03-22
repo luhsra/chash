@@ -26,7 +26,7 @@ struct Hash : protected MurMurHash3 {
         }
 
 
-        std::string getHexDigest() const {
+        std::string asString() const {
             std::stringstream ss;
             for (unsigned i = 0; i < DIGEST_WORDS; i++) {
                 ss << std::hex << std::setfill('0') << std::setw(8)

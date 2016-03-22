@@ -15,7 +15,7 @@ string HashVisitor::GetHash(unsigned *processed_bytes) {
     if (processed_bytes) {
         *processed_bytes = hash.length;
     }
-    return hash.getHexDigest();
+    return hash.asString();
 }
 
 /// Declarations
