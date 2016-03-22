@@ -12,7 +12,7 @@
 #include <tuple>
 
 
-#include "SHA1.h"
+#include "Hash.h"
 
 using namespace clang;
 
@@ -25,10 +25,10 @@ class TranslationUnitHashVisitor
 	typedef ConstStmtVisitor<TranslationUnitHashVisitor, bool> mt_stmtvisitor;
 	typedef TypeVisitor<TranslationUnitHashVisitor, bool>	   mt_typevisitor;
 
-	sha1::SHA1 toplevel_hash;
+	Hash toplevel_hash;
 
 	// In this storage we save hashes for various memory objects
-	std::map<const void *, sha1::digest> silo;
+	std::map<const void *, Hash::digest> silo;
 
 	// /// Pending[i] is an action to hash an entity at level i.
 	bool FirstChild;
@@ -59,7 +59,7 @@ class TranslationUnitHashVisitor
 		}
 	}
 
-	llvm::SmallVector<sha1::SHA1, 32> HashStack;
+	llvm::SmallVector<Hash, 32> HashStack;
 public:
 	// Utilities
 	bool hasNodes(const DeclContext *DC);
@@ -79,7 +79,7 @@ public:
 	/// Not interesting
 	bool VisitTypedefDecl(const TypedefDecl *) { return true; };
 
-	/* Wird erst in Aufrufen geprueft */	
+	/* Wird erst in Aufrufen geprueft */
 	bool VisitRecordDecl(const RecordDecl *D){ return true; };
 	bool VisitFieldDecl(const FieldDecl *D){ return true; };
 
@@ -140,7 +140,7 @@ public:
 	bool VisitDesignatedInitExpr(const DesignatedInitExpr *Node);
 	bool VisitStmtExpr(const StmtExpr *Node);
 	bool VisitVAArgExpr(const VAArgExpr *Node);
-	
+
 	//TODO: evtl. ImplicitValueInitExpr, GenericSelectionExpr, ArraySubscriptExpr
 	//TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach C++)
 
@@ -201,7 +201,7 @@ public:
 protected:
 	bool doNotHashThis = false; // Flag used to ignore Nodes such as extern Decls
 	std::map<const void *, const void *> seen_types;
-		
+
 	bool haveSeen(const void *key, const void *type){
 		if (seen_types.find(key) != seen_types.end()){
 			return true;
@@ -277,49 +277,42 @@ protected:
 	}
 
 	// Hash Silo
-	void StoreHash(const void *obj, sha1::digest digest) {
+	void StoreHash(const void *obj, Hash::digest digest) {
 		silo[obj] = digest;
 	}
 
-	const sha1::digest * GetHash(const void *obj) {
+	const Hash::digest * GetHash(const void *obj) {
 		if (silo.find(obj) != silo.end()) {
 			return &silo[obj];
 		}
 		return nullptr;
 	}
 
-	sha1::SHA1 * PushHash() {
-		HashStack.push_back(sha1::SHA1());
-		
-		//llvm::errs() << "  PushHash mit Groesse: " << HashStack.size() << " und Rueckgabewert: " << (&HashStack.back()) << "\n";
+	Hash * PushHash() {
+		HashStack.push_back(Hash());
+
+                //	llvm::errs() << "  PushHash mit Groesse: " << HashStack.size() << " und Rueckgabewert: " << (&HashStack.back()) << "\n";
 
 		return &HashStack.back();
 	}
 
-	sha1::digest PopHash(const sha1::SHA1 *should_be = nullptr) {
+	Hash::digest PopHash(const Hash *should_be = nullptr) {
 
-		//llvm::errs() << "  PopHash mit Groesse: " << HashStack.size() << " und Parameter: " << (should_be) << "\n";
-		//if(should_be != &HashStack.back()){
-			//llvm::errs() << "	but Stack-Level is: " << &HashStack.back() << "\n";
-		//}
+            // llvm::errs() << "  PopHash mit Groesse: " << HashStack.size() << " und Parameter: " << (should_be) << "\n";
+            //if(should_be != &HashStack.back()){
+            //llvm::errs() << "	but Stack-Level is: " << &HashStack.back() << "\n";
+            //}
 
-		assert(!should_be || should_be == &HashStack.back());
+            assert(!should_be || should_be == &HashStack.back());
 
-		// Finalize the Hash
-		sha1::digest digest;
-		HashStack.back().getDigest(digest.value);
-		HashStack.pop_back();
-		return digest;
+            // Finalize the Hash
+            Hash::digest digest = TopHash().getDigest();
+            HashStack.pop_back();
+            return digest;
 	}
 
-	sha1::SHA1 &Hash() {
+	Hash &TopHash() {
 		return HashStack.back();
-	}
-
-	sha1::digest getDigest(){
-		sha1::digest digest;
-		HashStack.back().getDigest(digest.value);
-		return digest;
 	}
 };
 
