@@ -1,11 +1,13 @@
 #ifndef __CLANG_HASH_HASH
 #define __CLANG_HASH_HASH
 
-#include "SHA1.h"
+// #include "SHA1.h"
+#include "MurMurHash3.h"
 
-struct Hash : protected SHA1 {
 
-    typedef SHA1 algorithm;
+struct Hash : protected MurMurHash3 {
+
+    typedef MurMurHash3 algorithm;
 
     struct digest {
         enum { DIGEST_WORDS = algorithm::DIGEST_WORDS };
