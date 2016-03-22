@@ -199,7 +199,113 @@ public:
 	bool VisitOMPExecutableDirective(const OMPExecutableDirective *stmt);
 
 protected:
-	bool doNotHashThis = false; // Flag used to ignore Nodes such as extern Decls
+        enum AstElementPrefix {
+            AstElementVarDecl           = 0xb19c2ee2,
+            AstElementVarDecl_init      = 0x66734486,
+            AstElementImplicitParamDecl = 0xd04f138f,
+            AstElementParamVarDecl      = 0x1fe2fcb9,
+
+            AstElementStmtExpr = 0xf4bb377e,
+            AstElementCastExpr = 0x7c505e88,
+
+            AstElementCharacterLiteral = 0x2a1c033f,
+            AstElementIntegerLiteral   = 0x7b2daa87,
+            AstElementFloatingLiteral  = 0xceee8473,
+            AstElementStringLiteral    = 0xe5846c45,
+
+            AstElementForStmt      = 0xec4e334f,
+            AstElementIfStmt       = 0x3de06c3c,
+            AstElementNullStmt     = 0x777400e0,
+            AstElementDoStmt       = 0xa80405bd,
+            AstElementGotoStmt     = 0xec2a6be8,
+            AstElementContinueStmt = 0x2c518360,
+            AstElementReturnStmt   = 0x1cf8354e,
+            AstElementWhileStmt    = 0x6cb85f96,
+            AstElementLabelStmt    = 0xe3d17613,
+            AstElementSwitchStmt   = 0x6ef423db,
+            AstElementCaseStmt     = 0x9640cc21,
+            AstElementDefaultStmt  = 0x2f6febe9,
+            AstElementDeclStmt     = 0xbe748556,
+
+// AstElement = 0x5b868718
+// AstElement = 0xd0b37bef
+// AstElement = 0x6439c9ef
+// AstElement = 0x74887cd4
+// AstElement = 0x75d5304a
+// AstElement = 0x8a024d89
+// AstElement = 0x3417cfda
+// AstElement = 0x98090139
+// AstElement = 0x7c2df2fc
+// AstElement = 0x8647819b
+// AstElement = 0x4dd5f204
+// AstElement = 0x4acd4cde
+// AstElement = 0x94c7a399
+// AstElement = 0xddc8426
+// AstElement = 0xca8afa5b
+// AstElement = 0x707c703e
+// AstElement = 0x9936193
+// AstElement = 0x96681107
+// AstElement = 0xa33a24f3
+// AstElement = 0xffb3cc20
+// AstElement = 0xe23aaddd
+// AstElement = 0x496a1fb5
+// AstElement = 0xb4995380
+// AstElement = 0xe682fc67
+// AstElement = 0xe511b92e
+// AstElement = 0xc54ffefa
+// AstElement = 0x427cc6e8
+// AstElement = 0x48232f36
+// AstElement = 0xf1a9c911
+// AstElement = 0x7e5497b7
+// AstElement = 0x64600f
+// AstElement = 0x8d017154
+// AstElement = 0x6cf40f99
+// AstElement = 0x8c7ab6b2
+// AstElement = 0xfe7647fa
+// AstElement = 0xdf10fedc
+// AstElement = 0xcc75aacd
+// AstElement = 0x761e230f
+// AstElement = 0x2a34b689
+// AstElement = 0xff6db781
+// AstElement = 0xc564aed1
+// AstElement = 0x11050d85
+// AstElement = 0x937408ea
+// AstElement = 0xbb06d011
+// AstElement = 0x381879fa
+// AstElement = 0xa3a884ed
+// AstElement = 0x56b6cba9
+// AstElement = 0x7c0b04ce
+// AstElement = 0x6a4fdb90
+// AstElement = 0x906b6fb4
+// AstElement = 0x530ae0a9
+// AstElement = 0x652782d6
+// AstElement = 0xccd123ef
+// AstElement = 0x8e36d148
+// AstElement = 0x1cafe3db
+// AstElement = 0x98888356
+// AstElement = 0xa5b0d36d
+// AstElement = 0x5057c896
+// AstElement = 0xa6339d46
+// AstElement = 0x9c582bf3
+// AstElement = 0x151982b7
+// AstElement = 0x40d2aa93
+// AstElement = 0xe340180e
+// AstElement = 0x17f2d532
+// AstElement = 0xac0c83d4
+// AstElement = 0x27892cea
+// AstElement = 0x4ed393c3
+// AstElement = 0x2e2321ad
+// AstElement = 0xfe447195
+// AstElement = 0xe9bda7ae
+// AstElement = 0x366466fc
+// AstElement = 0xd6b02f4e
+// AstElement = 0x9b31edf6
+// AstElement = 0x45b2a746
+// AstElement = 0xc853e2ac
+// AstElement = 0xbcfa92ec
+// AstElement = 0x1cc7935
+        };
+	bool doNotHashThis         = false; // Flag used to ignore Nodes such as extern Decls
 	std::map<const void *, const void *> seen_types;
 
 	bool haveSeen(const void *key, const void *type){
