@@ -152,11 +152,12 @@ public:
         return *this;
     }
 
-    void finalize(uint32_t *digest) {
+    uint32_t finalize(uint32_t *digest) {
         //----------
         // tail
         uint64_t k1 = 0;
         uint64_t k2 = 0;
+        // We use m_byteCount NOT here. On Purpose.
         switch(m_blockByteIndex & 15)
         {
         case 15: k2 ^= ((uint64_t)m_block[14]) << 48;
@@ -194,9 +195,11 @@ public:
 
         ((uint64_t*)digest)[0] = h1;
         ((uint64_t*)digest)[1] = h2;
+
+        return m_byteCount;
     }
 
-private:
+protected:
     void processBlock() {
         uint64_t k1 = getblock64((uint64_t*)m_block, 0);
         uint64_t k2 = getblock64((uint64_t*)m_block, 1);

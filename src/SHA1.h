@@ -70,7 +70,7 @@ public:
         return *this;
     }
 
-    void finalize(uint32_t *digest) {
+    uint32_t finalize(uint32_t *digest) {
         size_t bitCount = m_byteCount * 8;
         processByte(0x80);
         if (m_blockByteIndex > 56) {
@@ -95,6 +95,8 @@ public:
         processByte( static_cast<unsigned char>((bitCount)     & 0xFF));
 
         memcpy(digest, m_digest, sizeof(m_digest));
+
+        return m_byteCount;
     }
 
 private:

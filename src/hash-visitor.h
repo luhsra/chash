@@ -107,7 +107,7 @@ public:
 	bool VisitAdjustedType(const AdjustedType *T);
 	bool VisitElaboratedType(const ElaboratedType *T);
 
-	std::string GetHash();
+	std::string GetHash(unsigned *processed_bytes = nullptr);
 
 	//C Exprs (no clang-builtins, ...)
 	/*bool VisitExpr(const Expr *Node);*/

@@ -10,8 +10,12 @@ using namespace std;
 
 typedef TranslationUnitHashVisitor HashVisitor;
 
-string HashVisitor::GetHash() {
-    return toplevel_hash.getDigest().getHexDigest();
+string HashVisitor::GetHash(unsigned *processed_bytes) {
+    auto hash = toplevel_hash.getDigest();
+    if (processed_bytes) {
+        *processed_bytes = hash.length;
+    }
+    return hash.getHexDigest();
 }
 
 /// Declarations

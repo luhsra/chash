@@ -20,13 +20,16 @@ public:
         Visitor.hashDecl(Context.getTranslationUnitDecl());
 
         // Context.getTranslationUnitDecl()->dump();
-        if (toplevel_hash_stream) {
-            std::string hash = Visitor.GetHash();
-            toplevel_hash_stream->write(hash.c_str(), hash.length());
+        unsigned processed_bytes;
+        std::string hash = Visitor.GetHash(&processed_bytes);
 
+        if (toplevel_hash_stream) {
+            toplevel_hash_stream->write(hash.c_str(), hash.length());
             delete toplevel_hash_stream;
         }
-        llvm::errs() << "top-level-hash: " << Visitor.GetHash() << "\n";
+        llvm::errs() << "top-level-hash: " << hash << "\n";
+        llvm::errs() << "processed bytes: " << processed_bytes << "\n";
+
     }
 private:
     raw_ostream *toplevel_hash_stream;

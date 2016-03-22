@@ -12,6 +12,7 @@ struct Hash : protected MurMurHash3 {
     struct digest {
         enum { DIGEST_WORDS = algorithm::DIGEST_WORDS };
         uint32_t value[algorithm::DIGEST_WORDS];
+        uint32_t length;
 
         bool operator==(const digest &other) const {
             for (unsigned i = 0; i < DIGEST_WORDS; i++) {
@@ -55,7 +56,7 @@ struct Hash : protected MurMurHash3 {
     const digest getDigest() const {
         Hash copy = *this;
         digest ret;
-        copy.finalize(ret.value);
+        ret.length = copy.finalize(ret.value);
         return ret;
     }
 
@@ -99,6 +100,7 @@ struct Hash : protected MurMurHash3 {
     }
 
     Hash& operator<<(const digest & x) {
+        m_byteCount += x.length;
         return  processBytes(x.value, sizeof(x.value));
     }
 
