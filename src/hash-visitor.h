@@ -24,10 +24,10 @@ class TranslationUnitHashVisitor
   typedef ConstStmtVisitor<TranslationUnitHashVisitor, bool> mt_stmtvisitor;
   typedef TypeVisitor<TranslationUnitHashVisitor, bool> mt_typevisitor;
 
-  Hash toplevel_hash;
+  Hash TopLevelHash;
 
   // In this storage we save hashes for various memory objects
-  std::map<const void *, Hash::digest> silo;
+  std::map<const void *, Hash::Digest> Silo;
 
   // /// Pending[i] is an action to hash an entity at level i.
   bool FirstChild;
@@ -39,12 +39,12 @@ class TranslationUnitHashVisitor
     return Pending.size();
   }
 
-  template <typename Fn> void afterChildren(Fn func) {
+  template <typename Fn> void afterChildren(Fn Func) {
     if (FirstChild) {
-      Pending.push_back(std::move(func));
+      Pending.push_back(std::move(Func));
     } else {
       Pending.back()();
-      Pending.back() = std::move(func);
+      Pending.back() = std::move(Func);
     }
     FirstChild = false;
   }
@@ -105,7 +105,7 @@ public:
   bool VisitAdjustedType(const AdjustedType *T);
   bool VisitElaboratedType(const ElaboratedType *T);
 
-  std::string GetHash(unsigned *processed_bytes = nullptr);
+  std::string getHash(unsigned *ProcessedBytes = nullptr);
 
   // C Exprs (no clang-builtins, ...)
   /*bool VisitExpr(const Expr *Node);*/
@@ -168,35 +168,35 @@ public:
 
   // statements
   bool VisitStmt(const Stmt *Node);
-  bool VisitCompoundStmt(const CompoundStmt *stmt);
-  bool VisitBreakStmt(const BreakStmt *stmt);
-  bool VisitContinueStmt(const ContinueStmt *stmt);
-  bool VisitGotoStmt(const GotoStmt *stmt);
-  bool VisitLabelStmt(const LabelStmt *stmt);
-  bool VisitDoStmt(const DoStmt *stmt);
-  bool VisitForStmt(const ForStmt *stmt);
-  bool VisitIfStmt(const IfStmt *stmt);
-  bool VisitNullStmt(const NullStmt *stmt);
-  bool VisitReturnStmt(const ReturnStmt *stmt);
-  bool VisitWhileStmt(const WhileStmt *stmt);
-  bool VisitSwitchStmt(const SwitchStmt *stmt);
-  bool VisitCaseStmt(const CaseStmt *stmt);
-  bool VisitDefaultStmt(const DefaultStmt *stmt);
-  bool VisitDeclStmt(const DeclStmt *stmt);
-  bool VisitGCCAsmStmt(const GCCAsmStmt *stmt);
-  bool VisitMSAsmStmt(const MSAsmStmt *stmt);
+  bool VisitCompoundStmt(const CompoundStmt *Stmt);
+  bool VisitBreakStmt(const BreakStmt *Stmt);
+  bool VisitContinueStmt(const ContinueStmt *Stmt);
+  bool VisitGotoStmt(const GotoStmt *Stmt);
+  bool VisitLabelStmt(const LabelStmt *Stmt);
+  bool VisitDoStmt(const DoStmt *Stmt);
+  bool VisitForStmt(const ForStmt *Stmt);
+  bool VisitIfStmt(const IfStmt *Stmt);
+  bool VisitNullStmt(const NullStmt *Stmt);
+  bool VisitReturnStmt(const ReturnStmt *Stmt);
+  bool VisitWhileStmt(const WhileStmt *Stmt);
+  bool VisitSwitchStmt(const SwitchStmt *Stmt);
+  bool VisitCaseStmt(const CaseStmt *Stmt);
+  bool VisitDefaultStmt(const DefaultStmt *Stmt);
+  bool VisitDeclStmt(const DeclStmt *Stmt);
+  bool VisitGCCAsmStmt(const GCCAsmStmt *Stmt);
+  bool VisitMSAsmStmt(const MSAsmStmt *Stmt);
 
   // not sure if we need this
-  bool VisitAttributedStmt(const AttributedStmt *stmt);
-  bool VisitCapturedStmt(const CapturedStmt *stmt);
-  bool VisitSEHExceptStmt(const SEHExceptStmt *stmt);
-  bool VisitSEHFinallyStmt(const SEHFinallyStmt *stmt);
-  bool VisitSEHLeaveStmt(const SEHLeaveStmt *stmt);
-  bool VisitSEHTryStmt(const SEHTryStmt *stmt);
-  bool VisitIndirectGotoStmt(const IndirectGotoStmt *stmt);
+  bool VisitAttributedStmt(const AttributedStmt *Stmt);
+  bool VisitCapturedStmt(const CapturedStmt *Stmt);
+  bool VisitSEHExceptStmt(const SEHExceptStmt *Stmt);
+  bool VisitSEHFinallyStmt(const SEHFinallyStmt *Stmt);
+  bool VisitSEHLeaveStmt(const SEHLeaveStmt *Stmt);
+  bool VisitSEHTryStmt(const SEHTryStmt *Stmt);
+  bool VisitIndirectGotoStmt(const IndirectGotoStmt *Stmt);
 
   // not implemented
-  bool VisitOMPExecutableDirective(const OMPExecutableDirective *stmt);
+  bool VisitOMPExecutableDirective(const OMPExecutableDirective *Stmt);
 
 protected:
   enum AstElementPrefix {
@@ -305,14 +305,15 @@ protected:
     // AstElement = 0xbcfa92ec
     // AstElement = 0x1cc7935
   };
-  bool doNotHashThis = false; // Flag used to ignore Nodes such as extern Decls
-  std::map<const void *, const void *> seen_types;
+
+  bool DoNotHashThis = false; // Flag used to ignore Nodes such as extern Decls
+  std::map<const void *, const void *> SeenTypes;
 
   bool haveSeen(const void *key, const void *type) {
-    if (seen_types.find(key) != seen_types.end()) {
+    if (SeenTypes.find(key) != SeenTypes.end()) {
       return true;
     }
-    seen_types[key] = type;
+    SeenTypes[key] = type;
     return false;
   }
 
@@ -381,16 +382,16 @@ protected:
   }
 
   // Hash Silo
-  void StoreHash(const void *obj, Hash::digest digest) { silo[obj] = digest; }
+  void storeHash(const void *obj, Hash::Digest digest) { Silo[obj] = digest; }
 
-  const Hash::digest *GetHash(const void *obj) {
-    if (silo.find(obj) != silo.end()) {
-      return &silo[obj];
+  const Hash::Digest *getHash(const void *obj) {
+    if (Silo.find(obj) != Silo.end()) {
+      return &Silo[obj];
     }
     return nullptr;
   }
 
-  Hash *PushHash() {
+  Hash *pushHash() {
     HashStack.push_back(Hash());
 
     //	llvm::errs() << "  PushHash mit Groesse: " << HashStack.size() << " und
@@ -399,7 +400,7 @@ protected:
     return &HashStack.back();
   }
 
-  Hash::digest PopHash(const Hash *should_be = nullptr) {
+  Hash::Digest popHash(const Hash *should_be = nullptr) {
 
     // llvm::errs() << "  PopHash mit Groesse: " << HashStack.size() << " und
     // Parameter: " << (should_be) << "\n";
@@ -411,12 +412,12 @@ protected:
     assert(!should_be || should_be == &HashStack.back());
 
     // Finalize the Hash
-    Hash::digest digest = TopHash().getDigest();
+    Hash::Digest digest = topHash().getDigest();
     HashStack.pop_back();
     return digest;
   }
 
-  Hash &TopHash() { return HashStack.back(); }
+  Hash &topHash() { return HashStack.back(); }
 };
 
 #endif

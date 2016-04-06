@@ -1,17 +1,17 @@
+#include "hash-visitor.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "hash-visitor.h"
 
 using namespace clang;
 using namespace llvm;
 
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
-  HashTranslationUnitConsumer(raw_ostream *OS) : toplevel_hash_stream(OS) {}
+  HashTranslationUnitConsumer(raw_ostream *OS) : TopLevelHashStream(OS) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) {
     // Traversing the translation unit decl via a RecursiveASTVisitor
@@ -19,33 +19,32 @@ public:
     Visitor.hashDecl(Context.getTranslationUnitDecl());
 
     // Context.getTranslationUnitDecl()->dump();
-    unsigned processed_bytes;
-    std::string hash = Visitor.GetHash(&processed_bytes);
+    unsigned ProcessedBytes;
+    std::string HashString = Visitor.getHash(&ProcessedBytes);
 
-    if (toplevel_hash_stream) {
-      toplevel_hash_stream->write(hash.c_str(), hash.length());
-      delete toplevel_hash_stream;
+    if (TopLevelHashStream) {
+      TopLevelHashStream->write(HashString.c_str(), HashString.length());
+      delete TopLevelHashStream;
     }
-    llvm::errs() << "top-level-hash: " << hash << "\n";
-    llvm::errs() << "processed bytes: " << processed_bytes << "\n";
+    errs() << "top-level-hash: " << HashString << "\n";
+    errs() << "processed bytes: " << ProcessedBytes << "\n";
   }
 
 private:
-  raw_ostream *toplevel_hash_stream;
+  raw_ostream *TopLevelHashStream;
   TranslationUnitHashVisitor Visitor;
 };
 
 class HashTranslationUnitAction : public PluginASTAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 llvm::StringRef) override {
-
+                                                 StringRef) override {
     // Write hash database to .o.hash if the compiler produces a object file
-    llvm::raw_ostream *Out = nullptr;
+    raw_ostream *Out = nullptr;
     if (CI.getFrontendOpts().OutputFile != "") {
       std::error_code Error;
       std::string HashFile = CI.getFrontendOpts().OutputFile + ".hash";
-      Out = new llvm::raw_fd_ostream(HashFile, Error, llvm::sys::fs::F_Text);
+      Out = new raw_fd_ostream(HashFile, Error, sys::fs::F_Text);
       errs() << "dump-ast-file: " << CI.getFrontendOpts().OutputFile << " "
              << HashFile << "\n";
       if (Error) {
@@ -53,14 +52,13 @@ protected:
                << CI.getFrontendOpts().OutputFile << "\n";
       }
     }
-    return llvm::make_unique<HashTranslationUnitConsumer>(Out);
+    return make_unique<HashTranslationUnitConsumer>(Out);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string> &args) override {
-
     for (unsigned i = 0, e = args.size(); i != e; ++i) {
-      llvm::errs() << " arg = " << args[i] << "\n";
+      errs() << " arg = " << args[i] << "\n";
 
       // Example error handling.
       if (args[i] == "-an-error") {
@@ -73,9 +71,8 @@ protected:
     }
     if (args.size() && args[0] == "help") {
       // FIXME
-      PrintHelp(llvm::errs());
+      PrintHelp(errs());
     }
-
     return true;
   }
 
@@ -83,7 +80,7 @@ protected:
     return AddBeforeMainAction;
   }
 
-  void PrintHelp(llvm::raw_ostream &ros) {
+  void PrintHelp(raw_ostream &ros) {
     ros << "Help for PrintFunctionNames plugin goes here\n";
   }
 };

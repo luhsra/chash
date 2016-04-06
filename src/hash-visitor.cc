@@ -6,16 +6,15 @@
 
 using namespace llvm;
 using namespace clang;
-using namespace std;
 
 typedef TranslationUnitHashVisitor HashVisitor;
 
-string HashVisitor::GetHash(unsigned *processed_bytes) {
-  auto hash = toplevel_hash.getDigest();
-  if (processed_bytes) {
-    *processed_bytes = hash.length;
+std::string HashVisitor::getHash(unsigned *ProcessedBytes) {
+  Hash::Digest TopLevelDigest = TopLevelHash.getDigest();
+  if (ProcessedBytes) {
+    *ProcessedBytes = TopLevelDigest.Length;
   }
-  return hash.asString();
+  return TopLevelDigest.asString();
 }
 
 /// Declarations
@@ -25,19 +24,19 @@ void HashVisitor::hashDecl(const Decl *D) {
   if (!D) {
     return;
   }
-  const Hash::digest *saved_digest = GetHash(D);
-  if (saved_digest) {
-    TopHash() << *saved_digest;
+  const Hash::Digest *const SavedDigest = getHash(D);
+  if (SavedDigest) {
+    topHash() << *SavedDigest;
     return;
   }
 
   // Visit in Pre-Order
-  unsigned Depth = beforeDescent();
+  const unsigned Depth = beforeDescent();
 
-  const Hash *hash = PushHash();
+  const Hash *const hash = pushHash();
 
-  bool handled = mt_declvisitor::Visit(D);
-  if (!handled) {
+  bool Handled = mt_declvisitor::Visit(D);
+  if (!Handled) {
     errs() << "---- START unhandled -----\n";
     D->dump();
     errs() << "---- END unhandled -----\n";
@@ -48,26 +47,26 @@ void HashVisitor::hashDecl(const Decl *D) {
     hashDeclContext(cast<DeclContext>(D));
 
   // visit Attributes of the Decl
-  for (Attr *attr : D->attrs()) {
+  for (const Attr *const attr : D->attrs()) {
     hashAttr(attr);
   }
 
   afterDescent(Depth);
 
-  const Hash::digest digest = PopHash(hash);
+  const Hash::Digest digest = popHash(hash);
 
   // Do not store or hash if flag is set
-  if (doNotHashThis) {
-    doNotHashThis = false;
+  if (DoNotHashThis) {
+    DoNotHashThis = false;
     return;
   }
 
   // Store hash for underlying type
-  StoreHash(D, digest);
+  storeHash(D, digest);
 
   // Hash into Parent
   if (!isa<TranslationUnitDecl>(D)) {
-    TopHash() << digest;
+    topHash() << digest;
   }
 }
 
@@ -93,13 +92,13 @@ void HashVisitor::hashDeclContext(const DeclContext *DC) {
 }
 
 bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
-  Hash *hash = PushHash();
+  Hash *hash = pushHash();
 
   // FIXME Hash Compiler Options
 
   afterChildren([=] {
-    StoreHash(Unit, PopHash(hash));
-    toplevel_hash << *hash;
+    storeHash(Unit, popHash(hash));
+    TopLevelHash << *hash;
   });
 
   Unit->dump();
@@ -110,23 +109,23 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
   // Ignore extern declarations
   if (Decl->hasExternalStorage()) {
-    doNotHashThis = true;
+    DoNotHashThis = true;
     return true;
   }
   haveSeen(Decl, Decl);
 
-  TopHash() << AstElementVarDecl;
+  topHash() << AstElementVarDecl;
   hashName(Decl);
   hashType(Decl->getType());
 
-  TopHash() << Decl->getStorageClass();
-  TopHash() << Decl->getTLSKind();
-  TopHash() << Decl->isModulePrivate();
-  TopHash() << Decl->isNRVOVariable();
+  topHash() << Decl->getStorageClass();
+  topHash() << Decl->getTLSKind();
+  topHash() << Decl->isModulePrivate();
+  topHash() << Decl->isNRVOVariable();
 
   if (Decl->hasInit()) {
     const Expr *expr = Decl->getInit();
-    TopHash() << AstElementVarDecl_init;
+    topHash() << AstElementVarDecl_init;
     hashStmt(expr);
   }
 
@@ -134,36 +133,35 @@ bool HashVisitor::VisitVarDecl(const VarDecl *Decl) {
 }
 
 bool HashVisitor::VisitImplicitParamDecl(const ImplicitParamDecl *Node) {
-  TopHash() << AstElementImplicitParamDecl;
+  topHash() << AstElementImplicitParamDecl;
   VisitVarDecl(Node); // important stuff done by parent
-
   return true;
 }
 
 bool HashVisitor::VisitParmVarDecl(const ParmVarDecl *Node) {
-  TopHash() << AstElementParamVarDecl;
+  topHash() << AstElementParamVarDecl;
   if (Node->hasDefaultArg()) {
     hashStmt(Node->getDefaultArg());
   }
   hashType(Node->getOriginalType());
-  TopHash() << Node->isParameterPack();
+  topHash() << Node->isParameterPack();
   VisitVarDecl(Node); // visit Parent
   return true;
 }
 
 // Types
 void HashVisitor::hashType(QualType T) {
-  uint64_t qualifiers = 0;
+  uint64_t Qualifiers = 0;
   if (T.hasQualifiers()) {
     // TODO evtl. CVRMASK benutzen
     if (T.isLocalConstQualified()) {
-      qualifiers |= 1;
+      Qualifiers |= 1;
     }
     if (T.isLocalRestrictQualified()) {
-      qualifiers |= (1 << 1);
+      Qualifiers |= (1 << 1);
     }
     if (T.isLocalVolatileQualified()) {
-      qualifiers |= (1 << 2);
+      Qualifiers |= (1 << 2);
     }
     // weitere qualifier?
   }
@@ -171,39 +169,39 @@ void HashVisitor::hashType(QualType T) {
   const Type *type = T.getTypePtr();
   assert(type != nullptr);
 
-  if (qualifiers) {
-    TopHash() << qualifiers;
+  if (Qualifiers) {
+    topHash() << Qualifiers;
   }
   // T->dump();
   // errs() << type<< " " << qualifiers << " qualifiers\n";
 
-  const Hash::digest *saved_digest = GetHash(type);
+  const Hash::Digest *SavedDigest = getHash(type);
 
-  if (saved_digest) {
-    TopHash() << *saved_digest;
+  if (SavedDigest) {
+    topHash() << *SavedDigest;
     return;
   }
 
   if (type->isStructureType()) {
     if (haveSeen(type, type)) {
-      TopHash() << "struct";
-      TopHash() << T.getAsString();
+      topHash() << "struct";
+      topHash() << T.getAsString();
       return;
     }
   } else if (type->isUnionType()) {
     if (haveSeen(type, type)) {
-      TopHash() << "union";
-      TopHash() << T.getAsString();
+      topHash() << "union";
+      topHash() << T.getAsString();
       return;
     }
   }
 
   // Visit in Pre-Order
   unsigned Depth = beforeDescent();
-  const Hash *hash = PushHash();
+  const Hash *hash = pushHash();
 
-  bool handled = mt_typevisitor::Visit(type);
-  if (!handled) {
+  bool Handled = mt_typevisitor::Visit(type);
+  if (!Handled) {
     errs() << "---- START unhandled type -----\n";
     type->dump();
     errs() << "---- END unhandled type -----\n";
@@ -211,7 +209,7 @@ void HashVisitor::hashType(QualType T) {
 
   afterDescent(Depth);
 
-  const Hash::digest digest = PopHash(hash);
+  const Hash::Digest digest = popHash(hash);
 
   // if(saved_digest && digest != *saved_digest){
   //	errs() << "Different hashes for\n";
@@ -220,48 +218,48 @@ void HashVisitor::hashType(QualType T) {
   //	type->dump();
   //}
 
-  assert((!saved_digest || digest == *saved_digest) && "Hashes do not match");
+  assert((!SavedDigest || digest == *SavedDigest) && "Hashes do not match");
   // Hash into Parent
-  TopHash() << digest;
+  topHash() << digest;
 
   // Store hash for underlying type
-  StoreHash(type, digest);
+  storeHash(type, digest);
 }
 
 bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
-  TopHash() << T->getKind();
+  topHash() << T->getKind();
   assert(!T->isSugared());
   return true;
 }
 
 bool HashVisitor::VisitPointerType(const PointerType *T) {
-  TopHash() << "pointer";
+  topHash() << "pointer";
   hashType(T->getPointeeType());
   return true;
 }
 
 bool HashVisitor::VisitArrayType(const ArrayType *T) {
-  TopHash() << "ArrayType";
+  topHash() << "ArrayType";
   hashType(T->getElementType());
-  TopHash() << "["
+  topHash() << "["
             << "*"
             << "]";
   return true;
 }
 
 bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T) {
-  TopHash() << "ConstantArrayType";
+  topHash() << "ConstantArrayType";
   hashType(T->getElementType());
-  TopHash() << "[" << T->getSize().getZExtValue() << "]";
+  topHash() << "[" << T->getSize().getZExtValue() << "]";
   return true;
 }
 
 bool HashVisitor::VisitVariableArrayType(const VariableArrayType *T) {
-  TopHash() << "VariableArrayType";
+  topHash() << "VariableArrayType";
   hashType(T->getElementType());
-  TopHash() << "[";
+  topHash() << "[";
   hashStmt(T->getSizeExpr());
-  TopHash() << "]";
+  topHash() << "]";
   return true;
 }
 
@@ -270,56 +268,56 @@ bool HashVisitor::VisitTypedefType(const TypedefType *T) {
 }
 
 bool HashVisitor::VisitComplexType(const ComplexType *T) {
-  TopHash() << "complex";
+  topHash() << "complex";
   hashType(T->getElementType());
   return true;
 }
 
 bool HashVisitor::VisitAtomicType(const AtomicType *T) {
-  TopHash() << "atomic";
+  topHash() << "atomic";
   hashType(T->getValueType());
   return true;
 }
 
 bool HashVisitor::VisitTypeOfExprType(const TypeOfExprType *T) {
-  TopHash() << "typeof";
+  topHash() << "typeof";
   hashType(T->desugar());
   return true;
 }
 
 bool HashVisitor::VisitTypeOfType(const TypeOfType *T) {
-  TopHash() << "typeoftypetype";
+  topHash() << "typeoftypetype";
   hashType(T->desugar());
   return true;
 }
 
 bool HashVisitor::VisitParenType(const ParenType *T) {
-  TopHash() << "parenType";
+  topHash() << "parenType";
   hashType(T->desugar());
   return true;
 }
 
 bool HashVisitor::VisitFunctionType(const FunctionType *T) {
-  TopHash() << "functype";
+  topHash() << "functype";
   hashType(T->getReturnType());
-  TopHash() << T->getRegParmType();
-  TopHash() << T->getCallConv();
+  topHash() << T->getRegParmType();
+  topHash() << T->getCallConv();
   return true;
 }
 
 bool HashVisitor::VisitFunctionProtoType(const FunctionProtoType *T) {
-  TopHash() << "funcprototype";
+  topHash() << "funcprototype";
   hashType(T->getReturnType());
   for (QualType qt : T->getParamTypes()) {
     hashType(qt);
   }
-  TopHash() << T->getRegParmType();
-  TopHash() << T->getCallConv();
+  topHash() << T->getRegParmType();
+  topHash() << T->getCallConv();
   return true;
 }
 
 bool HashVisitor::VisitEnumType(const EnumType *Node) {
-  TopHash() << "Enum Type";
+  topHash() << "Enum Type";
   if (Node->isSugared()) {
     hashType(Node->desugar());
   }
@@ -330,7 +328,7 @@ bool HashVisitor::VisitEnumType(const EnumType *Node) {
 
   for (EnumConstantDecl *ecd : ed->enumerators()) {
     hashStmt(ecd->getInitExpr());
-    TopHash() << ecd->getInitVal().getExtValue();
+    topHash() << ecd->getInitVal().getExtValue();
     hashName(ecd);
   }
   hashName(ed);
@@ -339,29 +337,29 @@ bool HashVisitor::VisitEnumType(const EnumType *Node) {
 }
 
 bool HashVisitor::VisitTagType(const TagType *Node) {
-  TopHash() << "Tag Type";
+  topHash() << "Tag Type";
   hashDecl(Node->getDecl());
   return true;
 }
 
 bool HashVisitor::VisitAttributedType(const AttributedType *Node) {
-  TopHash() << "AttributedType";
-  TopHash() << Node->getAttrKind();
+  topHash() << "AttributedType";
+  topHash() << Node->getAttrKind();
   hashType(Node->getModifiedType());
   hashType(Node->getEquivalentType());
   return true;
 }
 
 bool HashVisitor::VisitUnaryTransformType(const UnaryTransformType *T) {
-  TopHash() << "UnaryTransformType";
+  topHash() << "UnaryTransformType";
   hashType(T->getBaseType());
   hashType(T->getUnderlyingType());
-  TopHash() << T->getUTTKind();
+  topHash() << T->getUTTKind();
   return true;
 }
 
 bool HashVisitor::VisitDecayedType(const DecayedType *T) {
-  TopHash() << "DecayedType";
+  topHash() << "DecayedType";
   hashType(T->getOriginalType());
   hashType(T->getAdjustedType());
   hashType(T->getPointeeType());
@@ -369,28 +367,29 @@ bool HashVisitor::VisitDecayedType(const DecayedType *T) {
 }
 
 bool HashVisitor::VisitAdjustedType(const AdjustedType *T) {
-  TopHash() << "AdjustedType";
+  topHash() << "AdjustedType";
   hashType(T->getOriginalType());
   hashType(T->getAdjustedType());
   return true;
 }
 
 bool HashVisitor::VisitElaboratedType(const ElaboratedType *T) {
-  TopHash() << "ElaboratedType";
+  topHash() << "ElaboratedType";
   hashType(T->getNamedType());
-  TopHash() << T->getKeyword();
+  topHash() << T->getKeyword();
   return true;
 }
 
 bool HashVisitor::VisitType(const Type *T) {
-  const Hash::digest *digest = GetHash(T);
+  const Hash::Digest *digest = getHash(T);
   if (digest) {
-    TopHash() << *digest;
+    topHash() << *digest;
     return true;
   }
+
   if (T->isStructureType()) {
     haveSeen(T, T);
-    TopHash() << "struct";
+    topHash() << "struct";
     const RecordType *rt = T->getAsStructureType();
     RecordDecl *rd = rt->getDecl();
 
@@ -400,18 +399,22 @@ bool HashVisitor::VisitType(const Type *T) {
       hashAttr(attr);
     }
 
-    for (RecordDecl::field_iterator iter = rd->field_begin();
-         iter != rd->field_end(); iter++) {
-      FieldDecl fd = **iter;
-      TopHash() << "member";
+    for (RecordDecl::field_iterator Iter =
+             rd->field_begin(); // TODO: put end in initialisation; condition:
+                                // iter != e
+         Iter != rd->field_end();
+         ++Iter) {
+      FieldDecl fd = **Iter;
+      topHash() << "member";
       hashType(fd.getType());
       hashName(&fd);
     }
     return true;
+  }
 
-  } else if (T->isUnionType()) {
+  if (T->isUnionType()) {
     haveSeen(T, T);
-    TopHash() << "union";
+    topHash() << "union";
     const RecordType *rt = T->getAsUnionType();
     RecordDecl *rd = rt->getDecl();
 
@@ -421,50 +424,51 @@ bool HashVisitor::VisitType(const Type *T) {
       hashAttr(attr);
     }
 
-    for (RecordDecl::field_iterator iter = rd->field_begin();
-         iter != rd->field_end(); iter++) {
-      FieldDecl fd = **iter;
-      TopHash() << "member";
+    for (RecordDecl::field_iterator Iter =
+             rd->field_begin(); // TODO: put end in initialisation; condition:
+                                // iter != e
+         Iter != rd->field_end();
+         ++Iter) {
+      FieldDecl fd = **Iter;
+      topHash() << "member";
       hashType(fd.getType());
       hashName(&fd);
     }
     return true;
-
-  } else {
-    return false;
   }
+  return false;
 }
 
 // Other Utilities
 void HashVisitor::hashName(const NamedDecl *ND) {
   if (ND->getIdentifier() && ND->getDeclName()) {
-    TopHash() << ND->getNameAsString();
+    topHash() << ND->getNameAsString();
   } else {
-    TopHash() << 0;
+    topHash() << 0;
   }
 }
 
 // Expressions
 bool HashVisitor::VisitCastExpr(const CastExpr *Node) {
-  TopHash() << AstElementCastExpr;
+  topHash() << AstElementCastExpr;
   hashStmt(Node->getSubExpr());
-  TopHash() << Node->getCastKind();
+  topHash() << Node->getCastKind();
   hashType(Node->getType());
   return true;
 }
 
 bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
-  const ValueDecl *Decl = Node->getDecl();
-  TopHash() << "ref";
+  const ValueDecl *const Decl = Node->getDecl();
+  topHash() << "ref";
   // FIXME:	spaeter Auskommentiertes(isa-Zeug) einkommentieren (oder Problem
   // anders beheben)
   //		Andere Decls mehrfach referenzieren => Problem
   //		evtl. auch Zyklus in anderer Decl
   if (/*(isa<VarDecl>(Decl) || isa<FunctionDecl>(Decl)) && */ haveSeen(Decl,
                                                                        Decl)) {
-    const Hash::digest *digest = GetHash(Decl);
+    const Hash::Digest *digest = getHash(Decl);
     if (digest) {
-      TopHash() << *digest;
+      topHash() << *digest;
     } else {
       // if(!isa<VarDecl>(Decl) && !isa<FunctionDecl>(Decl)){
       //	errs() << "Not a VarDecl or FunctionDecl:\n";
@@ -472,11 +476,12 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
       //}
       assert(isa<VarDecl>(Decl) || isa<FunctionDecl>(Decl));
       if (isa<VarDecl>(Decl)) {
-        VarDecl *vd = (VarDecl *)Decl;
-        TopHash() << "VarDeclDummy";
+        VarDecl *vd = const_cast<VarDecl *>(static_cast<const VarDecl *>(Decl));
+        topHash() << "VarDeclDummy";
         dummyVarDecl(vd);
       } else {
-        FunctionDecl *fd = (FunctionDecl *)Decl;
+        FunctionDecl *fd =
+            const_cast<FunctionDecl *>(static_cast<const FunctionDecl *>(Decl));
         dummyFunctionDecl(fd);
       }
     }
@@ -488,51 +493,51 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
 }
 
 bool HashVisitor::VisitPredefinedExpr(const PredefinedExpr *Node) {
-  TopHash() << "predef";
+  topHash() << "predef";
   hashType(Node->getType());
-  TopHash() << Node->getFunctionName()->getString().str();
+  topHash() << Node->getFunctionName()->getString().str();
   return true;
 }
 
 bool HashVisitor::VisitCharacterLiteral(const CharacterLiteral *Node) {
-  TopHash() << AstElementCharacterLiteral;
+  topHash() << AstElementCharacterLiteral;
   hashType(Node->getType());
-  TopHash() << Node->getValue();
+  topHash() << Node->getValue();
   return true;
 }
 
 bool HashVisitor::VisitIntegerLiteral(const IntegerLiteral *Node) {
-  TopHash() << AstElementIntegerLiteral;
+  topHash() << AstElementIntegerLiteral;
   hashType(Node->getType());
   if (Node->getValue().isNegative()) {
-    TopHash() << Node->getValue().getSExtValue();
+    topHash() << Node->getValue().getSExtValue();
   } else {
-    TopHash() << Node->getValue().getZExtValue();
+    topHash() << Node->getValue().getZExtValue();
   }
   return true;
 }
 
 bool HashVisitor::VisitFloatingLiteral(const FloatingLiteral *Node) {
-  TopHash() << AstElementFloatingLiteral;
+  topHash() << AstElementFloatingLiteral;
   hashType(Node->getType());
-  double mkay = (Node->getValue().convertToDouble());
+  double mkay = (Node->getValue().convertToDouble()); //TODO: rename
   double *mmkay = &mkay;
-  uint64_t *mval = (uint64_t *)(mmkay);
+  uint64_t *mval = reinterpret_cast<uint64_t *>(mmkay);
   uint64_t val = *mval;
-  TopHash() << val;
+  topHash() << val;
   return true;
 }
 
 bool HashVisitor::VisitStringLiteral(const StringLiteral *Str) {
-  TopHash() << AstElementStringLiteral;
+  topHash() << AstElementStringLiteral;
   hashType(Str->getType());
-  TopHash() << Str->getString().str();
+  topHash() << Str->getString().str();
   return true;
 }
 
 bool HashVisitor::VisitInitListExpr(const InitListExpr *ILE) {
-  TopHash() << "initlistexpr";
-  for (unsigned int i = 0; i < ILE->getNumInits(); i++) {
+  topHash() << "initlistexpr";
+  for (unsigned int i = 0; i < ILE->getNumInits(); ++i) {
     hashStmt(ILE->getInit(i));
   }
   if (ILE->hasArrayFiller()) {
@@ -542,17 +547,17 @@ bool HashVisitor::VisitInitListExpr(const InitListExpr *ILE) {
 }
 
 bool HashVisitor::VisitUnaryOperator(const UnaryOperator *Node) {
-  TopHash() << "unary";
+  topHash() << "unary";
   hashStmt(Node->getSubExpr());
-  TopHash() << Node->getOpcode();
+  topHash() << Node->getOpcode();
   hashType(Node->getType());
   return true;
 }
 
 bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *Node) {
-  TopHash() << "UOTT";
-  TopHash() << Node->getKind();
+  topHash() << "UOTT";
+  topHash() << Node->getKind();
   if (Node->isArgumentType()) {
     hashType(Node->getArgumentType());
   } else {
@@ -562,23 +567,23 @@ bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(
 }
 
 bool HashVisitor::VisitMemberExpr(const MemberExpr *Node) {
-  TopHash() << "member";
-  Expr *base = Node->getBase();
-  hashStmt(base);
+  topHash() << "member";
+  Expr *Base = Node->getBase();
+  hashStmt(Base);
 
-  ValueDecl *member = Node->getMemberDecl();
-  hashDecl(member);
+  ValueDecl *Member = Node->getMemberDecl();
+  hashDecl(Member);
 
-  TopHash() << Node->isArrow();
+  topHash() << Node->isArrow();
 
   return true;
 }
 
 bool HashVisitor::VisitBinaryOperator(const BinaryOperator *Node) {
-  TopHash() << "binary";
+  topHash() << "binary";
   hashStmt(Node->getLHS());
   hashStmt(Node->getRHS());
-  TopHash() << Node->getOpcode();
+  topHash() << Node->getOpcode();
   hashType(Node->getType());
   return true;
 }
@@ -586,29 +591,29 @@ bool HashVisitor::VisitBinaryOperator(const BinaryOperator *Node) {
 // erbt von BinaryOperator
 bool
 HashVisitor::VisitCompoundAssignOperator(const CompoundAssignOperator *Node) {
-  TopHash() << "compound";
+  topHash() << "compound";
   hashStmt(Node->getLHS());
   hashStmt(Node->getRHS());
-  TopHash() << Node->getOpcode();
+  topHash() << Node->getOpcode();
   hashType(Node->getType());
   return true;
 }
 
 bool HashVisitor::VisitAddrLabelExpr(const AddrLabelExpr *Node) {
-  TopHash() << "addrlabel";
+  topHash() << "addrlabel";
   hashStmt(Node->getLabel()->getStmt());
   return true;
 }
 
 bool HashVisitor::VisitImaginaryLiteral(const ImaginaryLiteral *Node) {
-  TopHash() << "imglit";
+  topHash() << "imglit";
   hashType(Node->getType());
   hashStmt(Node->getSubExpr());
   return true;
 }
 
 bool HashVisitor::VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node) {
-  TopHash() << "complit";
+  topHash() << "complit";
   hashType(Node->getType());
   hashStmt(Node->getInitializer());
   return true;
@@ -616,7 +621,7 @@ bool HashVisitor::VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node) {
 
 bool HashVisitor::VisitAbstractConditionalOperator(
     const AbstractConditionalOperator *Node) {
-  TopHash() << "ACondO";
+  topHash() << "ACondO";
   hashType(Node->getType());
   hashStmt(Node->getCond());
   hashStmt(Node->getTrueExpr());
@@ -626,7 +631,7 @@ bool HashVisitor::VisitAbstractConditionalOperator(
 
 bool HashVisitor::VisitBinaryConditionalOperator(
     const BinaryConditionalOperator *Node) {
-  TopHash() << "BCondO";
+  topHash() << "BCondO";
   hashType(Node->getType());
   hashStmt(Node->getCond());
   hashStmt(Node->getCommon());
@@ -636,7 +641,7 @@ bool HashVisitor::VisitBinaryConditionalOperator(
 }
 
 bool HashVisitor::VisitCallExpr(const CallExpr *Node) {
-  TopHash() << "callExpr";
+  topHash() << "callExpr";
   hashType(Node->getType());
   const FunctionDecl *fd = Node->getDirectCallee();
   if (fd) {
@@ -644,22 +649,22 @@ bool HashVisitor::VisitCallExpr(const CallExpr *Node) {
   } else {
     hashStmt(Node->getCallee());
   }
-  for (unsigned int i = 0; i < Node->getNumArgs(); i++) {
+  for (unsigned int i = 0; i < Node->getNumArgs(); ++i) {
     hashStmt(Node->getArg(i));
   }
   return true;
 }
 
 bool HashVisitor::VisitOffsetOfExpr(const OffsetOfExpr *Node) {
-  TopHash() << "offsetof";
+  topHash() << "offsetof";
   hashType(Node->getType());
-  for (unsigned int i = 0; i < Node->getNumExpressions(); i++) {
+  for (unsigned int i = 0; i < Node->getNumExpressions(); ++i) {
     hashStmt(Node->getIndexExpr(i));
   }
-  for (unsigned int i = 0; i < Node->getNumComponents(); i++) {
+  for (unsigned int i = 0; i < Node->getNumComponents(); ++i) {
     OffsetOfNode off = Node->getComponent(i);
-    TopHash() << "offsetnode";
-    TopHash() << off.getKind();
+    topHash() << "offsetnode";
+    topHash() << off.getKind();
     FieldDecl *fd;
 
     if (off.getKind() == OffsetOfNode::Kind::Field) {
@@ -674,44 +679,44 @@ bool HashVisitor::VisitOffsetOfExpr(const OffsetOfExpr *Node) {
 }
 
 bool HashVisitor::VisitParenExpr(const ParenExpr *Node) {
-  TopHash() << "parenExpr";
+  topHash() << "parenExpr";
   hashType(Node->getType());
   hashStmt(Node->getSubExpr());
   return true;
 }
 
 bool HashVisitor::VisitAtomicExpr(const AtomicExpr *Node) {
-  AtomicExpr *node = (AtomicExpr *)Node;
+  AtomicExpr *MutableNode = const_cast<AtomicExpr *>(Node);
 
-  TopHash() << "atomicExpr";
+  topHash() << "atomicExpr";
   hashType(Node->getType());
-  Expr **subexprs = node->getSubExprs();
-  for (unsigned int i = 0; i < node->getNumSubExprs(); i++) {
-    hashStmt(subexprs[i]);
+  Expr **SubExprs = MutableNode->getSubExprs();
+  for (unsigned int i = 0; i < MutableNode->getNumSubExprs(); ++i) {
+    hashStmt(SubExprs[i]);
   }
   return true;
 }
 
 bool HashVisitor::VisitParenListExpr(const ParenListExpr *Node) {
-  TopHash() << "parenListExpr";
+  topHash() << "parenListExpr";
   hashType(Node->getType());
-  for (Expr *expr : ((ParenListExpr *)Node)->exprs()) {
+  for (Expr *expr : const_cast<ParenListExpr *>(Node)->exprs()) {
     hashStmt(expr);
   }
   return true;
 }
 
 bool HashVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *Node) {
-  DesignatedInitExpr *node = (DesignatedInitExpr *)Node;
+  DesignatedInitExpr *MutableNode = const_cast<DesignatedInitExpr *>(Node);
 
-  TopHash() << "designatedInit";
+  topHash() << "designatedInit";
   hashType(Node->getType());
-  for (unsigned int i = 0; i < node->getNumSubExprs(); i++) {
-    hashStmt(node->getSubExpr(i));
+  for (unsigned int i = 0; i < MutableNode->getNumSubExprs(); ++i) {
+    hashStmt(MutableNode->getSubExpr(i));
   }
-  for (unsigned int i = 0; i < node->size(); i++) {
-    DesignatedInitExpr::Designator *des = node->getDesignator(i);
-    TopHash() << "designator";
+  for (unsigned int i = 0; i < MutableNode->size(); ++i) {
+    DesignatedInitExpr::Designator *des = MutableNode->getDesignator(i);
+    topHash() << "designator";
     hashType(des->getField()->getType());
     hashName(des->getField());
   }
@@ -719,14 +724,14 @@ bool HashVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *Node) {
 }
 
 bool HashVisitor::VisitStmtExpr(const StmtExpr *Node) {
-  TopHash() << AstElementStmtExpr;
+  topHash() << AstElementStmtExpr;
   hashType(Node->getType());
   hashStmt(Node->getSubStmt());
   return true;
 }
 
 bool HashVisitor::VisitArraySubscriptExpr(const ArraySubscriptExpr *Node) {
-  TopHash() << "ArrayAccess";
+  topHash() << "ArrayAccess";
   hashStmt(Node->getLHS());
   hashStmt(Node->getRHS());
   hashStmt(Node->getBase());
@@ -736,21 +741,21 @@ bool HashVisitor::VisitArraySubscriptExpr(const ArraySubscriptExpr *Node) {
 
 bool
 HashVisitor::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *Node) {
-  TopHash() << "implicitInit";
+  topHash() << "implicitInit";
   hashType(Node->getType());
   return true;
 }
 
 bool HashVisitor::VisitVAArgExpr(const VAArgExpr *Node) {
-  TopHash() << "va_stuff";
+  topHash() << "va_stuff";
   hashType(Node->getType());
   hashStmt(Node->getSubExpr());
-  TopHash() << Node->isMicrosoftABI();
+  topHash() << Node->isMicrosoftABI();
   return true;
 }
 
 bool HashVisitor::VisitBlockExpr(const BlockExpr *Node) {
-  TopHash() << "block expr";
+  topHash() << "block expr";
   hashDecl(Node->getBlockDecl());
   hashStmt(Node->getBody());
 
@@ -760,7 +765,7 @@ bool HashVisitor::VisitBlockExpr(const BlockExpr *Node) {
 // common Decls
 
 bool HashVisitor::VisitBlockDecl(const BlockDecl *Node) {
-  TopHash() << "blockDecl";
+  topHash() << "blockDecl";
 
   for (ParmVarDecl *par : Node->parameters()) {
     VisitVarDecl(par);
@@ -775,34 +780,34 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node) {
   if (Node->getStorageClass() == StorageClass::SC_Extern ||
       Node->getStorageClass() == StorageClass::SC_PrivateExtern ||
       !Node->isThisDeclarationADefinition()) {
-    doNotHashThis = true;
+    DoNotHashThis = true;
     return true;
   }
 
   haveSeen(Node, Node);
 
-  TopHash() << "FunctionDecl";
-  TopHash() << Node->getNameInfo().getName().getAsString();
+  topHash() << "FunctionDecl";
+  topHash() << Node->getNameInfo().getName().getAsString();
   hashStmt(Node->getBody());
-  TopHash() << Node->isDefined();
-  TopHash() << Node->isThisDeclarationADefinition();
-  TopHash() << Node->isVariadic();
-  TopHash() << Node->isVirtualAsWritten();
-  TopHash() << Node->isPure();
-  TopHash() << Node->hasImplicitReturnZero();
-  TopHash() << Node->hasPrototype();
-  TopHash() << Node->hasWrittenPrototype();
-  TopHash() << Node->hasInheritedPrototype();
-  TopHash() << Node->isMain();
-  TopHash() << Node->isExternC();
-  TopHash() << Node->isGlobal();
-  TopHash() << Node->isNoReturn();
-  TopHash() << Node->hasSkippedBody(); //???
-  TopHash() << Node->getBuiltinID();
+  topHash() << Node->isDefined();
+  topHash() << Node->isThisDeclarationADefinition();
+  topHash() << Node->isVariadic();
+  topHash() << Node->isVirtualAsWritten();
+  topHash() << Node->isPure();
+  topHash() << Node->hasImplicitReturnZero();
+  topHash() << Node->hasPrototype();
+  topHash() << Node->hasWrittenPrototype();
+  topHash() << Node->hasInheritedPrototype();
+  topHash() << Node->isMain();
+  topHash() << Node->isExternC();
+  topHash() << Node->isGlobal();
+  topHash() << Node->isNoReturn();
+  topHash() << Node->hasSkippedBody(); //???
+  topHash() << Node->getBuiltinID();
 
-  TopHash() << Node->getStorageClass(); // static and stuff
-  TopHash() << Node->isInlineSpecified();
-  TopHash() << Node->isInlined();
+  topHash() << Node->getStorageClass(); // static and stuff
+  topHash() << Node->isInlineSpecified();
+  topHash() << Node->isInlined();
 
   // hash all parameters
   for (ParmVarDecl *decl : Node->parameters()) {
@@ -818,53 +823,53 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node) {
   hashType(Node->getReturnType());
 
   // here an error (propably nullptr) occured
-  const IdentifierInfo *ident = Node->getLiteralIdentifier();
-  if (ident != nullptr) {
-    const char *str = ident->getNameStart();
-    if (str != nullptr)
-      TopHash() << str;
+  const IdentifierInfo *Ident = Node->getLiteralIdentifier();
+  if (Ident) {
+    const char *IdentName = Ident->getNameStart();
+    if (IdentName)
+      topHash() << IdentName;
   }
 
-  TopHash() << Node->getMemoryFunctionKind(); // maybe needed
+  topHash() << Node->getMemoryFunctionKind(); // maybe needed
 
   return true;
 }
 
 bool HashVisitor::VisitLabelDecl(const LabelDecl *Node) {
-  TopHash() << "labeldecl";
+  topHash() << "labeldecl";
   hashName(Node);
   // if location changes, then it will be recompiled there.
   // Additionally the linker has this information--> no need to handle
   // this here (SourceRange)
 
-  TopHash() << Node->isGnuLocal();
-  TopHash() << Node->isMSAsmLabel();
+  topHash() << Node->isGnuLocal();
+  topHash() << Node->isMSAsmLabel();
   if (Node->isMSAsmLabel()) {
-    TopHash() << Node->getMSAsmLabel().str();
+    topHash() << Node->getMSAsmLabel().str();
   }
   return true;
 }
 
 bool HashVisitor::VisitEnumDecl(const EnumDecl *Node) {
-  const Hash *hash = PushHash();
-  TopHash() << "EnumDecl";
+  const Hash *hash = pushHash();
+  topHash() << "EnumDecl";
   hashName(Node);
-  bool handled = true;
+  bool Handled = true;
   for (EnumConstantDecl *ecd : Node->enumerators()) {
-    handled &= mt_declvisitor::Visit(ecd);
-    StoreHash(ecd, TopHash().getDigest());
+    Handled &= mt_declvisitor::Visit(ecd);
+    storeHash(ecd, topHash().getDigest());
   }
-  PopHash(hash);
-  return handled;
+  popHash(hash);
+  return Handled;
 }
 bool HashVisitor::VisitEnumConstantDecl(const EnumConstantDecl *Node) {
-  TopHash() << "EnumConstant";
+  topHash() << "EnumConstant";
   const Expr *expr = Node->getInitExpr();
   hashName(Node);
   if (expr) {
     hashStmt(expr);
   }
-  TopHash() << Node->getInitVal().getExtValue();
+  topHash() << Node->getInitVal().getExtValue();
 
   return true;
 }
@@ -873,10 +878,11 @@ bool HashVisitor::VisitEnumConstantDecl(const EnumConstantDecl *Node) {
 // an anonymous union/struct into the parent scope
 //--> do not follow the struct because it does not exist then...
 bool HashVisitor::VisitIndirectFieldDecl(const IndirectFieldDecl *Node) {
-  TopHash() << "VisitIndirectFieldDecl";
-  for (IndirectFieldDecl::chain_iterator iter = Node->chain_begin();
-       iter != Node->chain_end(); iter++) {
-    NamedDecl nd = **iter;
+  topHash() << "VisitIndirectFieldDecl";
+  for (IndirectFieldDecl::chain_iterator Iter = Node->chain_begin();
+       Iter != Node->chain_end();
+       ++Iter) { // TODO: put end in initialisation; condition: iter != e
+    NamedDecl nd = **Iter;
     hashDecl(&nd);
   }
   VisitValueDecl(Node);
@@ -886,33 +892,33 @@ bool HashVisitor::VisitIndirectFieldDecl(const IndirectFieldDecl *Node) {
 // called by children
 bool HashVisitor::VisitValueDecl(const ValueDecl *Node) {
 
-  TopHash() << "VisitValueDecl";
+  topHash() << "VisitValueDecl";
   hashType(Node->getType());
   hashName(Node);
   return true;
 }
 
 bool HashVisitor::VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node) {
-  TopHash() << "FileScopeAsmDecl";
+  topHash() << "FileScopeAsmDecl";
 
   const StringLiteral *sl = Node->getAsmString();
-  if (sl != nullptr) {
+  if (sl) {
     hashStmt(sl);
   }
   return true;
 }
 
 bool HashVisitor::VisitCapturedDecl(const CapturedDecl *Node) {
-  TopHash() << "CapturedDecl";
+  topHash() << "CapturedDecl";
   Stmt *body = Node->getBody();
-  if (body != nullptr) {
+  if (body) {
     hashStmt(body);
   }
-  TopHash() << Node->isNothrow();
+  topHash() << Node->isNothrow();
 
-  for (unsigned i = 0; i < Node->getNumParams(); i++) {
+  for (unsigned i = 0; i < Node->getNumParams(); ++i) {
     ImplicitParamDecl *ipd = Node->getParam(i);
-    if (ipd == nullptr) {
+    if (!ipd) {
       errs() << "nullptr in CapturedDecl!";
       exit(1);
     }
@@ -924,17 +930,15 @@ bool HashVisitor::VisitCapturedDecl(const CapturedDecl *Node) {
 
 // similar to hashDecl...
 void HashVisitor::hashAttr(const Attr *attr) {
-
   if (!attr) {
     return;
   }
-
   // No visitor exists. do it per hand
   // TODO ParmeterABIAttr & StmtAttr (siehe uncommented Attr...)
   if (isa<InheritableParamAttr>(attr)) {
-    VisitInheritableParamAttr((InheritableParamAttr *)attr);
+    VisitInheritableParamAttr(static_cast<const InheritableParamAttr *>(attr));
   } else if (isa<InheritableAttr>(attr)) {
-    VisitInheritableAttr((InheritableAttr *)attr);
+    VisitInheritableAttr(static_cast<const InheritableAttr *>(attr));
   } else {
     VisitAttr(attr);
   }
@@ -943,58 +947,52 @@ void HashVisitor::hashAttr(const Attr *attr) {
 // Attrs
 // uncommented Attr not found in namespace
 bool HashVisitor::VisitAttr(const Attr *attr) {
-  TopHash() << "Attr";
-  TopHash() << attr->getKind(); // hash enum
-  TopHash() << attr->isPackExpansion();
-
+  topHash() << "Attr";
+  topHash() << attr->getKind(); // hash enum
+  topHash() << attr->isPackExpansion();
   return true;
 }
 
 bool HashVisitor::VisitInheritableAttr(const InheritableAttr *attr) {
-  TopHash() << "Inheritable Attr";
+  topHash() << "Inheritable Attr";
   VisitAttr(attr);
-
   return true;
 }
 /*
 bool HashVisitor::VisitStmtAttr(const StmtAttr *attr){
-        TopHash() << "Stmt Attr";
-        VisitAttr(attr);
-
-        return true;
+  TopHash() << "Stmt Attr";
+  VisitAttr(attr);
+  return true;
 }
 */
 
 bool HashVisitor::VisitInheritableParamAttr(const InheritableParamAttr *attr) {
-
-  TopHash() << "InheritableParamAttr";
+  topHash() << "InheritableParamAttr";
   VisitAttr(attr);
   return true;
 }
 
 /*
 bool HashVisitor::VisitParameterABIAttr(const ParameterABIAttr *attr){
-
-        TopHash() << "ParameterABAttr";
-        const ParameterABI pabi = getABI();
-        TopHash() << pabi;//struct
-        VisitAttr(attr);
-
-        return true;
+  TopHash() << "ParameterABAttr";
+  const ParameterABI pabi = getABI();
+  TopHash() << pabi;//struct
+  VisitAttr(attr);
+  return true;
 }
 */
 
 // statements
-void HashVisitor::hashStmt(const Stmt *stmt) {
+void HashVisitor::hashStmt(const Stmt *Stmt) {
   // Falls wir Nullpointer reinstecken
-  if (!stmt) {
+  if (!Stmt) {
     return;
   }
 
-  bool handled = mt_stmtvisitor::Visit(stmt);
-  if (!handled) {
+  bool Handled = mt_stmtvisitor::Visit(Stmt);
+  if (!Handled) {
     errs() << "---- START unhandled statement ----\n";
-    stmt->dump();
+    Stmt->dump();
     errs() << "----- END unhandled statement -----\n";
   }
 }
@@ -1004,185 +1002,187 @@ bool HashVisitor::VisitStmt(const Stmt *Node) {
   return false;
 }
 
-bool HashVisitor::VisitCompoundStmt(const CompoundStmt *stmt) {
-  TopHash() << "compound";
-  for (CompoundStmt::const_body_iterator iter = stmt->body_begin();
-       iter != stmt->body_end(); iter++) {
-    hashStmt(*iter);
+bool HashVisitor::VisitCompoundStmt(const CompoundStmt *Stmt) {
+  topHash() << "compound";
+  for (CompoundStmt::const_body_iterator Iter = Stmt->body_begin();
+       Iter != Stmt->body_end();
+       ++Iter) { // TODO: put end in initialisation; condition: iter != e
+    hashStmt(*Iter);
   }
   return true;
 }
 
-bool HashVisitor::VisitBreakStmt(const BreakStmt *stmt) {
-  TopHash() << "break";
+bool HashVisitor::VisitBreakStmt(const BreakStmt *Stmt) {
+  topHash() << "break";
   return true;
 }
 
-bool HashVisitor::VisitContinueStmt(const ContinueStmt *stmt) {
-  TopHash() << AstElementContinueStmt;
+bool HashVisitor::VisitContinueStmt(const ContinueStmt *Stmt) {
+  topHash() << AstElementContinueStmt;
   return true;
 }
 
-bool HashVisitor::VisitGotoStmt(const GotoStmt *stmt) {
-  TopHash() << AstElementGotoStmt;
-  hashDecl(stmt->getLabel());
+bool HashVisitor::VisitGotoStmt(const GotoStmt *Stmt) {
+  topHash() << AstElementGotoStmt;
+  hashDecl(Stmt->getLabel());
   return true;
 }
 
-bool HashVisitor::VisitLabelStmt(const LabelStmt *stmt) {
-  TopHash() << AstElementLabelStmt;
-  hashDecl(stmt->getDecl());
-  hashStmt(stmt->getSubStmt());
+bool HashVisitor::VisitLabelStmt(const LabelStmt *Stmt) {
+  topHash() << AstElementLabelStmt;
+  hashDecl(Stmt->getDecl());
+  hashStmt(Stmt->getSubStmt());
   return true;
 }
 
-bool HashVisitor::VisitDoStmt(const DoStmt *stmt) {
-  TopHash() << AstElementDoStmt;
-  hashStmt(stmt->getCond());
-  hashStmt(stmt->getBody());
+bool HashVisitor::VisitDoStmt(const DoStmt *Stmt) {
+  topHash() << AstElementDoStmt;
+  hashStmt(Stmt->getCond());
+  hashStmt(Stmt->getBody());
   return true;
 }
 
-bool HashVisitor::VisitForStmt(const ForStmt *stmt) {
-  TopHash() << AstElementForStmt;
-  hashStmt(stmt->getInit());
-  hashStmt(stmt->getConditionVariableDeclStmt());
-  hashStmt(stmt->getCond());
-  hashStmt(stmt->getInc());
-  hashStmt(stmt->getBody());
+bool HashVisitor::VisitForStmt(const ForStmt *Stmt) {
+  topHash() << AstElementForStmt;
+  hashStmt(Stmt->getInit());
+  hashStmt(Stmt->getConditionVariableDeclStmt());
+  hashStmt(Stmt->getCond());
+  hashStmt(Stmt->getInc());
+  hashStmt(Stmt->getBody());
   return true;
 }
 
-bool HashVisitor::VisitIfStmt(const IfStmt *stmt) {
-  TopHash() << AstElementIfStmt;
-  hashStmt(stmt->getConditionVariableDeclStmt());
-  hashStmt(stmt->getCond());
-  hashStmt(stmt->getThen());
-  hashStmt(stmt->getElse());
+bool HashVisitor::VisitIfStmt(const IfStmt *Stmt) {
+  topHash() << AstElementIfStmt;
+  hashStmt(Stmt->getConditionVariableDeclStmt());
+  hashStmt(Stmt->getCond());
+  hashStmt(Stmt->getThen());
+  hashStmt(Stmt->getElse());
   return true;
 }
 
-bool HashVisitor::VisitNullStmt(const NullStmt *stmt) {
+bool HashVisitor::VisitNullStmt(const NullStmt *Stmt) {
   // macht funktional keinen Unterschied...
-  TopHash() << AstElementNullStmt;
+  topHash() << AstElementNullStmt;
   return true;
 }
 
-bool HashVisitor::VisitReturnStmt(const ReturnStmt *stmt) {
-  TopHash() << AstElementReturnStmt;
-  hashStmt(stmt->getRetValue());
+bool HashVisitor::VisitReturnStmt(const ReturnStmt *Stmt) {
+  topHash() << AstElementReturnStmt;
+  hashStmt(Stmt->getRetValue());
   return true;
 }
 
-bool HashVisitor::VisitWhileStmt(const WhileStmt *stmt) {
-  TopHash() << AstElementWhileStmt;
-  hashStmt(stmt->getConditionVariableDeclStmt());
-  hashStmt(stmt->getCond());
-  hashStmt(stmt->getBody());
+bool HashVisitor::VisitWhileStmt(const WhileStmt *Stmt) {
+  topHash() << AstElementWhileStmt;
+  hashStmt(Stmt->getConditionVariableDeclStmt());
+  hashStmt(Stmt->getCond());
+  hashStmt(Stmt->getBody());
   return true;
 }
 
-bool HashVisitor::VisitSwitchStmt(const SwitchStmt *stmt) {
-  TopHash() << AstElementSwitchStmt;
-  hashStmt(stmt->getConditionVariableDeclStmt());
-  hashStmt(stmt->getCond());
-  hashStmt(stmt->getBody());
+bool HashVisitor::VisitSwitchStmt(const SwitchStmt *Stmt) {
+  topHash() << AstElementSwitchStmt;
+  hashStmt(Stmt->getConditionVariableDeclStmt());
+  hashStmt(Stmt->getCond());
+  hashStmt(Stmt->getBody());
   return true;
 }
 
-bool HashVisitor::VisitCaseStmt(const CaseStmt *stmt) {
-  TopHash() << AstElementCaseStmt;
-  hashStmt(stmt->getLHS());
-  hashStmt(stmt->getRHS());
-  hashStmt(stmt->getSubStmt());
+bool HashVisitor::VisitCaseStmt(const CaseStmt *Stmt) {
+  topHash() << AstElementCaseStmt;
+  hashStmt(Stmt->getLHS());
+  hashStmt(Stmt->getRHS());
+  hashStmt(Stmt->getSubStmt());
   return true;
 }
 
-bool HashVisitor::VisitDefaultStmt(const DefaultStmt *stmt) {
-  TopHash() << AstElementDefaultStmt;
-  hashStmt(stmt->getSubStmt());
+bool HashVisitor::VisitDefaultStmt(const DefaultStmt *Stmt) {
+  topHash() << AstElementDefaultStmt;
+  hashStmt(Stmt->getSubStmt());
   return true;
 }
 
-bool HashVisitor::VisitDeclStmt(const DeclStmt *stmt) {
-  TopHash() << AstElementDeclStmt;
-  for (DeclStmt::const_decl_iterator it = stmt->decl_begin();
-       it != stmt->decl_end(); it++) {
+bool HashVisitor::VisitDeclStmt(const DeclStmt *Stmt) {
+  topHash() << AstElementDeclStmt;
+  for (DeclStmt::const_decl_iterator it = Stmt->decl_begin();
+       it != Stmt->decl_end();
+       ++it) { // TODO: put end in initialisation; condition: iter != e
     hashDecl(*it);
   }
   return true;
 }
 
-bool HashVisitor::VisitGCCAsmStmt(const GCCAsmStmt *stmt) {
-  TopHash() << "gcc asm";
-  TopHash() << stmt->getAsmString()->getString().str();
+bool HashVisitor::VisitGCCAsmStmt(const GCCAsmStmt *Stmt) {
+  topHash() << "gcc asm";
+  topHash() << Stmt->getAsmString()->getString().str();
   return true;
 }
 
-bool HashVisitor::VisitMSAsmStmt(const MSAsmStmt *stmt) {
-  TopHash() << "MS asm";
-  TopHash() << stmt->getAsmString().str();
+bool HashVisitor::VisitMSAsmStmt(const MSAsmStmt *Stmt) {
+  topHash() << "MS asm";
+  topHash() << Stmt->getAsmString().str();
   return true;
 }
 
-bool HashVisitor::VisitAttributedStmt(const AttributedStmt *stmt) {
-  TopHash() << "AttributedStmt";
-  for (const Attr *attr : stmt->getAttrs()) {
+bool HashVisitor::VisitAttributedStmt(const AttributedStmt *Stmt) {
+  topHash() << "AttributedStmt";
+  for (const Attr *attr : Stmt->getAttrs()) {
     hashAttr(attr);
   }
 
-  hashStmt(stmt->getSubStmt());
+  hashStmt(Stmt->getSubStmt());
   return true;
 }
 
-bool HashVisitor::VisitCapturedStmt(const CapturedStmt *stmt) {
-  TopHash() << "CaptureStmt";
-  hashStmt(stmt->getCapturedStmt());
-  hashDecl(stmt->getCapturedDecl());
-  return true;
-}
-
-// not tested
-bool HashVisitor::VisitSEHExceptStmt(const SEHExceptStmt *stmt) {
-  TopHash() << "__except";
-  hashStmt(stmt->getFilterExpr());
-  hashStmt(stmt->getBlock());
+bool HashVisitor::VisitCapturedStmt(const CapturedStmt *Stmt) {
+  topHash() << "CaptureStmt";
+  hashStmt(Stmt->getCapturedStmt());
+  hashDecl(Stmt->getCapturedDecl());
   return true;
 }
 
 // not tested
-bool HashVisitor::VisitSEHFinallyStmt(const SEHFinallyStmt *stmt) {
-  TopHash() << "__finally";
-  hashStmt(stmt->getBlock());
+bool HashVisitor::VisitSEHExceptStmt(const SEHExceptStmt *Stmt) {
+  topHash() << "__except";
+  hashStmt(Stmt->getFilterExpr());
+  hashStmt(Stmt->getBlock());
   return true;
 }
 
 // not tested
-bool HashVisitor::VisitSEHLeaveStmt(const SEHLeaveStmt *stmt) {
-  TopHash() << "__leave";
+bool HashVisitor::VisitSEHFinallyStmt(const SEHFinallyStmt *Stmt) {
+  topHash() << "__finally";
+  hashStmt(Stmt->getBlock());
   return true;
 }
 
 // not tested
-bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *stmt) {
-  TopHash() << "__try";
-  hashStmt(stmt->getTryBlock());
-  hashStmt(stmt->getHandler());
+bool HashVisitor::VisitSEHLeaveStmt(const SEHLeaveStmt *Stmt) {
+  topHash() << "__leave";
   return true;
 }
 
-bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *stmt) {
-  TopHash() << "IndirectGotoStmt";
-  hashStmt(stmt->getTarget());
-  if (stmt->getConstantTarget()) {
-    hashDecl(stmt->getConstantTarget());
+// not tested
+bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *Stmt) {
+  topHash() << "__try";
+  hashStmt(Stmt->getTryBlock());
+  hashStmt(Stmt->getHandler());
+  return true;
+}
+
+bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *Stmt) {
+  topHash() << "IndirectGotoStmt";
+  hashStmt(Stmt->getTarget());
+  if (Stmt->getConstantTarget()) {
+    hashDecl(Stmt->getConstantTarget());
   }
   return true;
 }
 
 // OpenMP directives, not tested
 bool
-HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *stmt) {
+HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *Stmt) {
   errs() << "OMPExecutableDirectives are not implemented yet.\n";
   exit(1);
 }
