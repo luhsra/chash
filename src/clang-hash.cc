@@ -56,20 +56,20 @@ protected:
   }
 
   bool ParseArgs(const CompilerInstance &CI,
-                 const std::vector<std::string> &args) override {
-    for (unsigned i = 0, e = args.size(); i != e; ++i) {
-      errs() << " arg = " << args[i] << "\n";
+                 const std::vector<std::string> &arg) override {
+    for (unsigned I = 0, E = arg.size(); I != E; ++I) {
+      errs() << " arg = " << arg[I] << "\n";
 
       // Example error handling.
-      if (args[i] == "-an-error") {
+      if (arg[I] == "-an-error") {
         DiagnosticsEngine &D = CI.getDiagnostics();
         unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
                                             "invalid argument '%0'");
-        D.Report(DiagID) << args[i];
+        D.Report(DiagID) << arg[I];
         return false;
       }
     }
-    if (args.size() && args[0] == "help") {
+    if (arg.size() && arg[0] == "help") {
       // FIXME
       PrintHelp(errs());
     }
@@ -80,8 +80,8 @@ protected:
     return AddBeforeMainAction;
   }
 
-  void PrintHelp(raw_ostream &ros) {
-    ros << "Help for PrintFunctionNames plugin goes here\n";
+  void PrintHelp(raw_ostream &Out) {
+    Out << "Help for PrintFunctionNames plugin goes here\n";
   }
 };
 

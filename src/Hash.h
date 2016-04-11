@@ -14,8 +14,8 @@ struct Hash : protected MurMurHash3 {
     uint32_t Length;
 
     bool operator==(const Digest &Other) const {
-      for (unsigned i = 0; i < DIGEST_WORDS; ++i) {
-        if (Other.Value[i] != Value[i])
+      for (unsigned I = 0; I < DIGEST_WORDS; ++I) {
+        if (Other.Value[I] != Value[I])
           return false;
       }
       return true;
@@ -25,8 +25,8 @@ struct Hash : protected MurMurHash3 {
 
     std::string asString() const {
       std::stringstream ss;
-      for (unsigned i = 0; i < DIGEST_WORDS; ++i) {
-        ss << std::hex << std::setfill('0') << std::setw(8) << Value[i];
+      for (unsigned I = 0; I < DIGEST_WORDS; ++I) {
+        ss << std::hex << std::setfill('0') << std::setw(8) << Value[I];
       }
       return ss.str();
     }

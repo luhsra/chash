@@ -66,24 +66,24 @@ public:
   void hashDeclContext(const DeclContext *DC);
 
   void hashDecl(const Decl *);
-  void hashStmt(const Stmt *);
-  void hashType(QualType);
-  void hashAttr(const Attr *);
+  void hashStmt(const Stmt *Node);
+  void hashType(const QualType);
+  void hashAttr(const Attr *A);
 
   void hashName(const NamedDecl *);
 
   // C Declarations
-  bool VisitTranslationUnitDecl(const TranslationUnitDecl *);
-  bool VisitVarDecl(const VarDecl *);
+  bool VisitTranslationUnitDecl(const TranslationUnitDecl *Unit);
+  bool VisitVarDecl(const VarDecl *D);
   /// Not interesting
-  bool VisitTypedefDecl(const TypedefDecl *) { return true; };
+  bool VisitTypedefDecl(const TypedefDecl *) { return true; }
 
   /* Wird erst in Aufrufen geprueft */
-  bool VisitRecordDecl(const RecordDecl *D) { return true; };
-  bool VisitFieldDecl(const FieldDecl *D) { return true; };
+  bool VisitRecordDecl(const RecordDecl *D) { return true; }
+  bool VisitFieldDecl(const FieldDecl *D) { return true; }
 
   // C Types
-  bool VisitBuiltinType(const BuiltinType *);
+  bool VisitBuiltinType(const BuiltinType *T);
   bool VisitPointerType(const PointerType *T);
   bool VisitArrayType(const ArrayType *T);
   bool VisitConstantArrayType(const ConstantArrayType *T);
@@ -97,9 +97,9 @@ public:
   bool VisitParenType(const ParenType *T);
   bool VisitFunctionType(const FunctionType *T);
   bool VisitFunctionProtoType(const FunctionProtoType *T);
-  bool VisitEnumType(const EnumType *Node);
-  bool VisitTagType(const TagType *Node);
-  bool VisitAttributedType(const AttributedType *Node);
+  bool VisitEnumType(const EnumType *T);
+  bool VisitTagType(const TagType *T);
+  bool VisitAttributedType(const AttributedType *T);
   bool VisitUnaryTransformType(const UnaryTransformType *T);
   bool VisitDecayedType(const DecayedType *T);
   bool VisitAdjustedType(const AdjustedType *T);
@@ -115,8 +115,8 @@ public:
   bool VisitCharacterLiteral(const CharacterLiteral *Node);
   bool VisitIntegerLiteral(const IntegerLiteral *Node);
   bool VisitFloatingLiteral(const FloatingLiteral *Node);
-  bool VisitStringLiteral(const StringLiteral *Str);
-  bool VisitInitListExpr(const InitListExpr *ILE);
+  bool VisitStringLiteral(const StringLiteral *Node);
+  bool VisitInitListExpr(const InitListExpr *Node);
   bool VisitUnaryOperator(const UnaryOperator *Node);
   bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node);
   bool VisitMemberExpr(const MemberExpr *Node);
@@ -146,57 +146,57 @@ public:
 
   // declarations
   bool VisitFunctionDecl(const FunctionDecl *D);
-  bool VisitBlockDecl(const BlockDecl *Node);
-  bool VisitLabelDecl(const LabelDecl *Node);
-  bool VisitEnumDecl(const EnumDecl *Node);
-  bool VisitEnumConstantDecl(const EnumConstantDecl *Node);
-  bool VisitImplicitParamDecl(const ImplicitParamDecl *Node);
-  bool VisitParmVarDecl(const ParmVarDecl *Node);
+  bool VisitBlockDecl(const BlockDecl *D);
+  bool VisitLabelDecl(const LabelDecl *D);
+  bool VisitEnumDecl(const EnumDecl *D);
+  bool VisitEnumConstantDecl(const EnumConstantDecl *D);
+  bool VisitImplicitParamDecl(const ImplicitParamDecl *D);
+  bool VisitParmVarDecl(const ParmVarDecl *D);
   // DeclaratorDecl done...
-  bool VisitIndirectFieldDecl(const IndirectFieldDecl *Node);
-  bool VisitValueDecl(const ValueDecl *Node); // maybe called by children
-  bool VisitFileScopeAsmDecl(const FileScopeAsmDecl *Node);
-  bool VisitCapturedDecl(const CapturedDecl *Node);
+  bool VisitIndirectFieldDecl(const IndirectFieldDecl *D);
+  bool VisitValueDecl(const ValueDecl *D); // maybe called by children
+  bool VisitFileScopeAsmDecl(const FileScopeAsmDecl *D);
+  bool VisitCapturedDecl(const CapturedDecl *D);
 
   // Attrs
   // uncommented Attr not found in namespace
-  bool VisitAttr(const Attr *attr);
-  bool VisitInheritableAttr(const InheritableAttr *attr);
-  // bool VisitStmtAttr(const StmtAttr *attr);
-  bool VisitInheritableParamAttr(const InheritableParamAttr *attr);
-  // bool VisitParameterABIAttr(const ParameterABIAttr *attr);
+  bool VisitAttr(const Attr *A);
+  bool VisitInheritableAttr(const InheritableAttr *A);
+  // bool VisitStmtAttr(const StmtAttr *A);
+  bool VisitInheritableParamAttr(const InheritableParamAttr *A);
+  // bool VisitParameterABIAttr(const ParameterABIAttr *A);
 
   // statements
   bool VisitStmt(const Stmt *Node);
-  bool VisitCompoundStmt(const CompoundStmt *Stmt);
-  bool VisitBreakStmt(const BreakStmt *Stmt);
-  bool VisitContinueStmt(const ContinueStmt *Stmt);
-  bool VisitGotoStmt(const GotoStmt *Stmt);
-  bool VisitLabelStmt(const LabelStmt *Stmt);
-  bool VisitDoStmt(const DoStmt *Stmt);
-  bool VisitForStmt(const ForStmt *Stmt);
-  bool VisitIfStmt(const IfStmt *Stmt);
-  bool VisitNullStmt(const NullStmt *Stmt);
-  bool VisitReturnStmt(const ReturnStmt *Stmt);
-  bool VisitWhileStmt(const WhileStmt *Stmt);
-  bool VisitSwitchStmt(const SwitchStmt *Stmt);
-  bool VisitCaseStmt(const CaseStmt *Stmt);
-  bool VisitDefaultStmt(const DefaultStmt *Stmt);
-  bool VisitDeclStmt(const DeclStmt *Stmt);
-  bool VisitGCCAsmStmt(const GCCAsmStmt *Stmt);
-  bool VisitMSAsmStmt(const MSAsmStmt *Stmt);
+  bool VisitCompoundStmt(const CompoundStmt *Node);
+  bool VisitBreakStmt(const BreakStmt *Node);
+  bool VisitContinueStmt(const ContinueStmt *Node);
+  bool VisitGotoStmt(const GotoStmt *Node);
+  bool VisitLabelStmt(const LabelStmt *Node);
+  bool VisitDoStmt(const DoStmt *Node);
+  bool VisitForStmt(const ForStmt *Node);
+  bool VisitIfStmt(const IfStmt *Node);
+  bool VisitNullStmt(const NullStmt *Node);
+  bool VisitReturnStmt(const ReturnStmt *Node);
+  bool VisitWhileStmt(const WhileStmt *Node);
+  bool VisitSwitchStmt(const SwitchStmt *Node);
+  bool VisitCaseStmt(const CaseStmt *Node);
+  bool VisitDefaultStmt(const DefaultStmt *Node);
+  bool VisitDeclStmt(const DeclStmt *Node);
+  bool VisitGCCAsmStmt(const GCCAsmStmt *Node);
+  bool VisitMSAsmStmt(const MSAsmStmt *Node);
 
   // not sure if we need this
-  bool VisitAttributedStmt(const AttributedStmt *Stmt);
-  bool VisitCapturedStmt(const CapturedStmt *Stmt);
-  bool VisitSEHExceptStmt(const SEHExceptStmt *Stmt);
-  bool VisitSEHFinallyStmt(const SEHFinallyStmt *Stmt);
-  bool VisitSEHLeaveStmt(const SEHLeaveStmt *Stmt);
-  bool VisitSEHTryStmt(const SEHTryStmt *Stmt);
-  bool VisitIndirectGotoStmt(const IndirectGotoStmt *Stmt);
+  bool VisitAttributedStmt(const AttributedStmt *Node);
+  bool VisitCapturedStmt(const CapturedStmt *Node);
+  bool VisitSEHExceptStmt(const SEHExceptStmt *Node);
+  bool VisitSEHFinallyStmt(const SEHFinallyStmt *Node);
+  bool VisitSEHLeaveStmt(const SEHLeaveStmt *Node);
+  bool VisitSEHTryStmt(const SEHTryStmt *Node);
+  bool VisitIndirectGotoStmt(const IndirectGotoStmt *Node);
 
   // not implemented
-  bool VisitOMPExecutableDirective(const OMPExecutableDirective *Stmt);
+  bool VisitOMPExecutableDirective(const OMPExecutableDirective *Node);
 
 protected:
   enum AstElementPrefix {
@@ -309,80 +309,79 @@ protected:
   bool DoNotHashThis = false; // Flag used to ignore Nodes such as extern Decls
   std::map<const void *, const void *> SeenTypes;
 
-  bool haveSeen(const void *key, const void *type) {
-    if (SeenTypes.find(key) != SeenTypes.end()) {
+  bool haveSeen(const void *Key, const void *Type) {
+    if (SeenTypes.find(Key) != SeenTypes.end()) {
       return true;
     }
-    SeenTypes[key] = type;
+    SeenTypes[Key] = Type;
     return false;
   }
 
-  bool dummyFunctionDecl(FunctionDecl *fd) {
+  bool dummyFunctionDecl(const FunctionDecl *FD) {
     // Ignore extern declarations
-    if (fd->getStorageClass() == StorageClass::SC_Extern ||
-        fd->getStorageClass() == StorageClass::SC_PrivateExtern) {
+    if (FD->getStorageClass() == StorageClass::SC_Extern ||
+        FD->getStorageClass() == StorageClass::SC_PrivateExtern) {
       return true;
     }
 
     Hash() << "FunctionDecl";
-    Hash() << fd->getNameInfo().getName().getAsString();
+    Hash() << FD->getNameInfo().getName().getAsString();
 
-    Hash() << fd->isDefined();
-    Hash() << fd->isThisDeclarationADefinition();
-    Hash() << fd->isVariadic();
-    Hash() << fd->isVirtualAsWritten();
-    Hash() << fd->isPure();
-    Hash() << fd->hasImplicitReturnZero();
-    Hash() << fd->hasPrototype();
-    Hash() << fd->hasWrittenPrototype();
-    Hash() << fd->hasInheritedPrototype();
-    Hash() << fd->isMain();
-    Hash() << fd->isExternC();
-    Hash() << fd->isGlobal();
-    Hash() << fd->isNoReturn();
-    Hash() << fd->hasSkippedBody(); //???
-    Hash() << fd->getBuiltinID();
+    Hash() << FD->isDefined();
+    Hash() << FD->isThisDeclarationADefinition();
+    Hash() << FD->isVariadic();
+    Hash() << FD->isVirtualAsWritten();
+    Hash() << FD->isPure();
+    Hash() << FD->hasImplicitReturnZero();
+    Hash() << FD->hasPrototype();
+    Hash() << FD->hasWrittenPrototype();
+    Hash() << FD->hasInheritedPrototype();
+    Hash() << FD->isMain();
+    Hash() << FD->isExternC();
+    Hash() << FD->isGlobal();
+    Hash() << FD->isNoReturn();
+    Hash() << FD->hasSkippedBody(); //???
+    Hash() << FD->getBuiltinID();
 
-    Hash() << fd->getStorageClass(); // static and stuff
-    Hash() << fd->isInlineSpecified();
-    Hash() << fd->isInlined();
+    Hash() << FD->getStorageClass(); // static and stuff
+    Hash() << FD->isInlineSpecified();
+    Hash() << FD->isInlined();
 
     // hash all parameters
-    for (ParmVarDecl *decl : fd->parameters()) {
-      hashDecl(decl);
+    for (ParmVarDecl *PVD : FD->parameters()) {
+      hashDecl(PVD);
     }
 
     // vielleicht will man das ja auch:
-    for (NamedDecl *decl : fd->getDeclsInPrototypeScope()) {
-      hashDecl(decl);
+    for (NamedDecl *ND : FD->getDeclsInPrototypeScope()) {
+      hashDecl(ND);
     }
 
     // visit QualType
-    hashType(fd->getReturnType());
+    hashType(FD->getReturnType());
 
     // here an error (propably nullptr) occured
-    const IdentifierInfo *ident = fd->getLiteralIdentifier();
-    if (ident != nullptr) {
-      const char *str = ident->getNameStart();
-      if (str != nullptr)
-        Hash() << str;
+    if (const IdentifierInfo *const IdentInfo = FD->getLiteralIdentifier()) {
+      if (const char *const IdentName = IdentInfo->getNameStart()) {
+        Hash() << IdentName;
+      }
     }
 
-    Hash() << fd->getMemoryFunctionKind(); // maybe needed
+    Hash() << FD->getMemoryFunctionKind(); // maybe needed
     return true;
   }
 
-  void dummyVarDecl(VarDecl *vd) {
-    hashName(vd);
-    hashType(vd->getType());
-    Hash() << vd->getStorageClass();
-    Hash() << vd->getTLSKind();
-    Hash() << vd->isModulePrivate();
-    Hash() << vd->isNRVOVariable();
+  void dummyVarDecl(const VarDecl *VD) {
+    hashName(VD);
+    hashType(VD->getType());
+    Hash() << VD->getStorageClass();
+    Hash() << VD->getTLSKind();
+    Hash() << VD->isModulePrivate();
+    Hash() << VD->isNRVOVariable();
   }
 
   // Hash Silo
-  void storeHash(const void *obj, Hash::Digest digest) { Silo[obj] = digest; }
+  void storeHash(const void *Obj, Hash::Digest Dig) { Silo[Obj] = Dig; }
 
   const Hash::Digest *getHash(const void *obj) {
     if (Silo.find(obj) != Silo.end()) {
@@ -400,7 +399,7 @@ protected:
     return &HashStack.back();
   }
 
-  Hash::Digest popHash(const Hash *should_be = nullptr) {
+  Hash::Digest popHash(const Hash *ShouldBe = nullptr) {
 
     // llvm::errs() << "  PopHash mit Groesse: " << HashStack.size() << " und
     // Parameter: " << (should_be) << "\n";
@@ -409,12 +408,12 @@ protected:
     // "\n";
     //}
 
-    assert(!should_be || should_be == &HashStack.back());
+    assert(!ShouldBe || ShouldBe == &HashStack.back());
 
     // Finalize the Hash
-    Hash::Digest digest = topHash().getDigest();
+    Hash::Digest CurrentDigest = topHash().getDigest();
     HashStack.pop_back();
-    return digest;
+    return CurrentDigest;
   }
 
   Hash &topHash() { return HashStack.back(); }
