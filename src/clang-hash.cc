@@ -5,7 +5,6 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
-
 using namespace clang;
 using namespace llvm;
 
@@ -57,15 +56,15 @@ protected:
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string> &arg) override {
-    for (unsigned I = 0, E = arg.size(); I != E; ++I) {
-      errs() << " arg = " << arg[I] << "\n";
+    for (const std::string& Arg : arg) {
+      errs() << " arg = " << Arg << "\n";
 
       // Example error handling.
-      if (arg[I] == "-an-error") {
+      if (Arg == "-an-error") {
         DiagnosticsEngine &D = CI.getDiagnostics();
         unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
                                             "invalid argument '%0'");
-        D.Report(DiagID) << arg[I];
+        D.Report(DiagID) << Arg;
         return false;
       }
     }

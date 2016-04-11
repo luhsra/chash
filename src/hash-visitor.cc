@@ -81,7 +81,7 @@ void HashVisitor::hashDeclContext(const DeclContext *DC) {
   if (!DC)
     return;
 
-  for (auto *D : DC->noload_decls()) {
+  for (const auto *const D : DC->noload_decls()) {
     // We don't need typedefs, enums and records here
     // TODO: Do we need to exclude more?
     if (!(isa<TagDecl>(D) || isa<TypedefDecl>(D))) {
@@ -149,7 +149,7 @@ bool HashVisitor::VisitParmVarDecl(const ParmVarDecl *D) {
 }
 
 // Types
-void HashVisitor::hashType(const QualType T) {
+void HashVisitor::hashType(const QualType& T) {
   uint64_t Qualifiers = 0;
   if (T.hasQualifiers()) {
     // TODO evtl. CVRMASK benutzen
@@ -217,7 +217,8 @@ void HashVisitor::hashType(const QualType T) {
   //	type->dump();
   //}
 
-  assert((!SavedDigest || CurrentDigest == *SavedDigest) && "Hashes do not match");
+  assert((!SavedDigest || CurrentDigest == *SavedDigest) &&
+         "Hashes do not match");
   // Hash into Parent
   topHash() << CurrentDigest;
 
@@ -307,7 +308,7 @@ bool HashVisitor::VisitFunctionType(const FunctionType *T) {
 bool HashVisitor::VisitFunctionProtoType(const FunctionProtoType *T) {
   topHash() << "funcprototype";
   hashType(T->getReturnType());
-  for (const QualType& QT : T->getParamTypes()) {
+  for (const QualType &QT : T->getParamTypes()) {
     hashType(QT);
   }
   topHash() << T->getRegParmType();
@@ -385,6 +386,7 @@ bool HashVisitor::VisitType(const Type *T) {
     return true;
   }
 
+  // TODO: die 2 if-bloecke zusammenfassen; alles redundant!
   if (T->isStructureType()) {
     haveSeen(T, T);
     topHash() << "struct";
@@ -397,12 +399,10 @@ bool HashVisitor::VisitType(const Type *T) {
       hashAttr(A);
     }
 
-    for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
-         I != E; ++I) {
-      const FieldDecl FD = **I;
+    for (const FieldDecl *const FD : RD->fields()) {
       topHash() << "member";
-      hashType(FD.getType());
-      hashName(&FD);
+      hashType(FD->getType());
+      hashName(FD);
     }
     return true;
   }
@@ -415,16 +415,15 @@ bool HashVisitor::VisitType(const Type *T) {
 
     // visit Attributes of the Decl (needed because RecordDecl shouldn't be not
     // called from hashDecl)
+    // TODO: shouldn't be not called ??? => fix comment
     for (const Attr *const A : RD->attrs()) {
       hashAttr(A);
     }
 
-    for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
-         I != E; ++I) {
-      const FieldDecl FD = **I;
+    for (const FieldDecl *const FD : RD->fields()) {
       topHash() << "member";
-      hashType(FD.getType());
-      hashName(&FD);
+      hashType(FD->getType());
+      hashName(FD);
     }
     return true;
   }
@@ -456,8 +455,8 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
   // anders beheben)
   //		Andere Decls mehrfach referenzieren => Problem
   //		evtl. auch Zyklus in anderer Decl
-  if (/*(isa<VarDecl>(Decl) || isa<FunctionDecl>(Decl)) && */ haveSeen(ValDecl,
-                                                                       ValDecl)) {
+  if (/*(isa<VarDecl>(Decl) || isa<FunctionDecl>(Decl)) && */ haveSeen(
+      ValDecl, ValDecl)) {
     if (const Hash::Digest *const D = getHash(ValDecl)) {
       topHash() << *D;
     } else {
@@ -471,7 +470,8 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
         const VarDecl *const VD = static_cast<const VarDecl *>(ValDecl);
         dummyVarDecl(VD);
       } else {
-        const FunctionDecl *const FD = static_cast<const FunctionDecl *>(ValDecl);
+        const FunctionDecl *const FD =
+            static_cast<const FunctionDecl *>(ValDecl);
         dummyFunctionDecl(FD);
       }
     }
@@ -524,7 +524,7 @@ bool HashVisitor::VisitStringLiteral(const StringLiteral *Node) {
 
 bool HashVisitor::VisitInitListExpr(const InitListExpr *Node) {
   topHash() << "initlistexpr";
-  for (unsigned I = 0; I < Node->getNumInits(); ++I) {
+  for (unsigned I = 0, E = Node->getNumInits(); I < E; ++I) {
     hashStmt(Node->getInit(I));
   }
   if (Node->hasArrayFiller()) {
@@ -634,7 +634,7 @@ bool HashVisitor::VisitCallExpr(const CallExpr *Node) {
   } else {
     hashStmt(Node->getCallee());
   }
-  for (unsigned I = 0; I < Node->getNumArgs(); ++I) {
+  for (unsigned I = 0, E = Node->getNumArgs(); I < E; ++I) {
     hashStmt(Node->getArg(I));
   }
   return true;
@@ -643,19 +643,19 @@ bool HashVisitor::VisitCallExpr(const CallExpr *Node) {
 bool HashVisitor::VisitOffsetOfExpr(const OffsetOfExpr *Node) {
   topHash() << "offsetof";
   hashType(Node->getType());
-  for (unsigned I = 0; I < Node->getNumExpressions(); ++I) {
+  for (unsigned I = 0, E = Node->getNumExpressions(); I < E; ++I) {
     hashStmt(Node->getIndexExpr(I));
   }
-  for (unsigned I = 0; I < Node->getNumComponents(); ++I) {
-    const OffsetOfNode off = Node->getComponent(I);
+  for (unsigned I = 0, E = Node->getNumComponents(); I < E; ++I) {
+    const OffsetOfNode Offset = Node->getComponent(I);
     topHash() << "offsetnode";
-    topHash() << off.getKind();
+    topHash() << Offset.getKind();
 
-    if (off.getKind() == OffsetOfNode::Kind::Field) {
-      const FieldDecl *const FD = off.getField();
+    if (Offset.getKind() == OffsetOfNode::Kind::Field) {
+      const FieldDecl *const FD = Offset.getField();
       const QualType QT = FD->getType();
       hashType(QT);
-      hashName(off.getField());
+      hashName(Offset.getField());
     }
   }
   return true;
@@ -674,8 +674,8 @@ bool HashVisitor::VisitAtomicExpr(const AtomicExpr *Node) {
   topHash() << "atomicExpr";
   hashType(Node->getType());
   Expr **SubExprs = MutableNode->getSubExprs();
-  for (unsigned int i = 0; i < MutableNode->getNumSubExprs(); ++i) {
-    hashStmt(SubExprs[i]);
+  for (unsigned int I = 0, E = MutableNode->getNumSubExprs(); I < E; ++I) {
+    hashStmt(SubExprs[I]);
   }
   return true;
 }
@@ -684,20 +684,21 @@ bool HashVisitor::VisitParenListExpr(const ParenListExpr *Node) {
   topHash() << "parenListExpr";
   hashType(Node->getType());
   for (const Expr *const E : const_cast<ParenListExpr *>(Node)->exprs()) {
-    hashStmt(E); // TODO: expr instead of stmt: ok or cast?
+    hashStmt(E); // TODO: expr instead of stmt: ok or cast explicitly?
   }
   return true;
 }
 
 bool HashVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *Node) {
-  DesignatedInitExpr *const MutableNode = const_cast<DesignatedInitExpr *>(Node);
+  DesignatedInitExpr *const MutableNode =
+      const_cast<DesignatedInitExpr *>(Node);
 
   topHash() << "designatedInit";
   hashType(Node->getType());
-  for (unsigned I = 0; I < MutableNode->getNumSubExprs(); ++I) {
+  for (unsigned I = 0, E = MutableNode->getNumSubExprs(); I < E; ++I) {
     hashStmt(MutableNode->getSubExpr(I));
   }
-  for (unsigned I = 0; I < MutableNode->size(); ++I) {
+  for (unsigned I = 0, E = MutableNode->size(); I < E; ++I) {
     DesignatedInitExpr::Designator *Des = MutableNode->getDesignator(I);
     topHash() << "designator";
     hashType(Des->getField()->getType());
@@ -890,8 +891,7 @@ bool HashVisitor::VisitCapturedDecl(const CapturedDecl *D) {
   }
   topHash() << D->isNothrow();
 
-  for (unsigned I = 0; I < D->getNumParams(); ++I) {
-    const ImplicitParamDecl *const IPD = D->getParam(I);
+  for (const ImplicitParamDecl *const IPD : D->params()) {
     if (!IPD) {
       errs() << "nullptr in CapturedDecl!";
       exit(1);
@@ -976,7 +976,8 @@ bool HashVisitor::VisitStmt(const Stmt *Node) {
 
 bool HashVisitor::VisitCompoundStmt(const CompoundStmt *Node) {
   topHash() << "compound";
-  for (CompoundStmt::const_body_iterator I = Node->body_begin(), E = Node->body_end();
+  for (CompoundStmt::const_body_iterator I = Node->body_begin(),
+                                         E = Node->body_end();
        I != E; ++I) {
     hashStmt(*I);
   }
@@ -1076,7 +1077,8 @@ bool HashVisitor::VisitDefaultStmt(const DefaultStmt *Node) {
 
 bool HashVisitor::VisitDeclStmt(const DeclStmt *Node) {
   topHash() << AstElementDeclStmt;
-  for (DeclStmt::const_decl_iterator I = Node->decl_begin(), E = Node->decl_end();
+  for (DeclStmt::const_decl_iterator I = Node->decl_begin(),
+                                     E = Node->decl_end();
        I != E; ++I) {
     hashDecl(*I);
   }
@@ -1097,7 +1099,7 @@ bool HashVisitor::VisitMSAsmStmt(const MSAsmStmt *Node) {
 
 bool HashVisitor::VisitAttributedStmt(const AttributedStmt *Node) {
   topHash() << "AttributedStmt";
-  for (const Attr *A : Node->getAttrs()) {
+  for (const Attr *const A : Node->getAttrs()) {
     hashAttr(A);
   }
 
@@ -1151,7 +1153,8 @@ bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *Node) {
 }
 
 // OpenMP directives, not tested
-bool HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {
+bool
+HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {
   errs() << "OMPExecutableDirectives are not implemented yet.\n";
   exit(1);
 }

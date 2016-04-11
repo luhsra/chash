@@ -65,12 +65,12 @@ public:
   bool hasNodes(const DeclContext *DC);
   void hashDeclContext(const DeclContext *DC);
 
-  void hashDecl(const Decl *);
+  void hashDecl(const Decl *D);
   void hashStmt(const Stmt *Node);
-  void hashType(const QualType);
+  void hashType(const QualType &T);
   void hashAttr(const Attr *A);
 
-  void hashName(const NamedDecl *);
+  void hashName(const NamedDecl *ND);
 
   // C Declarations
   bool VisitTranslationUnitDecl(const TranslationUnitDecl *Unit);
@@ -394,7 +394,7 @@ protected:
     HashStack.push_back(Hash());
 
     //	llvm::errs() << "  PushHash mit Groesse: " << HashStack.size() << " und
-    //Rueckgabewert: " << (&HashStack.back()) << "\n";
+    // Rueckgabewert: " << (&HashStack.back()) << "\n";
 
     return &HashStack.back();
   }
