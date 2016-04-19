@@ -387,48 +387,35 @@ bool HashVisitor::VisitType(const Type *T) {
     return true;
   }
 
-  // TODO: die 2 if-bloecke zusammenfassen; alles redundant!
+  const RecordType *RT = nullptr;
+
   if (T->isStructureType()) {
-    haveSeen(T, T);
+    haveSeen(T, T); // TODO: kann das auch nach unten oder muss das vor dem
+                    // hashen kommen?
     topHash() << AstElementStructureType;
-    const RecordType *const RT = T->getAsStructureType();
-    const RecordDecl *const RD = RT->getDecl();
-
-    // visit Attributes of the Decl (needed because RecordDecl shouldn't be not
-    // called from hashDecl)
-    for (const Attr *const A : RD->attrs()) {
-      hashAttr(A);
-    }
-
-    for (const FieldDecl *const FD : RD->fields()) {
-      topHash() << "member";
-      hashType(FD->getType());
-      hashName(FD);
-    }
-    return true;
-  }
-
-  if (T->isUnionType()) {
+    RT = T->getAsStructureType();
+  } else if (T->isUnionType()) {
     haveSeen(T, T);
     topHash() << AstElementUnionType;
-    const RecordType *const RT = T->getAsUnionType();
-    const RecordDecl *const RD = RT->getDecl();
-
-    // visit Attributes of the Decl (needed because RecordDecl shouldn't be not
-    // called from hashDecl)
-    // TODO: shouldn't be not called ??? => fix comment
-    for (const Attr *const A : RD->attrs()) {
-      hashAttr(A);
-    }
-
-    for (const FieldDecl *const FD : RD->fields()) {
-      topHash() << "member";
-      hashType(FD->getType());
-      hashName(FD);
-    }
-    return true;
+    RT = T->getAsUnionType();
+  } else {
+    return false;
   }
-  return false;
+
+  const RecordDecl *const RD = RT->getDecl();
+  // visit Attributes of the Decl (needed because RecordDecl shouldn't be not
+  // called from hashDecl)
+  // TODO: shouldn't be not called ??? => fix comment
+  for (const Attr *const A : RD->attrs()) {
+    hashAttr(A);
+  }
+
+  for (const FieldDecl *const FD : RD->fields()) {
+    topHash() << "member";
+    hashType(FD->getType());
+    hashName(FD);
+  }
+  return true;
 }
 
 // Other Utilities
@@ -452,7 +439,7 @@ bool HashVisitor::VisitCastExpr(const CastExpr *Node) {
 bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
   const ValueDecl *const ValDecl = Node->getDecl();
   topHash() << AstElementDeclRefExpr;
-  //TODO:
+  // TODO:
   // FIXME:	spaeter Auskommentiertes(isa-Zeug) einkommentieren (oder Problem
   // anders beheben)
   //		Andere Decls mehrfach referenzieren => Problem
