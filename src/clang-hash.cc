@@ -56,7 +56,7 @@ protected:
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string> &arg) override {
-    for (const std::string& Arg : arg) {
+    for (const std::string &Arg : arg) {
       errs() << " arg = " << Arg << "\n";
 
       // Example error handling.

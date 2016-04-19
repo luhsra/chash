@@ -24,7 +24,7 @@ void HashVisitor::hashDecl(const Decl *D) {
   if (!D) {
     return;
   }
-  const Hash::Digest *const SavedDigest = getHash(D);
+  const Hash::Digest *const SavedDigest = getHash(D); // TODO: move to if-cond
   if (SavedDigest) {
     topHash() << *SavedDigest;
     return;
@@ -94,6 +94,7 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
   const Hash *const CurrentHash = pushHash();
 
   // FIXME Hash Compiler Options
+  // TODO: compiler options mithashen!
 
   afterChildren([=] {
     storeHash(Unit, popHash(CurrentHash));
@@ -149,7 +150,7 @@ bool HashVisitor::VisitParmVarDecl(const ParmVarDecl *D) {
 }
 
 // Types
-void HashVisitor::hashType(const QualType& T) {
+void HashVisitor::hashType(const QualType &T) {
   uint64_t Qualifiers = 0;
   if (T.hasQualifiers()) {
     // TODO evtl. CVRMASK benutzen
@@ -183,13 +184,13 @@ void HashVisitor::hashType(const QualType& T) {
 
   if (ActualType->isStructureType()) {
     if (haveSeen(ActualType, ActualType)) {
-      topHash() << "struct";
+      topHash() << AstElementStructureType;
       topHash() << T.getAsString();
       return;
     }
   } else if (ActualType->isUnionType()) {
     if (haveSeen(ActualType, ActualType)) {
-      topHash() << "union";
+      topHash() << AstElementUnionType;
       topHash() << T.getAsString();
       return;
     }
@@ -233,13 +234,13 @@ bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
 }
 
 bool HashVisitor::VisitPointerType(const PointerType *T) {
-  topHash() << "pointer";
+  topHash() << AstElementPointerType;
   hashType(T->getPointeeType());
   return true;
 }
 
 bool HashVisitor::VisitArrayType(const ArrayType *T) {
-  topHash() << "ArrayType";
+  topHash() << AstElementArrayType;
   hashType(T->getElementType());
   topHash() << "["
             << "*"
@@ -248,14 +249,14 @@ bool HashVisitor::VisitArrayType(const ArrayType *T) {
 }
 
 bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T) {
-  topHash() << "ConstantArrayType";
+  topHash() << AstElementConstantArrayType;
   hashType(T->getElementType());
   topHash() << "[" << T->getSize().getZExtValue() << "]";
   return true;
 }
 
 bool HashVisitor::VisitVariableArrayType(const VariableArrayType *T) {
-  topHash() << "VariableArrayType";
+  topHash() << AstElementVariableArrayType;
   hashType(T->getElementType());
   topHash() << "[";
   hashStmt(T->getSizeExpr());
@@ -268,37 +269,37 @@ bool HashVisitor::VisitTypedefType(const TypedefType *T) {
 }
 
 bool HashVisitor::VisitComplexType(const ComplexType *T) {
-  topHash() << "complex";
+  topHash() << AstElementComplexType;
   hashType(T->getElementType());
   return true;
 }
 
 bool HashVisitor::VisitAtomicType(const AtomicType *T) {
-  topHash() << "atomic";
+  topHash() << AstElementAtomicType;
   hashType(T->getValueType());
   return true;
 }
 
 bool HashVisitor::VisitTypeOfExprType(const TypeOfExprType *T) {
-  topHash() << "typeof";
+  topHash() << AstElementTypeOfExprType;
   hashType(T->desugar());
   return true;
 }
 
 bool HashVisitor::VisitTypeOfType(const TypeOfType *T) {
-  topHash() << "typeoftypetype";
+  topHash() << AstElementTypeOfType;
   hashType(T->desugar());
   return true;
 }
 
 bool HashVisitor::VisitParenType(const ParenType *T) {
-  topHash() << "parenType";
+  topHash() << AstElementParenType;
   hashType(T->desugar());
   return true;
 }
 
 bool HashVisitor::VisitFunctionType(const FunctionType *T) {
-  topHash() << "functype";
+  topHash() << AstElementFunctionType;
   hashType(T->getReturnType());
   topHash() << T->getRegParmType();
   topHash() << T->getCallConv();
@@ -306,7 +307,7 @@ bool HashVisitor::VisitFunctionType(const FunctionType *T) {
 }
 
 bool HashVisitor::VisitFunctionProtoType(const FunctionProtoType *T) {
-  topHash() << "funcprototype";
+  topHash() << AstElementFunctionProtoType;
   hashType(T->getReturnType());
   for (const QualType &QT : T->getParamTypes()) {
     hashType(QT);
@@ -317,7 +318,7 @@ bool HashVisitor::VisitFunctionProtoType(const FunctionProtoType *T) {
 }
 
 bool HashVisitor::VisitEnumType(const EnumType *T) {
-  topHash() << "Enum Type";
+  topHash() << AstElementEnumType;
   if (T->isSugared()) {
     hashType(T->desugar());
   }
@@ -337,13 +338,13 @@ bool HashVisitor::VisitEnumType(const EnumType *T) {
 }
 
 bool HashVisitor::VisitTagType(const TagType *T) {
-  topHash() << "Tag Type";
+  topHash() << AstElementTagType;
   hashDecl(T->getDecl());
   return true;
 }
 
 bool HashVisitor::VisitAttributedType(const AttributedType *T) {
-  topHash() << "AttributedType";
+  topHash() << AstElementAttributedType;
   topHash() << T->getAttrKind();
   hashType(T->getModifiedType());
   hashType(T->getEquivalentType());
@@ -351,7 +352,7 @@ bool HashVisitor::VisitAttributedType(const AttributedType *T) {
 }
 
 bool HashVisitor::VisitUnaryTransformType(const UnaryTransformType *T) {
-  topHash() << "UnaryTransformType";
+  topHash() << AstElementUnaryTransformType;
   hashType(T->getBaseType());
   hashType(T->getUnderlyingType());
   topHash() << T->getUTTKind();
@@ -359,7 +360,7 @@ bool HashVisitor::VisitUnaryTransformType(const UnaryTransformType *T) {
 }
 
 bool HashVisitor::VisitDecayedType(const DecayedType *T) {
-  topHash() << "DecayedType";
+  topHash() << AstElementDecayedType;
   hashType(T->getOriginalType());
   hashType(T->getAdjustedType());
   hashType(T->getPointeeType());
@@ -367,14 +368,14 @@ bool HashVisitor::VisitDecayedType(const DecayedType *T) {
 }
 
 bool HashVisitor::VisitAdjustedType(const AdjustedType *T) {
-  topHash() << "AdjustedType";
+  topHash() << AstElementAdjustedType;
   hashType(T->getOriginalType());
   hashType(T->getAdjustedType());
   return true;
 }
 
 bool HashVisitor::VisitElaboratedType(const ElaboratedType *T) {
-  topHash() << "ElaboratedType";
+  topHash() << AstElementElaboratedType;
   hashType(T->getNamedType());
   topHash() << T->getKeyword();
   return true;
@@ -389,7 +390,7 @@ bool HashVisitor::VisitType(const Type *T) {
   // TODO: die 2 if-bloecke zusammenfassen; alles redundant!
   if (T->isStructureType()) {
     haveSeen(T, T);
-    topHash() << "struct";
+    topHash() << AstElementStructureType;
     const RecordType *const RT = T->getAsStructureType();
     const RecordDecl *const RD = RT->getDecl();
 
@@ -409,7 +410,7 @@ bool HashVisitor::VisitType(const Type *T) {
 
   if (T->isUnionType()) {
     haveSeen(T, T);
-    topHash() << "union";
+    topHash() << AstElementUnionType;
     const RecordType *const RT = T->getAsUnionType();
     const RecordDecl *const RD = RT->getDecl();
 
@@ -450,7 +451,8 @@ bool HashVisitor::VisitCastExpr(const CastExpr *Node) {
 
 bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
   const ValueDecl *const ValDecl = Node->getDecl();
-  topHash() << "ref";
+  topHash() << AstElementDeclRefExpr;
+  //TODO:
   // FIXME:	spaeter Auskommentiertes(isa-Zeug) einkommentieren (oder Problem
   // anders beheben)
   //		Andere Decls mehrfach referenzieren => Problem
@@ -466,7 +468,7 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
       //}
       assert(isa<VarDecl>(ValDecl) || isa<FunctionDecl>(ValDecl));
       if (isa<VarDecl>(ValDecl)) {
-        topHash() << "VarDeclDummy";
+        topHash() << "VarDeclDummy"; // TODO: ?
         const VarDecl *const VD = static_cast<const VarDecl *>(ValDecl);
         dummyVarDecl(VD);
       } else {
@@ -483,7 +485,7 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
 }
 
 bool HashVisitor::VisitPredefinedExpr(const PredefinedExpr *Node) {
-  topHash() << "predef";
+  topHash() << AstElementPredefinedExpr;
   hashType(Node->getType());
   topHash() << Node->getFunctionName()->getString().str();
   return true;
@@ -523,7 +525,7 @@ bool HashVisitor::VisitStringLiteral(const StringLiteral *Node) {
 }
 
 bool HashVisitor::VisitInitListExpr(const InitListExpr *Node) {
-  topHash() << "initlistexpr";
+  topHash() << AstElementInitListExpr;
   for (unsigned I = 0, E = Node->getNumInits(); I < E; ++I) {
     hashStmt(Node->getInit(I));
   }
@@ -534,7 +536,7 @@ bool HashVisitor::VisitInitListExpr(const InitListExpr *Node) {
 }
 
 bool HashVisitor::VisitUnaryOperator(const UnaryOperator *Node) {
-  topHash() << "unary";
+  topHash() << AstElementUnaryOperator;
   hashStmt(Node->getSubExpr());
   topHash() << Node->getOpcode();
   hashType(Node->getType());
@@ -543,7 +545,7 @@ bool HashVisitor::VisitUnaryOperator(const UnaryOperator *Node) {
 
 bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *Node) {
-  topHash() << "UOTT";
+  topHash() << AstElementUnaryExprOrTypeTraitExpr;
   topHash() << Node->getKind();
   if (Node->isArgumentType()) {
     hashType(Node->getArgumentType());
@@ -566,7 +568,7 @@ bool HashVisitor::VisitMemberExpr(const MemberExpr *Node) {
 }
 
 bool HashVisitor::VisitBinaryOperator(const BinaryOperator *Node) {
-  topHash() << "binary";
+  topHash() << AstElementBinaryOperator;
   hashStmt(Node->getLHS());
   hashStmt(Node->getRHS());
   topHash() << Node->getOpcode();
@@ -577,7 +579,7 @@ bool HashVisitor::VisitBinaryOperator(const BinaryOperator *Node) {
 // erbt von BinaryOperator
 bool
 HashVisitor::VisitCompoundAssignOperator(const CompoundAssignOperator *Node) {
-  topHash() << "compound";
+  topHash() << AstElementCompoundAssignmentOperator;
   hashStmt(Node->getLHS());
   hashStmt(Node->getRHS());
   topHash() << Node->getOpcode();
@@ -586,20 +588,20 @@ HashVisitor::VisitCompoundAssignOperator(const CompoundAssignOperator *Node) {
 }
 
 bool HashVisitor::VisitAddrLabelExpr(const AddrLabelExpr *Node) {
-  topHash() << "addrlabel";
+  topHash() << AstElementAddrLabelExpr;
   hashStmt(Node->getLabel()->getStmt());
   return true;
 }
 
 bool HashVisitor::VisitImaginaryLiteral(const ImaginaryLiteral *Node) {
-  topHash() << "imglit";
+  topHash() << AstElementImaginaryLiteral;
   hashType(Node->getType());
   hashStmt(Node->getSubExpr());
   return true;
 }
 
 bool HashVisitor::VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node) {
-  topHash() << "complit";
+  topHash() << AstElementCompoundLiteralExpr;
   hashType(Node->getType());
   hashStmt(Node->getInitializer());
   return true;
@@ -607,7 +609,7 @@ bool HashVisitor::VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node) {
 
 bool HashVisitor::VisitAbstractConditionalOperator(
     const AbstractConditionalOperator *Node) {
-  topHash() << "ACondO";
+  topHash() << AstElementAbstractConditionalOperator;
   hashType(Node->getType());
   hashStmt(Node->getCond());
   hashStmt(Node->getTrueExpr());
@@ -617,7 +619,7 @@ bool HashVisitor::VisitAbstractConditionalOperator(
 
 bool HashVisitor::VisitBinaryConditionalOperator(
     const BinaryConditionalOperator *Node) {
-  topHash() << "BCondO";
+  topHash() << AstElementBinaryConditionalOperator;
   hashType(Node->getType());
   hashStmt(Node->getCond());
   hashStmt(Node->getCommon());
@@ -627,7 +629,7 @@ bool HashVisitor::VisitBinaryConditionalOperator(
 }
 
 bool HashVisitor::VisitCallExpr(const CallExpr *Node) {
-  topHash() << "callExpr";
+  topHash() << AstElementCallExpr;
   hashType(Node->getType());
   if (const FunctionDecl *const FD = Node->getDirectCallee()) {
     hashName(FD);
@@ -641,14 +643,14 @@ bool HashVisitor::VisitCallExpr(const CallExpr *Node) {
 }
 
 bool HashVisitor::VisitOffsetOfExpr(const OffsetOfExpr *Node) {
-  topHash() << "offsetof";
+  topHash() << AstElementOffsetOfExpr;
   hashType(Node->getType());
   for (unsigned I = 0, E = Node->getNumExpressions(); I < E; ++I) {
     hashStmt(Node->getIndexExpr(I));
   }
   for (unsigned I = 0, E = Node->getNumComponents(); I < E; ++I) {
     const OffsetOfNode Offset = Node->getComponent(I);
-    topHash() << "offsetnode";
+    topHash() << AstElementOffsetOfNode;
     topHash() << Offset.getKind();
 
     if (Offset.getKind() == OffsetOfNode::Kind::Field) {
@@ -662,7 +664,7 @@ bool HashVisitor::VisitOffsetOfExpr(const OffsetOfExpr *Node) {
 }
 
 bool HashVisitor::VisitParenExpr(const ParenExpr *Node) {
-  topHash() << "parenExpr";
+  topHash() << AstElementParenExpr;
   hashType(Node->getType());
   hashStmt(Node->getSubExpr());
   return true;
@@ -671,7 +673,7 @@ bool HashVisitor::VisitParenExpr(const ParenExpr *Node) {
 bool HashVisitor::VisitAtomicExpr(const AtomicExpr *Node) {
   AtomicExpr *const MutableNode = const_cast<AtomicExpr *>(Node);
 
-  topHash() << "atomicExpr";
+  topHash() << AstElementAtomicExpr;
   hashType(Node->getType());
   Expr **SubExprs = MutableNode->getSubExprs();
   for (unsigned int I = 0, E = MutableNode->getNumSubExprs(); I < E; ++I) {
@@ -681,7 +683,7 @@ bool HashVisitor::VisitAtomicExpr(const AtomicExpr *Node) {
 }
 
 bool HashVisitor::VisitParenListExpr(const ParenListExpr *Node) {
-  topHash() << "parenListExpr";
+  topHash() << AstElementParenListExpr;
   hashType(Node->getType());
   for (const Expr *const E : const_cast<ParenListExpr *>(Node)->exprs()) {
     hashStmt(E); // TODO: expr instead of stmt: ok or cast explicitly?
@@ -693,14 +695,14 @@ bool HashVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *Node) {
   DesignatedInitExpr *const MutableNode =
       const_cast<DesignatedInitExpr *>(Node);
 
-  topHash() << "designatedInit";
+  topHash() << AstElementDesignatedInitExpr;
   hashType(Node->getType());
   for (unsigned I = 0, E = MutableNode->getNumSubExprs(); I < E; ++I) {
     hashStmt(MutableNode->getSubExpr(I));
   }
   for (unsigned I = 0, E = MutableNode->size(); I < E; ++I) {
     DesignatedInitExpr::Designator *Des = MutableNode->getDesignator(I);
-    topHash() << "designator";
+    topHash() << AstElementDesignator;
     hashType(Des->getField()->getType());
     hashName(Des->getField());
   }
@@ -715,7 +717,7 @@ bool HashVisitor::VisitStmtExpr(const StmtExpr *Node) {
 }
 
 bool HashVisitor::VisitArraySubscriptExpr(const ArraySubscriptExpr *Node) {
-  topHash() << "ArrayAccess";
+  topHash() << AstElementArraySubscriptExpr;
   hashStmt(Node->getLHS());
   hashStmt(Node->getRHS());
   hashStmt(Node->getBase());
@@ -725,13 +727,13 @@ bool HashVisitor::VisitArraySubscriptExpr(const ArraySubscriptExpr *Node) {
 
 bool
 HashVisitor::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *Node) {
-  topHash() << "implicitInit";
+  topHash() << AstElementImplicitValueInitExpr;
   hashType(Node->getType());
   return true;
 }
 
 bool HashVisitor::VisitVAArgExpr(const VAArgExpr *Node) {
-  topHash() << "va_stuff";
+  topHash() << AstElementVAArgExpr;
   hashType(Node->getType());
   hashStmt(Node->getSubExpr());
   topHash() << Node->isMicrosoftABI();
@@ -739,7 +741,7 @@ bool HashVisitor::VisitVAArgExpr(const VAArgExpr *Node) {
 }
 
 bool HashVisitor::VisitBlockExpr(const BlockExpr *Node) {
-  topHash() << "block expr";
+  topHash() << AstElementBlockExpr;
   hashDecl(Node->getBlockDecl());
   hashStmt(Node->getBody());
   return true;
@@ -748,7 +750,7 @@ bool HashVisitor::VisitBlockExpr(const BlockExpr *Node) {
 // common Decls
 
 bool HashVisitor::VisitBlockDecl(const BlockDecl *D) {
-  topHash() << "blockDecl";
+  topHash() << AstElementBlockDecl;
   for (const ParmVarDecl *const PVD : D->parameters()) {
     VisitVarDecl(PVD);
   }
@@ -768,7 +770,7 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node) {
 
   haveSeen(Node, Node);
 
-  topHash() << "FunctionDecl";
+  topHash() << AstElementFunctionDecl;
   topHash() << Node->getNameInfo().getName().getAsString();
   hashStmt(Node->getBody());
   topHash() << Node->isDefined();
@@ -817,7 +819,7 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *Node) {
 }
 
 bool HashVisitor::VisitLabelDecl(const LabelDecl *D) {
-  topHash() << "labeldecl";
+  topHash() << AstElementLabelDecl;
   hashName(D);
   // if location changes, then it will be recompiled there.
   // Additionally the linker has this information--> no need to handle
@@ -833,7 +835,7 @@ bool HashVisitor::VisitLabelDecl(const LabelDecl *D) {
 
 bool HashVisitor::VisitEnumDecl(const EnumDecl *D) {
   const Hash *const CurrentHash = pushHash();
-  topHash() << "EnumDecl";
+  topHash() << AstElementEnumDecl;
   hashName(D);
   bool Handled = true;
   for (const EnumConstantDecl *const ECD : D->enumerators()) {
@@ -844,7 +846,7 @@ bool HashVisitor::VisitEnumDecl(const EnumDecl *D) {
   return Handled;
 }
 bool HashVisitor::VisitEnumConstantDecl(const EnumConstantDecl *D) {
-  topHash() << "EnumConstant";
+  topHash() << AstElementEnumConstantDecl;
   hashName(D);
   if (const Expr *const InitExpr = D->getInitExpr()) {
     hashStmt(InitExpr);
@@ -858,7 +860,7 @@ bool HashVisitor::VisitEnumConstantDecl(const EnumConstantDecl *D) {
 // an anonymous union/struct into the parent scope
 //--> do not follow the struct because it does not exist then...
 bool HashVisitor::VisitIndirectFieldDecl(const IndirectFieldDecl *D) {
-  topHash() << "VisitIndirectFieldDecl";
+  topHash() << AstElementIndirectFieldDecl;
   for (IndirectFieldDecl::chain_iterator I = D->chain_begin(),
                                          E = D->chain_end();
        I != E; ++I) {
@@ -870,14 +872,14 @@ bool HashVisitor::VisitIndirectFieldDecl(const IndirectFieldDecl *D) {
 
 // called by children
 bool HashVisitor::VisitValueDecl(const ValueDecl *D) {
-  topHash() << "VisitValueDecl";
+  topHash() << AstElementValueDecl;
   hashType(D->getType());
   hashName(D);
   return true;
 }
 
 bool HashVisitor::VisitFileScopeAsmDecl(const FileScopeAsmDecl *D) {
-  topHash() << "FileScopeAsmDecl";
+  topHash() << AstElementFileScopeAsmDecl;
   if (const StringLiteral *const SL = D->getAsmString()) {
     hashStmt(SL);
   }
@@ -885,7 +887,7 @@ bool HashVisitor::VisitFileScopeAsmDecl(const FileScopeAsmDecl *D) {
 }
 
 bool HashVisitor::VisitCapturedDecl(const CapturedDecl *D) {
-  topHash() << "CapturedDecl";
+  topHash() << AstElementCapturedDecl;
   if (const Stmt *const Body = D->getBody()) {
     hashStmt(Body);
   }
@@ -920,27 +922,27 @@ void HashVisitor::hashAttr(const Attr *A) {
 // Attrs
 // uncommented Attr not found in namespace
 bool HashVisitor::VisitAttr(const Attr *A) {
-  topHash() << "Attr";
+  topHash() << AstElementAttr;
   topHash() << A->getKind(); // hash enum
   topHash() << A->isPackExpansion();
   return true;
 }
 
 bool HashVisitor::VisitInheritableAttr(const InheritableAttr *A) {
-  topHash() << "Inheritable Attr";
+  topHash() << AstElementInheritableAttr;
   VisitAttr(A);
   return true;
 }
 /*
 bool HashVisitor::VisitStmtAttr(const StmtAttr *A){
-  TopHash() << "Stmt Attr";
+  TopHash() << AstElementStmtAttr; //TODO: does not exist yet
   VisitAttr(A);
   return true;
 }
 */
 
 bool HashVisitor::VisitInheritableParamAttr(const InheritableParamAttr *A) {
-  topHash() << "InheritableParamAttr";
+  topHash() << AstElementInheritableParamAttr;
   VisitAttr(A);
   return true;
 }
@@ -975,7 +977,7 @@ bool HashVisitor::VisitStmt(const Stmt *Node) {
 }
 
 bool HashVisitor::VisitCompoundStmt(const CompoundStmt *Node) {
-  topHash() << "compound";
+  topHash() << AstElementCompoundStmt;
   for (CompoundStmt::const_body_iterator I = Node->body_begin(),
                                          E = Node->body_end();
        I != E; ++I) {
@@ -985,7 +987,7 @@ bool HashVisitor::VisitCompoundStmt(const CompoundStmt *Node) {
 }
 
 bool HashVisitor::VisitBreakStmt(const BreakStmt *Node) {
-  topHash() << "break";
+  topHash() << AstElementBreakStmt;
   return true;
 }
 
@@ -1086,19 +1088,19 @@ bool HashVisitor::VisitDeclStmt(const DeclStmt *Node) {
 }
 
 bool HashVisitor::VisitGCCAsmStmt(const GCCAsmStmt *Node) {
-  topHash() << "gcc asm";
+  topHash() << AstElementGCCAsmStmt;
   topHash() << Node->getAsmString()->getString().str();
   return true;
 }
 
 bool HashVisitor::VisitMSAsmStmt(const MSAsmStmt *Node) {
-  topHash() << "MS asm";
+  topHash() << AstElementMSAsmStmt;
   topHash() << Node->getAsmString().str();
   return true;
 }
 
 bool HashVisitor::VisitAttributedStmt(const AttributedStmt *Node) {
-  topHash() << "AttributedStmt";
+  topHash() << AstElementAttributedStmt;
   for (const Attr *const A : Node->getAttrs()) {
     hashAttr(A);
   }
@@ -1108,7 +1110,7 @@ bool HashVisitor::VisitAttributedStmt(const AttributedStmt *Node) {
 }
 
 bool HashVisitor::VisitCapturedStmt(const CapturedStmt *Node) {
-  topHash() << "CaptureStmt";
+  topHash() << AstElementCaptureStmt;
   hashStmt(Node->getCapturedStmt());
   hashDecl(Node->getCapturedDecl());
   return true;
@@ -1144,7 +1146,7 @@ bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *Node) {
 }
 
 bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *Node) {
-  topHash() << "IndirectGotoStmt";
+  topHash() << AstElementIndirectGotoStmt;
   hashStmt(Node->getTarget());
   if (Node->getConstantTarget()) {
     hashDecl(Node->getConstantTarget());

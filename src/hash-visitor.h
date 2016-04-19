@@ -227,71 +227,80 @@ protected:
     AstElementDefaultStmt = 0x2f6febe9,
     AstElementDeclStmt = 0xbe748556,
 
-    // AstElement = 0x5b868718
-    // AstElement = 0xd0b37bef
-    // AstElement = 0x6439c9ef
-    // AstElement = 0x74887cd4
-    // AstElement = 0x75d5304a
-    // AstElement = 0x8a024d89
-    // AstElement = 0x3417cfda
-    // AstElement = 0x98090139
-    // AstElement = 0x7c2df2fc
-    // AstElement = 0x8647819b
-    // AstElement = 0x4dd5f204
-    // AstElement = 0x4acd4cde
-    // AstElement = 0x94c7a399
-    // AstElement = 0xddc8426
-    // AstElement = 0xca8afa5b
-    // AstElement = 0x707c703e
-    // AstElement = 0x9936193
-    // AstElement = 0x96681107
-    // AstElement = 0xa33a24f3
-    // AstElement = 0xffb3cc20
-    // AstElement = 0xe23aaddd
-    // AstElement = 0x496a1fb5
-    // AstElement = 0xb4995380
-    // AstElement = 0xe682fc67
-    // AstElement = 0xe511b92e
-    // AstElement = 0xc54ffefa
-    // AstElement = 0x427cc6e8
-    // AstElement = 0x48232f36
-    // AstElement = 0xf1a9c911
-    // AstElement = 0x7e5497b7
-    // AstElement = 0x64600f
-    // AstElement = 0x8d017154
-    // AstElement = 0x6cf40f99
-    // AstElement = 0x8c7ab6b2
-    // AstElement = 0xfe7647fa
-    // AstElement = 0xdf10fedc
-    // AstElement = 0xcc75aacd
-    // AstElement = 0x761e230f
-    // AstElement = 0x2a34b689
-    // AstElement = 0xff6db781
-    // AstElement = 0xc564aed1
-    // AstElement = 0x11050d85
-    // AstElement = 0x937408ea
-    // AstElement = 0xbb06d011
-    // AstElement = 0x381879fa
-    // AstElement = 0xa3a884ed
-    // AstElement = 0x56b6cba9
-    // AstElement = 0x7c0b04ce
-    // AstElement = 0x6a4fdb90
-    // AstElement = 0x906b6fb4
-    // AstElement = 0x530ae0a9
-    // AstElement = 0x652782d6
-    // AstElement = 0xccd123ef
-    // AstElement = 0x8e36d148
-    // AstElement = 0x1cafe3db
-    // AstElement = 0x98888356
-    // AstElement = 0xa5b0d36d
-    // AstElement = 0x5057c896
-    // AstElement = 0xa6339d46
-    // AstElement = 0x9c582bf3
-    // AstElement = 0x151982b7
-    // AstElement = 0x40d2aa93
-    // AstElement = 0xe340180e
-    // AstElement = 0x17f2d532
-    // AstElement = 0xac0c83d4
+    AstElementPointerType = 0x5b868718,
+    AstElementArrayType = 0xd0b37bef,
+    AstElementConstantArrayType = 0x6439c9ef,
+    AstElementVariableArrayType = 0x74887cd4,
+    AstElementComplexType = 0x75d5304a,
+    AstElementAtomicType = 0x8a024d89,
+    AstElementTypeOfExprType = 0x3417cfda,
+    AstElementTypeOfType = 0x98090139,
+    AstElementParenType = 0x7c2df2fc,
+    AstElementFunctionType = 0x8647819b,
+    AstElementFunctionProtoType = 0x4dd5f204,
+    AstElementEnumType = 0x4acd4cde,
+    AstElementTagType = 0x94c7a399,
+    AstElementAttributedType = 0xddc8426,
+    AstElementUnaryTransformType = 0xca8afa5b,
+    AstElementDecayedType = 0x707c703e,
+    AstElementAdjustedType = 0x9936193,
+    AstElementElaboratedType = 0x96681107,
+
+    AstElementDeclRefExpr = 0xa33a24f3,
+    AstElementPredefinedExpr = 0xffb3cc20,
+    AstElementInitListExpr = 0xe23aaddd,
+    AstElementUnaryExprOrTypeTraitExpr = 0xb4995380,
+    AstElementMemberExpr = 0xe682fc67,
+    AstElementAddrLabelExpr = 0xe511b92e,
+    AstElementCompoundLiteralExpr = 0xc54ffefa,
+    AstElementCallExpr = 0x427cc6e8,
+    AstElementOffsetOfExpr = 0x48232f36,
+    AstElementParenExpr = 0xf1a9c911,
+    AstElementAtomicExpr = 0x7e5497b7,
+    AstElementParenListExpr = 0x64600f,
+    AstElementDesignatedInitExpr = 0x8d017154,
+    AstElementDesignator = 0x6cf40f99, // TODO: vllt. woanders "einsortieren"?
+    AstElementArraySubscriptExpr = 0x8c7ab6b2, // TODO: = ArrayAccess?
+    AstElementImplicitValueInitExpr = 0xfe7647fa,
+    AstElementVAArgExpr = 0xdf10fedc,
+    AstElementBlockExpr = 0xcc75aacd,
+
+    AstElementBlockDecl = 0x761e230f,
+    AstElementFunctionDecl = 0x2a34b689,
+    AstElementLabelDecl = 0xff6db781,
+    AstElementEnumDecl = 0xc564aed1,
+    AstElementEnumConstantDecl = 0x11050d85,
+    AstElementIndirectFieldDecl = 0x937408ea,
+    AstElementValueDecl = 0xbb06d011,
+    AstElementFileScopeAsmDecl = 0x381879fa,
+    AstElementCapturedDecl = 0xa3a884ed,
+
+    AstElementAttr = 0x56b6cba9,
+    AstElementInheritableAttr = 0x7c0b04ce,
+    AstElementInheritableParamAttr = 0x6a4fdb90,
+
+    AstElementCompoundStmt = 0x906b6fb4,
+    AstElementBreakStmt = 0x530ae0a9,
+    AstElementGCCAsmStmt = 0x652782d6,
+    AstElementMSAsmStmt = 0xccd123ef,
+    AstElementAttributedStmt = 0x8e36d148,
+    AstElementCaptureStmt = 0x1cafe3db,
+    AstElementIndirectGotoStmt = 0x98888356,
+
+    AstElementStructureType = 0xa5b0d36d,
+    AstElementUnionType = 0x5057c896,
+
+    AstElementUnaryOperator = 0x496a1fb5,
+    AstElementBinaryOperator = 0xa6339d46,
+    AstElementCompoundAssignmentOperator = 0x9c582bf3,
+    AstElementAbstractConditionalOperator = 0x151982b7,
+    AstElementBinaryConditionalOperator = 0x40d2aa93,
+
+    // TODO: sort these:
+    AstElementImaginaryLiteral = 0xe340180e,
+    AstElementOffsetOfNode = 0x17f2d532,
+    AstElementFieldDecl = 0xac0c83d4 //TODO!
+
     // AstElement = 0x27892cea
     // AstElement = 0x4ed393c3
     // AstElement = 0x2e2321ad
@@ -324,7 +333,7 @@ protected:
       return true;
     }
 
-    Hash() << "FunctionDecl";
+    Hash() << "FunctionDecl"; // TODO: replace with constant?
     Hash() << FD->getNameInfo().getName().getAsString();
 
     Hash() << FD->isDefined();
