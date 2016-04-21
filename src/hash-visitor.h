@@ -15,6 +15,8 @@
 
 using namespace clang;
 
+
+/// VisitXyz-Methods return true if case was handled
 class TranslationUnitHashVisitor
     : public ConstDeclVisitor<TranslationUnitHashVisitor, bool>,
       public ConstStmtVisitor<TranslationUnitHashVisitor, bool>,
@@ -299,7 +301,7 @@ protected:
     // TODO: sort these:
     AstElementImaginaryLiteral = 0xe340180e,
     AstElementOffsetOfNode = 0x17f2d532,
-    AstElementFieldDecl = 0xac0c83d4 //TODO!
+    AstElementFieldDecl = 0xac0c83d4 // TODO!
 
     // AstElement = 0x27892cea
     // AstElement = 0x4ed393c3
@@ -370,6 +372,7 @@ protected:
     hashType(FD->getReturnType());
 
     // here an error (propably nullptr) occured
+    // TODO: fix this!
     if (const IdentifierInfo *const IdentInfo = FD->getLiteralIdentifier()) {
       if (const char *const IdentName = IdentInfo->getNameStart()) {
         Hash() << IdentName;
@@ -392,9 +395,9 @@ protected:
   // Hash Silo
   void storeHash(const void *Obj, Hash::Digest Dig) { Silo[Obj] = Dig; }
 
-  const Hash::Digest *getHash(const void *obj) {
-    if (Silo.find(obj) != Silo.end()) {
-      return &Silo[obj];
+  const Hash::Digest *getHash(const void *Obj) {
+    if (Silo.find(Obj) != Silo.end()) {
+      return &Silo[Obj];
     }
     return nullptr;
   }

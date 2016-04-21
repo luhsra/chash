@@ -19,7 +19,7 @@ public:
 
     // Context.getTranslationUnitDecl()->dump();
     unsigned ProcessedBytes;
-    std::string HashString = Visitor.getHash(&ProcessedBytes);
+    const std::string HashString = Visitor.getHash(&ProcessedBytes);
 
     if (TopLevelHashStream) {
       TopLevelHashStream->write(HashString.c_str(), HashString.length());
@@ -30,7 +30,7 @@ public:
   }
 
 private:
-  raw_ostream *TopLevelHashStream;
+  raw_ostream *const TopLevelHashStream;
   TranslationUnitHashVisitor Visitor;
 };
 
