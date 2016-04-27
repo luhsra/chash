@@ -7,5 +7,5 @@ ende:	b = 0; {{B}}
 
 /*
  * check-name: goto backwards to not empty label
- * A != B
+ * assert-obj: A != B
  */

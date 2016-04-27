@@ -6,5 +6,6 @@ void a(){
 /*
  * check-name: empty return
  * obj-not-diff: true
- * A != B
+ * assert-ast: A != B
+ * assert-obj: A == B
  */

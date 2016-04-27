@@ -13,5 +13,6 @@ int a(){
 
 /*
  * check-name: include stuff
- * A == A
+ * assert-obj: A == A
  */
+//TODO: A == A???

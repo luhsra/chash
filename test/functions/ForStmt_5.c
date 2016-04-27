@@ -6,5 +6,7 @@ void a(){
 /*
  * check-name: incStmt on for
  * obj-not-diff: C==D
- * all versions should differ from each other
+ * all versions should differ from each other (except C == D)
+ * assert-ast: C != D
+ * assert-obj: A != B, A != C, A != D, A != E, B != C, B != D, B != E, C == D, C != E, D != E
  */

@@ -9,5 +9,5 @@ void a(){
 
 /*
  * check-name: switch without default
- * A != B
+ * assert-obj: A != B
  */

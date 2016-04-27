@@ -7,6 +7,6 @@ int first; {{B}}
 /*
  * check-name: typedef struct
  * obj-not-diff: might be the same size
- * B != A
+ * assert-ast: A != B
+ * assert-obj: A == B
  */
-

@@ -10,6 +10,6 @@ union foobar foo; {{B}}
 
 /*
  * check-name: Union or struct
- * B != A
+ * assert-obj: B != A
  */
 

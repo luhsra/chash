@@ -5,5 +5,5 @@ void a(){
 
 /*
  * check-name: break in for
- * A != B;
+ * assert-obj: A != B
  */

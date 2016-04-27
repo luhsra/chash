@@ -9,8 +9,8 @@ void f(){
 	
 /*
  * check-name: distinguish post and prefix increment when necessary
- * obj-not-diff: optimization is oki
- * A != B
+ * obj-not-diff: optimization is ok
+ * assert-ast: A != B
+ * assert-obj: A != B
  */
-
-
+//TODO: tests give obj A != B

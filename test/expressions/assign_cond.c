@@ -3,5 +3,5 @@ int a = 0?2:0; {{B}}
 
 /*
  * check-name: ConditionOperator
- * B != A
+ * assert-obj: A != B
  */

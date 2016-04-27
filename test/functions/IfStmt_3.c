@@ -7,5 +7,6 @@ void a(){
 /*
  * check-name: if block 3
  * obj-not-diff: blame optimisation
- * A != B, B != C, C != A
+ * assert-ast: A != B, B != C, C != A
+ * assert-obj: A == B, B == C, C == A
  */

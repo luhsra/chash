@@ -6,5 +6,5 @@ void f(){
 }
 /*
  * check-name: unminus
- * B != A
+ * assert-obj: A != B
  */

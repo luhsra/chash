@@ -7,5 +7,5 @@ int main(){
 
 /*
  * check-name: void FuncDecl used
- * B != A
+ * assert-obj: A != B
  */

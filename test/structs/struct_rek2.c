@@ -16,6 +16,7 @@ struct barfoo foo;
 /*
  * check-name: struct recursive 2
  * obj-not-diff: Ja
- * B != A
+ * assert-ast: A == B
+ * assert-obj: A == B
  */
-
+//TODO: war vorher !=; warum == ?

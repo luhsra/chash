@@ -8,5 +8,6 @@ void a(){
 /*
  * check-name: else block non-empty 2
  * obj-not-diff: yes
- * A != B
+ * assert-ast: A != B
+ * assert-obj: A == B
  */

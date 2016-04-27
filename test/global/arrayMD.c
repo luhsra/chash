@@ -4,5 +4,6 @@ int inty[2][4]; {{B}}
 /*
  * check-name: Initlist array
  * obj-not-diff: might have 
- * B != A
+ * assert-ast: A != B
+ * assert-obj: A == B
  */

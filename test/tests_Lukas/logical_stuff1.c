@@ -10,7 +10,7 @@ void f(){
 }
 /*
  * check-name: difference between while and if
- * A != B
+ * assert-obj: A != B
  */
 
 

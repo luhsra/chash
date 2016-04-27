@@ -12,18 +12,17 @@ void f(){
 	} {{B}}
 
 
-	if( 1){ 
+    if( 1){
 		a = 2;
 	}
-	else{ {{C}}
+    else{ {{C}}
 		a = 3; {{C}}
 	} {{C}}
 }
 	
 /*
  * check-name: do while, if/ else
- * obj-not-diff: optimization is oki
- * A != B, B != C, A != C
+ * obj-not-diff: optimization is ok
+ * assert-obj: A != B, B != C, A != C
  */
-
 

@@ -27,7 +27,8 @@ int func(void){
 }
 /*
  * check-name: struct 4
- * A==B
  * obj-not-diff: might be the same size
+ * assert-ast: A == B
+ * assert-obj: A == B
  */
-
+//TODO: why is ast also == ? seems not_used is completely ignored

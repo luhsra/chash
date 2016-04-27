@@ -5,5 +5,6 @@ int variable;
 
 /*
  * check-name: used Decls in include
- * B != A
+ * assert-obj: B != A
  */
+//TODO: was genau sollte das testen?

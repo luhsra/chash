@@ -12,6 +12,7 @@ void func(void){
 }
 /*
  * check-name: offsetof array
- * obj-not-diff: might
- * B != A
+ * obj-not-diff: might, //TODO should not!
+ * assert-obj: A != B
  */
+//TODO: obj should diff, or was array[1] meant to be tested?

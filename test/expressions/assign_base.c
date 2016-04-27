@@ -4,5 +4,5 @@ int a = 0x4711; {{C}}
 
 /*
  * check-name: oktal,...
- * assert-obj: B != A, B != C, A != C
+ * assert-obj: A != B, A != C, B != C
  */

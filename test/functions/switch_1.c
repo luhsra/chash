@@ -10,5 +10,5 @@ void a(){
 
 /*
  * check-name: switch-Stmt
- * A != B
+ * assert-obj: A != B
  */

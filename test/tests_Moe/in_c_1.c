@@ -11,5 +11,5 @@ typedef struct s s_type; {{A}}
 
 /*
  * check-name: unused Decls without include
- * B == A
+ * assert-obj: A == B
  */

@@ -6,5 +6,5 @@ int a(){
 
 /*
  * check-name: non-empty return
- * A != B
+ * assert-obj: A != B
  */

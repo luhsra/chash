@@ -5,5 +5,5 @@
 
 /*
  * check-name: not used dynamic include
- * A == B, B == C
+ * assert-obj: A == B, B == C
  */

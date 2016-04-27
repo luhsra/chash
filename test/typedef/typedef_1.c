@@ -4,6 +4,6 @@ used first; {{A}}
 int first; {{B}}
 /*
  * check-name: Typedef int
- * B == A
+ * assert-obj: A == B
  */
 

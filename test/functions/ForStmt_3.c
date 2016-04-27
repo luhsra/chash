@@ -9,5 +9,6 @@ void a(){
 /*
  * check-name: init-stmt in for
  * obj-not-diff: B == C
- * A != B; B != C; C != A
+ * assert-ast: A != B, B != C, C != A
+ * assert-obj: A != B, B == C, C != A
  */

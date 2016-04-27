@@ -7,6 +7,7 @@ int func(){
 /*
  * check-name: Array var
  * obj-not-diff: jupp
- * B != A
+ * assert-ast: A != B
+ * a-o A == B
  */
-
+//TODO: test sagt obj A != B, comment sagt ==

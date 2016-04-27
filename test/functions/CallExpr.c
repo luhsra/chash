@@ -6,7 +6,7 @@ void f2(){
 }
 /*
  * check-name: CallExpr
- * obj-not-diff: ?
- * B != A
+ * obj-not-diff: ? seem to differ slightly
+ * assert-ast: A != B
+ * assert-obj: A != B
  */
-

@@ -27,7 +27,7 @@ int main(){
 }
 /*
  * check-name: Function-Test-2
- * B != A
+ * assert-obj: B != A
  */
 
 

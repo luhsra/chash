@@ -15,5 +15,6 @@ void a(void)
 /*
  * check-name: sizeof
  * obj-not-diff: B==C
- * B != A, B != C, C != A 
+ * assert-ast: B != A, B != C, C != A
+ * assert-obj: A != B, B == C, C != A
  */

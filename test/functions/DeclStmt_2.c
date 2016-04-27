@@ -5,5 +5,5 @@ void a(){
 
 /*
  * check-name: initialisation
- * A != B
+ * assert-obj: A != B
  */

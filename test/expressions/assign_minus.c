@@ -3,5 +3,6 @@ int a = 0; {{B}}
 /*
  * check-name: minus
  * obj-not-diff: maybe
- * B != A 
+ * assert-ast: A != B
+ * assert-obj: A == B
  */

@@ -7,5 +7,5 @@ int main(){
 }
 /*
  * check-name: use stdlib.h
- * A != B
+ * assert-obj: A != B
  */

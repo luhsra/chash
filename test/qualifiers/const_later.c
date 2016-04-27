@@ -6,6 +6,6 @@ const int wombatino;
 /*
  * check-name: Testing const then without
  * obj-not-diff: yes
- * B != A
+ * assert-ast: A != B
+ * assert-obj: A == B
  */
-

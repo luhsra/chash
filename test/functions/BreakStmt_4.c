@@ -5,5 +5,5 @@ void a(){
 
 /*
  * check-name: break in do-while 2
- * A != B
+ * assert-obj: A != B
  */

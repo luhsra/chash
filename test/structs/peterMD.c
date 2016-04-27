@@ -12,5 +12,6 @@ struct paul i; {{A}}
 struct paul j; {{B}}
 /*
  * check-name: struct MD
- * B != A
+ * assert-obj: B != A
  */
+//TODO: sollten die nicht gleich sein? oder ist name ausreichend fuer diff?

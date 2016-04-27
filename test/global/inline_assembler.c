@@ -33,6 +33,6 @@ int main(void)
 
 /*
  * check-name: test inline assembler
- * A != B
+ * assert-obj: A != B
  */
 

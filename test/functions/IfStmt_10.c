@@ -7,5 +7,5 @@ void a(){
 
 /*
  * check-name: if & else block non-empty 1
- * A != B
+ * assert-obj: A != B
  */

@@ -3,5 +3,5 @@
 
 /*
  * check-name: used Decls in include
- * B != A
+ * assert-obj: A != B
  */

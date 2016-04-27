@@ -3,9 +3,9 @@ void a(){
 	int a; {{B}}
 }
 
-
 /*
  * check-name: DeclStmt 1
  * obj-not-diff: blame optimisation
- * A != B
+ * assert-ast: A != B
+ * assert-obj: A == B
  */

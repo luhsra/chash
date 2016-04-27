@@ -6,5 +6,5 @@ ende:	; {{B}}
 
 /*
  * check-name: Goto forwards
- * A != B
+ * assert-obj: A != B
  */

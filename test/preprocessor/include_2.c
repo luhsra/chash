@@ -8,5 +8,5 @@ int foo() {
 
 /*
  * check-name: Include with function extern
- * B == A
+ * assert-obj: A == B
  */

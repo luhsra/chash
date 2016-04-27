@@ -6,5 +6,5 @@ int f(){
 }
 /*
  * check-name: Initlist array access
- * assert-ast: A != B
+ * assert-obj: A != B
  */

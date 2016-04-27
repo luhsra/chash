@@ -6,5 +6,5 @@ void a(){
 
 /*
  * check-name: for with empty body
- * A != B; B != C; C != A
+ * assert-obj: A != B, B != C, C != A
  */

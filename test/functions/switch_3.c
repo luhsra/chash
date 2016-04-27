@@ -8,5 +8,5 @@ void a(){
 
 /*
  * check-name: case without break
- * A != B
+ * assert-obj: A != B
  */

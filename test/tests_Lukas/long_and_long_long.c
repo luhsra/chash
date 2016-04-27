@@ -6,7 +6,8 @@ int f(void){
 }
 /*
  * check-name: struct 1
- * obj-not-diff: reasonabale
- * B != A
+ * obj-not-diff: reasonable
+ * assert-ast: A != B
+ * assert-obj: A == B
  */
-
+//TODO: obj==/ast!= ok so? long === long long ?

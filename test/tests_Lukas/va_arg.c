@@ -29,3 +29,5 @@ static int vrdval(va_list arg_ptr)
 /*
  * check-name: va_arg found problematic in bb-project
  */
+//TODO: assertion!
+//TODO: auskommentierter code, fix this!

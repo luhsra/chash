@@ -15,4 +15,4 @@ void func(void){
 /*
  * check-name: size of the own declaration --> Seg-Fault?
  */
-
+//TODO: kein testcase!

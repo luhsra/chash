@@ -10,6 +10,6 @@ void f2(){
 }
 /*
  * check-name: cross recursion
- * B != A
+ * assert-obj: B != A
  */
 

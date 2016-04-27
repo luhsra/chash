@@ -15,3 +15,4 @@ void foo() {
  * compile-flags: -fdata-sections -Wall
  * assert-ast: A == B
  */
+//TODO: obj?

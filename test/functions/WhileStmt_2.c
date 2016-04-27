@@ -6,5 +6,5 @@ void a(){
 
 /*
  * check-name: while with non-empty body
- * A != B
+ * assert-obj: A != B
  */

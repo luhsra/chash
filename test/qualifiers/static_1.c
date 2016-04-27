@@ -3,6 +3,6 @@ static int first; {{B}}
 
 /*
  * check-name: Testing static (not in function)
- * B != A
+ * assert-obj: B != A
  */
 

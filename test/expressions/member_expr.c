@@ -14,5 +14,6 @@ void func(void){
 
 /*
  * check-name: NOT, L_NOT
- * B != A, B != C, C != A 
+ * A != B, A != C, B != C
  */
+//TODO: gar keine testcases!

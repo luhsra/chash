@@ -3,5 +3,5 @@ enum{aa, bb, cc}; {{A}}
 int j;
 /*
  * check-name: Definition of unused enum
- * A == B
+ * assert-ast: A == B
  */

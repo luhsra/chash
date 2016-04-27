@@ -8,5 +8,6 @@ label2: b = 0; {{C}}
 /*
  *check-name: label not empty, not used
  * obj-not-diff: why should they?
- * A != B, A != C, B != C
+ * assert-ast: A != B, A != C, B != C
+ * assert-obj: A == B, A == C, B == C
  */

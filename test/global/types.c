@@ -11,6 +11,6 @@ long double a1; {{B}}
 unsigned short a2; {{C}}
 /*
  * check-name: More Types
- * B != A, C != B, A != C
+ * assert-obj: B != A, C != B, A != C
  */
 

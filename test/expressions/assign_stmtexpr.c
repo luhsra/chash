@@ -5,5 +5,5 @@ void f(){
 
 /*
  * check-name: STMTEXPR
- * B != A
+ * assert-obj: A != B
  */

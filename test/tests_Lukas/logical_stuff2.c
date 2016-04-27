@@ -12,7 +12,7 @@ void f(){
 	
 /*
  * check-name: logical operators
- * A != B, A != C, B != C
+ * assert-obj: A != B, A != C, B != C
  */
 
 

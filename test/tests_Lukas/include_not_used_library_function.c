@@ -9,5 +9,5 @@ void f(){
 
 /*
  * check-name: Definition of unused enum
- * A == B
+ * assert-obj: A == B
  */

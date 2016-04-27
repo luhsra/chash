@@ -8,5 +8,6 @@ void func(void){
 /*
  * check-name: Initlist array
  * obj-not-diff: might have 
- * B != A
+ * assert-ast: A != B
+ * assert-obj: A != B
  */

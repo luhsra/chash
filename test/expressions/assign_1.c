@@ -7,5 +7,5 @@ void f(){
 
 /*
  * check-name: declref
- * B != A
+ * assert-obj: A != B
  */

@@ -4,5 +4,6 @@ int a = (int) 1.444; {{B}}
 /*
  * check-name: cast
  * obj-not-diff: maybe
- * B != A
+ * assert-ast: A != B
+ * assert-obj: A == B
  */

@@ -4,5 +4,5 @@ int a;
 
 /*
  * check-name: extern declaration
- * B == A
+ * assert-obj: B == A
  */

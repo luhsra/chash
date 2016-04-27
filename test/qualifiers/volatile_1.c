@@ -4,6 +4,6 @@ volatile int first; {{B}}
 /*
  * check-name: Testing volatile
  * obj-not-diff: yes
- * B != A
+ * assert-ast: A != B
+ * assert-obj: A == B
  */
-

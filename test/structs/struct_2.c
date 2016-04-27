@@ -8,6 +8,6 @@ int dasGehtDochNicht;
 
 /*
  * check-name: struct 2
- * B == A
+ * assert-obj: B == A
  */
-
+//TODO: muss doch != sein?! oder nicht weil nicht verwendet wird?

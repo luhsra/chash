@@ -13,5 +13,5 @@ s_type s1 = {.a = 0, .b = 1}; {{A}}
 
 /*
  * check-name: used Decls in include
- * B != A
+ * assert-obj: A != B
  */

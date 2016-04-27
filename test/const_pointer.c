@@ -10,4 +10,5 @@ void cdcmd(void)
  * check-name: qualifiers in subtype
  * obj-not-diff: maybe
  * assert-ast: A != B
+ * assert-obj: A == B
  */

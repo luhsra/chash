@@ -6,5 +6,5 @@ ende:	;
 
 /*
  * check-name: Goto backwards
- * A != B
+ * assert-obj: A != B
  */

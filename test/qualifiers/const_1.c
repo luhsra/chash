@@ -5,6 +5,6 @@ char second;
 /*
  * check-name: Testing const
  * obj-not-diff: yes
- * B != A
+ * assert-ast: A != B
+ * assert-obj: A == B
  */
-

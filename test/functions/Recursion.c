@@ -4,6 +4,6 @@ void f1(){
 }
 /*
  * check-name: recursion
- * B != A
+ * assert-obj: B != A
  */
 

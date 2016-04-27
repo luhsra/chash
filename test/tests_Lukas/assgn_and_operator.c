@@ -11,7 +11,7 @@ void f(){
 }
 /*
  * check-name: assgn_and_operator
- * A != C, A != D, B != C, B != D, C !=D
+ * assert-obj: A != C, A != D, B != C, B != D, C !=D
  */
 
 

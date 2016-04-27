@@ -4,6 +4,6 @@ int x; {{B}}
 /*
  * check-name: typeof 1
  * obj-not-diff: y
- * B != A
+ * assert-ast: A != B
+ * assert-obj: A == B
  */
-

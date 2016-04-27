@@ -6,5 +6,5 @@ int main(){
 
 /*
  * check-name: void FuncDecl unused
- * B == A
+ * assert-obj: A == B
  */

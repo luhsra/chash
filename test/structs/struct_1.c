@@ -9,6 +9,6 @@ struct foobar foo;
 
 /*
  * check-name: struct 1
- * B != A
+ * assert-obj: B != A
  */
-
+//TODO: testcase ok?

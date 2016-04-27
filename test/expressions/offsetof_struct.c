@@ -14,5 +14,6 @@ void func(){
 /*
  * check-name: offsetof struct
  * obj-not-diff: might
- * B != A
+ * assert-ast: A != B
+ * assert-obj: A == B
  */

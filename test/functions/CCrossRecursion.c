@@ -11,6 +11,6 @@ void f2(){
 }
 /*
  * check-name: cross recursion
- * B != A, B != C, A != C
+ * assert-obj: B != A, B != C, A != C
  */
 

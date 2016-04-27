@@ -9,5 +9,5 @@ int main(){
 }
 /*
  * check-name: use stdio.h
- * A != B
+ * assert-obj: A != B
  */

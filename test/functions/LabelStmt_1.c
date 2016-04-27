@@ -7,6 +7,7 @@ label2:	; {{C}}
 
 /*
  * check-name: label empty, not used
- * obj-not-diff: why should they?
- * A != B, B != C, c != A
+ * obj-not-diff: why should they? //TODO!
+ * assert-obj: A != B, A == C, B != C
  */
+//TODO: test sagt A != B und B != C

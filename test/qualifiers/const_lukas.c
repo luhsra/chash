@@ -7,6 +7,6 @@ const int wombat; {{A}}
 /*
  * check-name: Testing const then without L
  * obj-not-diff: yes
- * B != A, A != C, B != C
+ * assert-ast: A != B, A != C, B != C
+ * assert-obj: A != B, A == C, B != C
  */
-

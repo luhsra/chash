@@ -5,6 +5,6 @@ int first; {{B}}
 /*
  * check-name: typedef const
  * obj-not-diff: yes
- * B != A
+ * A != B
  */
-
+//TODO: beim testen sind ast und obj beide ==

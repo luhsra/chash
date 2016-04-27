@@ -11,4 +11,4 @@ struct foobar *barfoo(){
 /*
  * check-name: return recordptr
  */
-
+//TODO: keine testcases!

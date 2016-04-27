@@ -3,6 +3,6 @@ int x; {{B}}
 /*
  * check-name: WTF
  * obj-not-diff: y
- * B != A
+ * assert-ast: A != B
+ * assert-obj: A == B
  */
-
