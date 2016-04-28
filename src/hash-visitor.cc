@@ -498,7 +498,14 @@ bool HashVisitor::VisitIntegerLiteral(const IntegerLiteral *Node) {
 bool HashVisitor::VisitFloatingLiteral(const FloatingLiteral *Node) {
   topHash() << AstElementFloatingLiteral;
   hashType(Node->getType());
-  const double Value = (Node->getValue().convertToDouble());
+  double Value;
+  if (&Node->getValue().getSemantics() == (const fltSemantics*)&APFloat::IEEEdouble) {
+    Value = (Node->getValue().convertToDouble());
+  } else if (&Node->getValue().getSemantics() == (const fltSemantics*)&APFloat::IEEEsingle) {
+    Value = (Node->getValue().convertToFloat());
+  } else {
+    assert(0 && "unknown FloatingLiteral: neither float nor double");
+  }
   topHash() << *reinterpret_cast<const uint64_t *>(&Value);
   return true;
 }
