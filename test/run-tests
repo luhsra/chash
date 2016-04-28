@@ -242,9 +242,11 @@ def run_testcase_helper(test_case, check_name, future):
             fd.write(variants[variant])
 
         assert os.path.exists(source_file)
+        assert not os.path.exists(object_file)
 
-        cmd = "{compiler} -c -xc - -o {object_file} {flags}".format(
+        cmd = "{compiler} -c {source_file} -o {object_file} {flags}".format(
             compiler=compile_command,
+            source_file=source_file,
             object_file=object_file,
             flags=compile_flags)
         (ret_compiler, x, _, __) = run_command(cmd, stdin=variants[variant])
@@ -264,7 +266,7 @@ def run_testcase_helper(test_case, check_name, future):
             failed = True
 
         #### Run Clang-Hash
-        cmd = "{cmd} -c {source_file} -o {object_file} {flags}".format(
+        cmd = "{cmd} -fsyntax-only -c {source_file} -o {object_file} {flags}".format(
             cmd=hash_command,
             source_file=source_file,
             object_file=object_file, # Won't be overriden

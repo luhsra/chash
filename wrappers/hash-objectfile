@@ -8,7 +8,8 @@ import tempfile
 import hashlib
 
 def find_symbols(elf):
-    nm_output  = subprocess.check_output(["nm", elf])
+    cmd = ["nm", "-a", elf]
+    nm_output  = subprocess.check_output(cmd)
     ret = []
     for line in nm_output.strip("\n").split("\n"):
         items = line.split()
@@ -26,19 +27,22 @@ def find_sections(elf):
             ret.append(items[0])
     return ret
 
-def normalize_names(names):
+def normalize_names(names, fn):
     """Find dangerous names, that change although nothing has changed"""
     ret = []
     for name in names:
         (new, count) = re.subn("\\.([0-9]{4,})", ".%04d" % len(ret), name)
         if count:
             ret.append( (name, new) )
+        if fn in name:
+            ret.append( (name, "FILE") )
     return ret
 
 def hash_file(fn_in):
+    c_file = os.path.basename(fn_in).replace(".o", ".c")
     names = find_symbols(fn_in)
-    symbol_renames = normalize_names(names)
-    section_renames = normalize_names(find_sections(fn_in))
+    symbol_renames = normalize_names(names, c_file)
+    section_renames = normalize_names(find_sections(fn_in), c_file)
 
     fn_rename = tempfile.NamedTemporaryFile()
     for i in symbol_renames:
@@ -50,16 +54,15 @@ def hash_file(fn_in):
         extra_args += ["--rename-section", "%s=%s" % (f,t)]
 
 
-    c_file = os.path.basename(fn_in).replace(".o", ".c")
     fn_out = tempfile.NamedTemporaryFile()
     subprocess.check_call(["objcopy", fn_in,
-                           "--strip-symbol=%s" % c_file,
                            "--redefine-syms=%s" % fn_rename.name] +
                           extra_args + [fn_out.name])
 
     H = hashlib.sha1()
     with fn_out as fd:
-        H.update(fd.read())
+        text = fd.read()
+        H.update(text)
         digest = H.hexdigest()
     fn_rename.close()
     fn_out.close()
