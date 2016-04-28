@@ -122,8 +122,10 @@ bool HashVisitor::VisitVarDecl(const VarDecl *D) {
   topHash() << D->isNRVOVariable();
 
   if (D->hasInit()) {
-    topHash() << AstElementVarDecl_init; //TODO: special case required here or just hash Expr?
-    const Expr *const E = D->getInit(); //TODO: perhaps hashStmt(D->getInit()) instead
+    topHash() << AstElementVarDecl_init; // TODO: special case required here or
+                                         // just hash Expr?
+    const Expr *const E =
+        D->getInit(); // TODO: perhaps hashStmt(D->getInit()) instead
     hashStmt(E);
   }
   return true;
@@ -246,7 +248,8 @@ bool HashVisitor::VisitArrayType(const ArrayType *T) {
 
 bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T) {
   topHash() << AstElementConstantArrayType;
-  //errs() << "\n\n\nVisitConstantArrayType: " << T->getSize().getZExtValue() << "\n\n\n";
+  // errs() << "\n\n\nVisitConstantArrayType: " << T->getSize().getZExtValue()
+  // << "\n\n\n";
   hashType(T->getElementType());
   topHash() << "[" << T->getSize().getZExtValue() << "]";
   return true;
@@ -499,9 +502,11 @@ bool HashVisitor::VisitFloatingLiteral(const FloatingLiteral *Node) {
   topHash() << AstElementFloatingLiteral;
   hashType(Node->getType());
   double Value;
-  if (&Node->getValue().getSemantics() == (const fltSemantics*)&APFloat::IEEEdouble) {
+  if (&Node->getValue().getSemantics() ==
+      (const fltSemantics *)&APFloat::IEEEdouble) {
     Value = (Node->getValue().convertToDouble());
-  } else if (&Node->getValue().getSemantics() == (const fltSemantics*)&APFloat::IEEEsingle) {
+  } else if (&Node->getValue().getSemantics() ==
+             (const fltSemantics *)&APFloat::IEEEsingle) {
     Value = (Node->getValue().convertToFloat());
   } else {
     assert(0 && "unknown FloatingLiteral: neither float nor double");
@@ -694,7 +699,8 @@ bool HashVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *Node) {
     hashStmt(MutableNode->getSubExpr(I));
   }
   for (unsigned I = 0, E = MutableNode->size(); I < E; ++I) {
-    const DesignatedInitExpr::Designator *const Des = MutableNode->getDesignator(I);
+    const DesignatedInitExpr::Designator *const Des =
+        MutableNode->getDesignator(I);
     topHash() << AstElementDesignator;
     hashType(Des->getField()->getType());
     hashName(Des->getField());
