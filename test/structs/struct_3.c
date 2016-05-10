@@ -1,14 +1,15 @@
-struct foobar{
-	int *gelb;
-	char *gruen;
-	unsigned long magenta; {{B}}
+struct foobar {
+  int *first;
+  char *second;
+  unsigned long third; {{B}}
 };
 
-struct foobar *mkay; {{A}}
-int rot_rot_usw;
+struct foobar *foo; {{A}}
+
+int val;
 
 /*
- * check-name: struct 3
- * assert-obj: B != A
+ * check-name: structs with different members and ptr to struct (no instance)
+ * assert-obj: A != B
  */
 

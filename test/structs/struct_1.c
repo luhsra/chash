@@ -1,14 +1,13 @@
-struct foobar{
-	int gelb;
-	char gruen;
-	unsigned long magenta; {{B}}
+struct foobar {
+  int first;
+  char second;
+  unsigned long third; {{B}}
 };
 
-//int dasGehtDochNicht = 0; {{A}}
+{{A}}
 struct foobar foo;
 
 /*
- * check-name: struct 1
- * assert-obj: B != A
+ * check-name: structs with different members
+ * assert-obj: A != B
  */
-//TODO: testcase ok?

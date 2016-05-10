@@ -1,14 +1,17 @@
-struct foobar{
-	int l;
+struct foobar {
+  int l;
 };
 
-struct foobar *barfoo(){
-	struct foobar foo = {.l = 1};
-	return &foo;
+struct foobar *barfoo() {
+  struct foobar foo = {.l = 1};
+  return &foo;
 }
+
 {{A}}
+{{B}}
 
 /*
  * check-name: return recordptr
+ * assert-ast: A == B
  */
-//TODO: keine testcases!
+//TODO: Testcase draus machen!

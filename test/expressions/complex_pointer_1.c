@@ -1,16 +1,16 @@
-void f(void){
-
-	char a;
-	const char b;
-	char * c = &a;
-	c = &b;
-
-	return;
+void f(void) {
+  char a;       {{A}}
+  const char a; {{B}}
+  const char b;
+  char* c = &a;
+  c = &b;
+  return;
 }
-
-{{A}}
 
 /*
  * check-name: complex pointer (maybe our problem)
+ * obj-not-diff: yes
+ * assert-ast: A != B
+ * assert-obj: A == B
  */
-//TODO: testcases fehlen
+//TODO: besseren Testcase bauen!

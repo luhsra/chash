@@ -1,10 +1,5 @@
-
-
-void func(int a,...){ {{A}}
-void func(int a){ {{B}}
-
-
-}
+void func(int a, ...) {} {{A}}
+void func(int a) {}     {{B}}
 
 /*
  * check-name: multiple_args

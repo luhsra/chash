@@ -5,8 +5,8 @@ typedef int UNUSED; {{A}}
 {{B}}
 
 void foo() {
-    static int A;
-    (void) A;
+  static int A;
+  (void) A;
 }
 
 /*
@@ -15,4 +15,3 @@ void foo() {
  * compile-flags: -fdata-sections -Wall
  * assert-ast: A == B
  */
-//TODO: obj?

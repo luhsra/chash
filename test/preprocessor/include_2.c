@@ -2,11 +2,10 @@
 {{B}}
 
 int foo() {
-    return 0;
+  return 0;
 }
 
-
 /*
- * check-name: Include with function extern
+ * check-name: implementation of included extern function declaration ()
  * assert-obj: A == B
  */

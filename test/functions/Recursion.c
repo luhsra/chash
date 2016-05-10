@@ -1,9 +1,9 @@
-void f1(){
-	f1(); {{A}}
-	{{B}}
+void f1() {
+  f1(); {{A}}
+  {{B}}
 }
 /*
  * check-name: recursion
- * assert-obj: B != A
+ * assert-obj: A != B
  */
 

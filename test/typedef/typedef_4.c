@@ -1,10 +1,13 @@
 typedef const int used;
 
 used first; {{A}}
-int first; {{B}}
+int first;  {{B}}
+
 /*
  * check-name: typedef const
  * obj-not-diff: yes
- * A != B
+ * -ast A != B
+ * assert-obj: A == B
  */
-//TODO: beim testen sind ast und obj beide ==
+//TODO: BUG?! beim testen ist ast ==, warum ist ast nicht !=???
+// wenn ich used mit const int ersetze ists unterschiedlich

@@ -2,8 +2,9 @@ typedef long used; {{A}}
 typedef char used; {{B}}
 
 used first;
+
 /*
  * check-name: typedef diff
- * A != B
+ * assert-obj: A != B
  */
 

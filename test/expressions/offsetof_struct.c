@@ -1,14 +1,13 @@
 #include <stddef.h>
 
-
-struct test{
-	int a1;
-	int a2;
+struct test {
+  int a1;
+  int a2;
 };
 
-void func(){
-	unsigned int a = offsetof(struct test, a2); {{A}}
-	unsigned int a = 4; {{B}}
+void func() {
+  unsigned int a = offsetof(struct test, a2); {{A}}
+  unsigned int a = 4;                         {{B}}
 }
 
 /*

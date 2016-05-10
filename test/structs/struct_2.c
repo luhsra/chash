@@ -1,13 +1,12 @@
-struct foobar{
-	int gelb;
-	char gruen;
-	unsigned long magenta; {{B}}
+struct foobar {
+  int first;
+  char second;
+  unsigned long third; {{B}}
 };
 {{A}}
-int dasGehtDochNicht;
+int var;
 
 /*
- * check-name: struct 2
- * assert-obj: B == A
+ * check-name: unused structs with different members
+ * assert-ast: A == B
  */
-//TODO: muss doch != sein?! oder nicht weil nicht verwendet wird?

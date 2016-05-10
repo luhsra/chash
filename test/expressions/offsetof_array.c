@@ -1,18 +1,20 @@
 #include <stddef.h>
 
-/*This does only make sense in an array context*/
-struct ding{
-	int b;
-	int array[10];
+/* This does only make sense in an array context */
+struct ding {
+  int b;
+  int array[10];
 };
 
-void func(void){
-	unsigned int a = offsetof(struct ding, array[2]); {{A}}
-	unsigned int a = 8; {{B}}
+void func(void) {
+  unsigned int a = offsetof(struct ding, array[2]); {{A}}
+  unsigned int a = offsetof(struct ding, array[1]); {{B}}
+  unsigned int a = 8;                               {{C}}
 }
+
 /*
  * check-name: offsetof array
- * obj-not-diff: might, //TODO should not!
- * assert-obj: A != B
+ * obj-not-diff: B == C
+ * assert-ast: B != C
+ * assert-obj: B == C, A != B, A != C
  */
-//TODO: obj should diff, or was array[1] meant to be tested?

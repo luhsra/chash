@@ -2,8 +2,9 @@ typedef int * used;
 
 used first; {{A}}
 int *first; {{B}}
+
 /*
  * check-name: typedef int *
- * assert-obj: A == B
+ * assert-ast: A == B
  */
 

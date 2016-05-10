@@ -1,20 +1,17 @@
-void a(void)
-{
-	int a;
-	struct b{
-		int a;
-		int b;
-	};
-	unsigned int s = sizeof(struct b); {{A}}
-
-	unsigned int s = sizeof(int); {{B}}
-
-	unsigned int s = sizeof(a); {{C}}
+void func(void) {
+  int var;
+  struct st {
+    int a;
+    int b;
+  };
+  unsigned int s = sizeof(struct st); {{A}}
+  unsigned int s = sizeof(int);       {{B}}
+  unsigned int s = sizeof(var);       {{C}}
 }
 
 /*
  * check-name: sizeof
- * obj-not-diff: B==C
- * assert-ast: B != A, B != C, C != A
- * assert-obj: A != B, B == C, C != A
+ * obj-not-diff: B == C
+ * assert-ast: B != C
+ * assert-obj: B == C, A != B, A != C
  */
