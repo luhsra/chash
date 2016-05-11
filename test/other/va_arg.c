@@ -26,6 +26,6 @@ static int vrdval(va_list arg_ptr)
 
 /*
  * check-name: va_arg found problematic in bb-project
+ * assert-ast: A == A
  */
-//TODO: Testcases bauen!
-//TODO: auskommentierter code, fix this!
+//TODO: write testcases!

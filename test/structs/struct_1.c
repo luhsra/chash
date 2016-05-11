@@ -4,8 +4,9 @@ struct foobar {
   unsigned long third; {{B}}
 };
 
-{{A}}
 struct foobar foo;
+
+{{A}}
 
 /*
  * check-name: structs with different members

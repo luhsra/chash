@@ -1,8 +1,8 @@
 void a() {
-	int b = 0;
-    ;                     {{A}}
-    do { b++; } while (0); {{B}}
-    do { b++; } while (1); {{C}}
+  int b = 0;
+  ;                      {{A}}
+  do { b++; } while (0); {{B}}
+  do { b++; } while (1); {{C}}
 }
 
 /*

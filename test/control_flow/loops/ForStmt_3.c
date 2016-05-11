@@ -10,5 +10,5 @@ void a() {
  * check-name: init-stmt in for
  * obj-not-diff: B == C
  * assert-ast: B != C
- * assert-obj: A != B, A != C, B == C
+ * assert-obj: B == C, A != B, A != C
  */

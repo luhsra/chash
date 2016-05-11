@@ -1,6 +1,6 @@
 void a() {
-    for (int i = 0; i < 100; i++) {}         {{A}}
-    for (int i = 0; i < 100; i++) { break; } {{B}}
+  for (int i = 0; i < 100; i++) {}         {{A}}
+  for (int i = 0; i < 100; i++) { break; } {{B}}
 }
 
 /*

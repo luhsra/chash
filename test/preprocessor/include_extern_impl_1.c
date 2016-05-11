@@ -1,4 +1,4 @@
-#include "header.h" {{A}}
+#include "header_extern_1.h" {{A}}
 {{B}}
 
 int foo(void) {

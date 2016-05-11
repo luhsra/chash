@@ -3,8 +3,10 @@ struct foobar {
   char second;
   unsigned long third; {{B}}
 };
-{{A}}
+
 int var;
+
+{{A}}
 
 /*
  * check-name: unused structs with different members

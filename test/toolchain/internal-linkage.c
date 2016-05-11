@@ -5,8 +5,8 @@ typedef int UNUSED; {{A}}
 {{B}}
 
 void foo() {
-  static int A;
-  (void) A;
+  static int a;
+  (void) a;
 }
 
 /*

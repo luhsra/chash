@@ -1,7 +1,7 @@
 void a() {
-    do {} while (0); {{A}}
-    do {} while (1); {{B}}
-    ;                {{C}}
+  do {} while (0); {{A}}
+  do {} while (1); {{B}}
+  ;                {{C}}
 }
 
 /*

@@ -1,8 +1,8 @@
 struct foobar { {{A}}
 union foobar {  {{B}}
-    int first;
-    char second;
-    unsigned long third;
+  int first;
+  char second;
+  unsigned long third;
 };
 
 struct foobar foo; {{A}}

@@ -1,4 +1,4 @@
-#include "header.h" {{A}}
+#include "header_extern_1.h" {{A}}
 {{B}}
 
 int foo() {
@@ -7,7 +7,7 @@ int foo() {
 
 
 /*
- * check-name: Include with extern function declaration
+ * check-name: Include with different extern function declaration
  * obj-not-diff: void parameter != no parameter
  * assert-ast: A != B
  * assert-obj: A == B

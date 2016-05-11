@@ -1,8 +1,7 @@
 void f(void) {
-  char a;       {{A}}
-  const char a; {{B}}
-  const char b;
-  char* c = &a;
+  char a{{B:[1]}};
+  char* c = {{A:&}}a;
+  char b = 0;
   c = &b;
   return;
 }
@@ -13,4 +12,3 @@ void f(void) {
  * assert-ast: A != B
  * assert-obj: A == B
  */
-//TODO: besseren Testcase bauen!

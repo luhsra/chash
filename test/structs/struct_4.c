@@ -4,8 +4,8 @@ struct not_used{ {{A}}
   int a;         {{A}}
   int b;         {{A}}
 };               {{A}}
-
 {{B}}
+
 struct used_with_typedef {
   int c;
   int d;
@@ -26,7 +26,5 @@ int func(void) {
 
 /*
  * check-name: unused struct
- * obj-not-diff: might be the same size
  * assert-ast: A == B
  */
-//TODO: remove obj-

@@ -1,15 +1,17 @@
-struct a {
+struct ST {
   int c;
   int *b;
 };
 
 void func(void) {
-  struct a *d;
-  int e = d->c;
+  struct ST s;
+  struct ST *ps = &s;
+
+  int e = s.c;   {{A}}
+  int e = ps->c; {{B}}
 }
 
 /*
- * check-name: NOT, L_NOT
- * A != B, A != C, B != C
+ * check-name: struct member access
+ * assert-obj: A != B
  */
-//TODO: Testcases bauen!

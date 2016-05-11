@@ -82,4 +82,5 @@ out:
 /*
  * check-name: Forward and backward gotos
  * assert-obj: A != B
+ * unnecessarily bloated testcase
  */

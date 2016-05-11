@@ -3,7 +3,7 @@ int a = (int) 1.444; {{B}}
 
 /*
  * check-name: cast
- * obj-not-diff: maybe
+ * obj-not-diff: yes
  * assert-ast: A != B
  * assert-obj: A == B
  */

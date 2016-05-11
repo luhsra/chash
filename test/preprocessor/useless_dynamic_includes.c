@@ -1,4 +1,4 @@
-#include <stdio.h> {{A}}
+#include <stdio.h>  {{A}}
 #include <stdlib.h> {{B}}
 {{C}}
 

@@ -1,16 +1,16 @@
 struct foobar {
-  int gelb;
+  int var;
 };
 
 void func(void) {
-  struct foobar* a = (struct cc_trie*) (sizeof(*a)); {{A}}
-  struct foobar* a = (struct foobar*) (sizeof(*a));  {{B}}
+  struct foobar a = {sizeof(a)};                    {{A}}
+  struct foobar a = {sizeof(a.var)};                {{B}}
+  struct foobar a = {4};                            {{C}}
 }
 
 /*
- * check-name: size of the own declaration --> Seg-Fault?
+ * check-name: size of the own declaration
  * obj-not-diff: yes
- * assert-ast: A != B
- * assert-obj: A == B
+ * assert-ast: A != B, A != C, B != C
+ * assert-obj: A == B, A == C, B == C
  */
-//TODO: Testcase draus machen!

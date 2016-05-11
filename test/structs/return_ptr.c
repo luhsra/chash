@@ -4,14 +4,12 @@ struct foobar {
 
 struct foobar *barfoo() {
   struct foobar foo = {.l = 1};
-  return &foo;
+  struct foobar *pfoo = &foo;
+  return &foo; {{A}}
+  return pfoo; {{B}}
 }
-
-{{A}}
-{{B}}
 
 /*
  * check-name: return recordptr
- * assert-ast: A == B
+ * assert-obj: A != B
  */
-//TODO: Testcase draus machen!

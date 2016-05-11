@@ -4,7 +4,6 @@ int variable;
 {{B}}
 
 /*
- * check-name: used Decls in include
+ * check-name: unused include
  * assert-obj: A == B
  */
-//TODO: besserer name!
