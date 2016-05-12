@@ -193,7 +193,12 @@ def run_command(cmd, stdin=None):
 
     p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
     if stdin:
-        p.stdin.write(stdin)
+        try:
+            p.stdin.write(stdin)
+        except:
+            (stdout, stderr) = p.communicate()
+            return 1, "BROKEN PIPE", stdout, stderr
+
     (stdout, stderr) = p.communicate()
     if stdout:
         output += "----- stdout -----\n"
@@ -204,7 +209,12 @@ def run_command(cmd, stdin=None):
     p.wait()
     return p.returncode, output, stdout, stderr
 
-def run_testcase_helper(test_case, check_name, future):
+def run_testcase_helper(test_case_opts, future):
+    test_case = test_case_opts['test_case']
+    check_name = test_case_opts['check-name']
+    known_to_fail = test_case_opts['check-known-to-fail']
+
+
     compile_command = get_tag(test_case, "compile-command", default_compile_command)
     hash_command = get_tag(test_case, "hash-command", default_hash_command)
 
@@ -223,6 +233,13 @@ def run_testcase_helper(test_case, check_name, future):
 
     output = COLOR.format("TEST", "blue", True) + " %s: %s (%d leftovers removed)\n" % \
              (COLOR.format(test_case, "cyan"), COLOR.format(check_name, "yellow"), cruft)
+
+    def fail_msg(fmt, *args):
+        if known_to_fail:
+            color, bold = "green", False
+        else:
+            color, bold = "red", True
+        return COLOR.format(fmt % args, color, bold=bold) + "\n"
 
     failed = False
 
@@ -249,10 +266,10 @@ def run_testcase_helper(test_case, check_name, future):
             source_file=source_file,
             object_file=object_file,
             flags=compile_flags)
-        (ret_compiler, x, _, __) = run_command(cmd, stdin=variants[variant])
+        (ret_compiler, x, _, __) = run_command(cmd)
         assert os.path.exists(source_file)
 
-        if (LOGLEVEL >= LOGLEVEL_NORMAL and ret_compiler != 0) and ret_compiler != 0:
+        if (LOGLEVEL >= LOGLEVEL_NORMAL and ret_compiler != 0) and ret_compiler != 0 and not known_to_fail:
             output += x
         elif LOGLEVEL >= LOGLEVEL_DEBUG:
             output += x
@@ -261,8 +278,9 @@ def run_testcase_helper(test_case, check_name, future):
         if ret_compiler == 0:
             object_hash = check_output([default_objhash_command, object_file]).strip()
         else:
-            output += COLOR.format("!!! Failed: compile (%s) failed with %d\n" % (variant, ret_compiler),
-                                   "red", bold=True)
+            object_hash = None
+            output += fail_msg("!!! Failure: compile (%s) failed with %d",
+                               variant, ret_compiler)
             failed = True
 
         #### Run Clang-Hash
@@ -272,19 +290,17 @@ def run_testcase_helper(test_case, check_name, future):
             object_file=object_file, # Won't be overriden
             flags=compile_flags)
         (ret_hasher, x, _, stderr) = run_command(cmd)
-        if (LOGLEVEL >= LOGLEVEL_NORMAL and ret_hasher != 0) or LOGLEVEL >= LOGLEVEL_DEBUG:
+        if (LOGLEVEL >= LOGLEVEL_NORMAL and ret_hasher != 0 and not known_to_fail) or LOGLEVEL >= LOGLEVEL_DEBUG :
             output += x
         ast_hash = None
         for line in stderr.split("\n"):
             if line.startswith("top-level-hash"):
                 ast_hash = line.split(":")[1].strip()
         if ret_hasher != 0:
-            output += COLOR.format("!!! Failure: clang-hash (%s) failed with %d\n" % (variant, ret_hasher),
-                                   "red", bold=True)
+            output += fail_msg("!!! Failure: clang-hash (%s) failed with %d", variant, ret_hasher)
             failed = True
         elif not ast_hash:
-            output += COLOR.format("!!! Failure: Did not find top-level-hash in stderr\n",
-                                   "red", bold=True)
+            output += fail_msg("!!! Failure: Did not find top-level-hash in stderr")
             failed = True
 
         # Call clang-hash
@@ -313,7 +329,7 @@ def run_testcase_helper(test_case, check_name, future):
             if object_files_might_not_differ and obj == other_obj:
                 continue
 
-            output += COLOR.format("!!! Failure: Different hashes\n", "red", True)
+            output += fail_msg("!!! Failure: Different hashes")
             output += " {var_1} obj:{obj} ast{ast}\n".format(**locals())
             output += " {var_2} obj:{other_obj} ast:{other_ast}\n".format(**locals())
 
@@ -332,48 +348,57 @@ def run_testcase_helper(test_case, check_name, future):
 
 
     if failed:
-        output += " Failed\n"
+        output += fail_msg("!!! Failed")
 
+    test_case_opts['output'] = output
+    test_case_opts['passed'] = not failed
     to_console(output)
 
-    future.set(tuple([not failed, output]))
+    future.set(test_case_opts)
 
 
-def run_testcase(test_case, check_name):
+def run_testcase(test_case):
     future = Future()
     if threading.active_count() >= threads:
-        run_testcase_helper(test_case, check_name, future)
+        run_testcase_helper(test_case, future)
         future.get()
     else:
         t = threading.Thread(target = run_testcase_helper,
-                             args = (test_case, check_name, future))
+                             args = (test_case, future))
         t.start()
     return future
 
 def run_test_suite(tests):
-    tests_run = 0
     tests_failed = 0
     tests_known_fail = 0
 
-    failed_tests = []
+    running_tests = []
 
     for test_case in tests:
         check_name = get_tag(test_case, "check-name")
         if not check_name:
             to_console(COLOR.format("WARN", 'yellow', True) + " test '%s' unhandled\n" % test_case)
             continue
-        failed_tests.append((run_testcase(test_case, check_name),
-                       get_tag(test_case, "check-known-to-fail")))
+        data = {
+            'test_case': test_case,
+            'check-name': check_name,
+            'check-known-to-fail': get_tag(test_case, "check-known-to-fail"),
+        }
+        running_tests.append(run_testcase(data))
 
-    for (future, expected) in failed_tests:
-        (passed, output) = future.get()
-        if not passed:
+    for future in running_tests:
+        test_case = future.get()
+        if not test_case['passed']:
             tests_failed += 1
-            if expected:
+            if test_case['check-known-to-fail']:
                 tests_known_fail += 1
-        tests_run += 1
+
+
     to_console("Out of %d tests, %d passed, %d failed (%d of them are known to fail).\n" \
-               % (tests_run, tests_run - tests_failed, tests_failed, tests_known_fail))
+               % (len(running_tests),
+                  len(running_tests) - tests_failed,
+                  tests_failed,
+                  tests_known_fail))
 
     return tests_failed <= tests_known_fail
 
