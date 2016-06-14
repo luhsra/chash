@@ -35,7 +35,7 @@ void HashVisitor::hashDecl(const Decl *D) {
   const bool Handled = mt_declvisitor::Visit(D);
   if (!Handled) {
     errs() << "---- START unhandled -----\n";
-    D->dump();
+    //    D->dump();
     errs() << "---- END unhandled -----\n";
   }
 
@@ -99,7 +99,7 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
     TopLevelHash << *CurrentHash;
   });
 
-  Unit->dump();
+  //  Unit->dump();
 
   return true;
 }
@@ -124,9 +124,8 @@ bool HashVisitor::VisitVarDecl(const VarDecl *D) {
   if (D->hasInit()) {
     topHash() << AstElementVarDecl_init; // TODO: special case required here or
                                          // just hash Expr?
-    const Expr *const E =
-        D->getInit(); // TODO: perhaps hashStmt(D->getInit()) instead
-    hashStmt(E);
+    const Expr *const E = D->getInit();
+    hashStmt(E); // TODO: perhaps hashStmt(D->getInit()) instead
   }
   return true;
 }
@@ -201,7 +200,7 @@ void HashVisitor::hashType(const QualType &T) {
   bool Handled = mt_typevisitor::Visit(ActualType);
   if (!Handled) {
     errs() << "---- START unhandled type -----\n";
-    ActualType->dump();
+    //    ActualType->dump();
     errs() << "---- END unhandled type -----\n";
   }
 
@@ -226,6 +225,7 @@ void HashVisitor::hashType(const QualType &T) {
 }
 
 bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
+  // errs() << "\n\nVisitBuiltinType, Kind = " << T->getKind() << "\n\n";//TODO:
   topHash() << T->getKind();
   assert(!T->isSugared());
   return true;
@@ -248,8 +248,6 @@ bool HashVisitor::VisitArrayType(const ArrayType *T) {
 
 bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T) {
   topHash() << AstElementConstantArrayType;
-  // errs() << "\n\n\nVisitConstantArrayType: " << T->getSize().getZExtValue()
-  // << "\n\n\n";
   hashType(T->getElementType());
   topHash() << "[" << T->getSize().getZExtValue() << "]";
   return true;
@@ -265,6 +263,18 @@ bool HashVisitor::VisitVariableArrayType(const VariableArrayType *T) {
 }
 
 bool HashVisitor::VisitTypedefType(const TypedefType *T) {
+  // must not hash AstElementTypedefType here, else there will be differences
+  // between variables declared with the typedef vs. with the same type
+
+  // TODO: hier ist wsl der fehler!
+  // der fehler ist wsl, dass getTypePtr den unqualified type returnt,
+  // und da fehlt halt dann das const...
+
+  // errs() << "\n\n\n" << T->desugar().getAsString() << "\n" <<
+  // T->desugar().getTypePtr()->getTypeClassName() << "\n\n\n";//TODO:
+
+  // TODO: vllt. hier nicht den TypePtr hashen, sondern den QualType?
+  // => muss dann aber ggf. auch ueberall anders ausgetauscht werden!
   return mt_typevisitor::Visit(T->desugar().getTypePtr());
 }
 
@@ -411,7 +421,7 @@ bool HashVisitor::VisitType(const Type *T) {
   }
 
   for (const FieldDecl *const FD : RD->fields()) {
-    topHash() << "member";
+    topHash() << "member"; // TODO: replace with constant
     hashType(FD->getType());
     hashName(FD);
   }
@@ -508,6 +518,19 @@ bool HashVisitor::VisitFloatingLiteral(const FloatingLiteral *Node) {
   } else if (&Node->getValue().getSemantics() ==
              (const fltSemantics *)&APFloat::IEEEsingle) {
     Value = (Node->getValue().convertToFloat());
+  }
+
+  // TODO: handle these cases!!! especially x87DoubleExtended!!!
+  else if (&Node->getValue().getSemantics() == &llvm::APFloat::IEEEhalf) {
+    errs() << "FloatingLiteralBits.Semantics = IEEEhalf";
+  } else if (&Node->getValue().getSemantics() ==
+             &llvm::APFloat::x87DoubleExtended) {
+    errs() << "FloatingLiteralBits.Semantics = x87DoubleExtended";
+  } else if (&Node->getValue().getSemantics() == &llvm::APFloat::IEEEquad) {
+    errs() << "FloatingLiteralBits.Semantics = IEEEquad";
+  } else if (&Node->getValue().getSemantics() ==
+             &llvm::APFloat::PPCDoubleDouble) {
+    errs() << "FloatingLiteralBits.Semantics = PPCDoubleDouble";
   } else {
     assert(0 && "unknown FloatingLiteral: neither float nor double");
   }
@@ -554,7 +577,7 @@ bool HashVisitor::VisitUnaryExprOrTypeTraitExpr(
 }
 
 bool HashVisitor::VisitMemberExpr(const MemberExpr *Node) {
-  topHash() << "member";
+  topHash() << "member"; // TODO: replace with constant
   const Expr *const Base = Node->getBase();
   hashStmt(Base);
 
@@ -974,7 +997,7 @@ void HashVisitor::hashStmt(const Stmt *Node) {
   bool Handled = mt_stmtvisitor::Visit(Node);
   if (!Handled) {
     errs() << "---- START unhandled statement ----\n";
-    Node->dump();
+    //    Node->dump();
     errs() << "----- END unhandled statement -----\n";
   }
 }
@@ -1124,35 +1147,6 @@ bool HashVisitor::VisitCapturedStmt(const CapturedStmt *Node) {
   return true;
 }
 
-// not tested
-bool HashVisitor::VisitSEHExceptStmt(const SEHExceptStmt *Node) {
-  topHash() << "__except";
-  hashStmt(Node->getFilterExpr());
-  hashStmt(Node->getBlock());
-  return true;
-}
-
-// not tested
-bool HashVisitor::VisitSEHFinallyStmt(const SEHFinallyStmt *Node) {
-  topHash() << "__finally";
-  hashStmt(Node->getBlock());
-  return true;
-}
-
-// not tested
-bool HashVisitor::VisitSEHLeaveStmt(const SEHLeaveStmt *Node) {
-  topHash() << "__leave";
-  return true;
-}
-
-// not tested
-bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *Node) {
-  topHash() << "__try";
-  hashStmt(Node->getTryBlock());
-  hashStmt(Node->getHandler());
-  return true;
-}
-
 bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *Node) {
   topHash() << AstElementIndirectGotoStmt;
   hashStmt(Node->getTarget());
@@ -1160,11 +1154,4 @@ bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *Node) {
     hashDecl(Node->getConstantTarget());
   }
   return true;
-}
-
-// OpenMP directives, not tested
-bool
-HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {
-  errs() << "OMPExecutableDirectives are not implemented yet.\n";
-  exit(1);
 }
