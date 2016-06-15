@@ -15,7 +15,8 @@ def find_symbols(elf):
         items = line.split()
         if len(items) < 3:
             continue
-        ret.append(items[2])
+
+        ret.append([items[1], items[2]])
     return ret
 
 def find_sections(elf):
@@ -24,18 +25,18 @@ def find_sections(elf):
     for line in nm_output.strip("\n").split("\n"):
         items = [x for x in line.split() if x[0] == "."]
         if len(items) == 1:
-            ret.append(items[0])
+            ret.append(['section', items[0]])
     return ret
 
 def normalize_names(names, fn):
     """Find dangerous names, that change although nothing has changed"""
     ret = []
-    for name in names:
+    for _type, name in sorted(names):
         (new, count) = re.subn("\\.([0-9]{4,})", ".%04d" % len(ret), name)
         if count:
             ret.append( (name, new) )
-        if fn in name:
-            ret.append( (name, "FILE") )
+        if fn in name and _type not in  ("T", "t", "b", "B", "d", "D"):
+            ret.append( (name, "FILE-%d" % len(ret)) )
     return ret
 
 def hash_file(fn_in):
