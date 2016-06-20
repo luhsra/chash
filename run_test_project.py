@@ -6,6 +6,8 @@ import subprocess
 from subprocess import check_output
 
 pathToProject = os.path.abspath("../hash_projects/musl")
+hashObjectfile = os.path.abspath("wrappers/hash-objectfile")
+outputFilename = "hashRecords.txt";
 
 class HashRecord:
     filename = ""
@@ -35,21 +37,28 @@ class HashRecord:
    
 
 def getListOfCommits():
+    """get all the commit ids from the project"""
     os.chdir(pathToProject)   
     git_log = check_output(["git", "log"])
     git_log = git_log.split("\n")
-    
-    commits = []
     for line in git_log:
         if re.match("commit [0-9a-f]{40}", line):
             yield line[7:47]
 
 
-
 def checkout(commitID):
-    #TODO: checkout next commit, run clean for clean build environment
+    """checkout commit with commitID"""
     os.chdir(pathToProject)
+#    subprocess.call(["git", "clean", "-f", "-q", "-x"]) #TODO: geht iwie nicht richtig...
+# => bloede idee, removed auch die sachen vom configure...
+# => vllt. auch configure noch extra aufrufen?
     subprocess.call(["git", "checkout", "-f", "-q", commitID])
+
+
+def getSourceFilename(objectfile):
+    filename = objectfile[4:]
+    filename = filename[:-1] + 'c'
+    return filename
 
 
 DEBUG = 1
@@ -60,12 +69,18 @@ def log(message):
 
 records = []
 
-#TODO: implement iteration over all commits
-#TODO: get commit/pull/checkout?
 #reset to latest version
 checkout("master")
 
+try:
+    os.remove(outputFilename) #TODO: -> already gets removed by git clean
+except OSError:
+    pass
+
+f = open(outputFilename, 'a')
+
 for commitID in getListOfCommits():
+    records = [] #TODO: ist das ok? sollte am schluss am besten eine einzige map sein
     os.chdir(pathToProject)
     log("calling make clean")
     subprocess.call(["make", "clean"])
@@ -73,35 +88,38 @@ for commitID in getListOfCommits():
     checkout(commitID)
     log("cp Makefile")
     subprocess.call(["cp", "../Makefile", "Makefile"])
-#    make_output = check_output(["make"])
     log("calling make")
     p = subprocess.Popen(["make"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
 
 
-    filename = "" #TODO: brauche noch den richtigen filename (vom .c file); momentan das .o file
+    filename = ""
     astHash = 0
-    objHash = 0 #TODO: hash object file
+    objHash = 0
     hashTime = 0 #TODO:  measure hash time in plugin
     compileTime = 0 #TODO: measure compile time
 
     log ("looping")
     lines = err.split("\n")
     for line in lines:
+        log(line)
+#    log(lines) #TODO: write this to a file and break after first commit for error search
+    for line in lines:
         if 0 == line.find("dump-ast-file"):
-            filename = line.split()[1]
+            objFilename = line.split()[1];
+            filename = getSourceFilename(objFilename)
+            log(filename)
+            objHash = check_output([hashObjectfile, objFilename])
         elif 0 == line.find("top-level-hash"):
             astHash = line.split()[1]
             hashRecord = HashRecord()
             hashRecord.fill(filename, commitID, astHash, objHash, hashTime, compileTime)
             records.append(hashRecord.toDict())
-            print hashRecord.toDict()
+    f.write("%s" % records)
+    log("finished commit %s" % commitID)
 
 
 #for record in records:
 #    print record
 
-f = open('hashRecords.txt', 'w') #TODO: ok oder brauche ich w+
-
-f.write("%s" % records)
 

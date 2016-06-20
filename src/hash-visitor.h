@@ -188,10 +188,17 @@ public:
   bool VisitGCCAsmStmt(const GCCAsmStmt *Node);
   bool VisitMSAsmStmt(const MSAsmStmt *Node);
 
-  // not sure if we need this TODO: remove?
+  // not sure if we need this
   bool VisitAttributedStmt(const AttributedStmt *Node);
   bool VisitCapturedStmt(const CapturedStmt *Node);
+  bool VisitSEHExceptStmt(const SEHExceptStmt *Node);
+  bool VisitSEHFinallyStmt(const SEHFinallyStmt *Node);
+  bool VisitSEHLeaveStmt(const SEHLeaveStmt *Node);
+  bool VisitSEHTryStmt(const SEHTryStmt *Node);
   bool VisitIndirectGotoStmt(const IndirectGotoStmt *Node);
+
+  // not implemented
+  bool VisitOMPExecutableDirective(const OMPExecutableDirective *Node);
 
 protected:
   enum AstElementPrefix {

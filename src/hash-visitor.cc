@@ -541,7 +541,7 @@ bool HashVisitor::VisitFloatingLiteral(const FloatingLiteral *Node) {
 bool HashVisitor::VisitStringLiteral(const StringLiteral *Node) {
   topHash() << AstElementStringLiteral;
   hashType(Node->getType());
-  topHash() << Node->getString().str();
+  topHash() << Node->getBytes().str();
   return true;
 }
 
@@ -1147,6 +1147,35 @@ bool HashVisitor::VisitCapturedStmt(const CapturedStmt *Node) {
   return true;
 }
 
+// not tested
+bool HashVisitor::VisitSEHExceptStmt(const SEHExceptStmt *Node) {
+  topHash() << "__except";
+  hashStmt(Node->getFilterExpr());
+  hashStmt(Node->getBlock());
+  return true;
+}
+
+// not tested
+bool HashVisitor::VisitSEHFinallyStmt(const SEHFinallyStmt *Node) {
+  topHash() << "__finally";
+  hashStmt(Node->getBlock());
+  return true;
+}
+
+// not tested
+bool HashVisitor::VisitSEHLeaveStmt(const SEHLeaveStmt *Node) {
+  topHash() << "__leave";
+  return true;
+}
+
+// not tested
+bool HashVisitor::VisitSEHTryStmt(const SEHTryStmt *Node) {
+  topHash() << "__try";
+  hashStmt(Node->getTryBlock());
+  hashStmt(Node->getHandler());
+  return true;
+}
+
 bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *Node) {
   topHash() << AstElementIndirectGotoStmt;
   hashStmt(Node->getTarget());
@@ -1155,3 +1184,11 @@ bool HashVisitor::VisitIndirectGotoStmt(const IndirectGotoStmt *Node) {
   }
   return true;
 }
+
+// OpenMP directives, not tested
+bool
+HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {
+  errs() << "OMPExecutableDirectives are not implemented yet.\n";
+  exit(1);
+}
+
