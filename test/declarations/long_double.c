@@ -1,7 +1,7 @@
-long double var = 1.0; {{A}}
-long double var = 1;   {{B}}
-double var = 1.0;      {{C}}
-long long var = 1.0;   {{D}}
+long double var = 1.0L; {{A}}
+long double var = 1.0;  {{B}}
+double var = 1.0;       {{C}}
+long long var = 1.0;    {{D}}
 
 /*
  * check-name: long double
