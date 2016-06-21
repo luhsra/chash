@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 from subprocess import check_output
+import datetime
 
 pathToProject = os.path.abspath("../hash_projects/musl")
 hashObjectfile = os.path.abspath("wrappers/hash-objectfile")
@@ -15,15 +16,17 @@ class HashRecord:
     astHash = 0
     objHash = 0
     hashTime = 0
-    compileTime = 0    
+    compileTime = 0
+    processedBytes = 0
 
-    def fill(self, filename, commitID, astHash, objHash, hashTime, compileTime):
+    def fill(self, filename, commitID, astHash, objHash, hashTime, compileTime, processedBytes):
         self.filename = filename
         self.commitID = commitID
         self.astHash = astHash
         self.objHash = objHash
         self.hashTime = hashTime
         self.compileTime = compileTime
+        self.processedBytes = processedBytes
 
     def toDict(self):
         return {
@@ -32,7 +35,8 @@ class HashRecord:
             "astHash" : self.astHash,
             "objHash" : self.objHash,
             "hashTime" : self.hashTime,
-            "compileTime" : self.compileTime
+            "compileTime" : self.compileTime,
+            "processedBytes" : self.processedBytes
         }
    
 
@@ -56,6 +60,7 @@ def checkout(commitID):
 
 
 def getSourceFilename(objectfile):
+    """removes "obj/" from the path and replaces .o with .c"""
     filename = objectfile[4:]
     filename = filename[:-1] + 'c'
     return filename
@@ -66,6 +71,9 @@ def log(message):
     if (DEBUG == 1):
         print message
 
+
+
+log("Starting at %s" % datetime.datetime.now())
 
 records = []
 
@@ -78,9 +86,10 @@ except OSError:
     pass
 
 f = open(outputFilename, 'a')
-
+commitCounter = 0
 for commitID in getListOfCommits():
-    records = [] #TODO: ist das ok? sollte am schluss am besten eine einzige map sein
+    log ("hashing commit #%d" % commitCounter)
+    records = [] #TODO: ist das ok? sollte am schluss am besten eine einzige map sein => am besten halt einfach die oben/close klammern per hand aussenrum machen
     os.chdir(pathToProject)
     log("calling make clean")
     subprocess.call(["make", "clean"])
@@ -96,8 +105,9 @@ for commitID in getListOfCommits():
     filename = ""
     astHash = 0
     objHash = 0
-    hashTime = 0 #TODO:  measure hash time in plugin
+    hashTime = 0
     compileTime = 0 #TODO: measure compile time
+    processedBytes = 0
 
     log ("looping")
     lines = err.split("\n")
@@ -112,14 +122,20 @@ for commitID in getListOfCommits():
             objHash = check_output([hashObjectfile, objFilename])
         elif 0 == line.find("top-level-hash"):
             astHash = line.split()[1]
+        elif 0 == line.find("processed bytes:"):
+            processedBytes = line.split()[1]
+        elif 0 == line.find("elapsed time (s):"):
+            hashTime = line.split()[1]
             hashRecord = HashRecord()
-            hashRecord.fill(filename, commitID, astHash, objHash, hashTime, compileTime)
+            hashRecord.fill(filename, commitID, astHash, objHash, hashTime, compileTime, processedBytes)
             records.append(hashRecord.toDict())
-    f.write("%s" % records)
+            
+    for record in records:
+        f.write("%s\n" % record)
+        log(record)
+    commitCounter += 1
     log("finished commit %s" % commitID)
 
-
-#for record in records:
-#    print record
-
+log("Finished at %s" % datetime.datetime.now())
+log("Total commits: &d" % (commitCounter + 1))
 

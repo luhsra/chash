@@ -4,6 +4,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include <chrono>
 
 using namespace clang;
 using namespace llvm;
@@ -13,9 +14,13 @@ public:
   HashTranslationUnitConsumer(raw_ostream *OS) : TopLevelHashStream(OS) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) {
+    const auto start = std::chrono::high_resolution_clock::now();
+
     // Traversing the translation unit decl via a RecursiveASTVisitor
     // will visit all nodes in the AST.
     Visitor.hashDecl(Context.getTranslationUnitDecl());
+
+    const auto finish = std::chrono::high_resolution_clock::now();
 
     // Context.getTranslationUnitDecl()->dump();
     unsigned ProcessedBytes;
@@ -27,6 +32,7 @@ public:
     }
     errs() << "top-level-hash: " << HashString << "\n";
     errs() << "processed bytes: " << ProcessedBytes << "\n";
+    errs() << "elapsed time (ns): " << std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() << "\n";
   }
 
 private:
