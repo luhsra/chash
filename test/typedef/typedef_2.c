@@ -5,6 +5,7 @@ int *first; {{B}}
 
 /*
  * check-name: typedef int *
- * assert-ast: A == B
+ * obj-not-diff: yes
+ * assert-ast: A != B
+ * assert-obj: A == B
  */
-

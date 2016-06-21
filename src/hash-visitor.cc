@@ -266,16 +266,8 @@ bool HashVisitor::VisitTypedefType(const TypedefType *T) {
   // must not hash AstElementTypedefType here, else there will be differences
   // between variables declared with the typedef vs. with the same type
 
-  // TODO: hier ist wsl der fehler!
-  // der fehler ist wsl, dass getTypePtr den unqualified type returnt,
-  // und da fehlt halt dann das const...
-
-  // errs() << "\n\n\n" << T->desugar().getAsString() << "\n" <<
-  // T->desugar().getTypePtr()->getTypeClassName() << "\n\n\n";//TODO:
-
-  // TODO: vllt. hier nicht den TypePtr hashen, sondern den QualType?
-  // => muss dann aber ggf. auch ueberall anders ausgetauscht werden!
-  return mt_typevisitor::Visit(T->desugar().getTypePtr());
+  hashType(T->desugar());
+  return true;
 }
 
 bool HashVisitor::VisitComplexType(const ComplexType *T) {
