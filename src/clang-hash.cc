@@ -46,7 +46,7 @@ protected:
                                                  StringRef) override {
     // Write hash database to .o.hash if the compiler produces a object file
     raw_ostream *Out = nullptr;
-    if (CI.getFrontendOpts().OutputFile != "") {
+    if (CI.getFrontendOpts().OutputFile != "" && CI.getFrontendOpts().OutputFile != "/dev/null") {
       std::error_code Error;
       std::string HashFile = CI.getFrontendOpts().OutputFile + ".hash";
       Out = new raw_fd_ostream(HashFile, Error, sys::fs::F_Text);
