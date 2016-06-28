@@ -503,30 +503,28 @@ bool HashVisitor::VisitIntegerLiteral(const IntegerLiteral *Node) {
 bool HashVisitor::VisitFloatingLiteral(const FloatingLiteral *Node) {
   topHash() << AstElementFloatingLiteral;
   hashType(Node->getType());
-  double Value;
-  if (&Node->getValue().getSemantics() ==
-      (const fltSemantics *)&APFloat::IEEEdouble) {
-    Value = (Node->getValue().convertToDouble());
-  } else if (&Node->getValue().getSemantics() ==
-             (const fltSemantics *)&APFloat::IEEEsingle) {
-    Value = (Node->getValue().convertToFloat());
-  }
-
-  // TODO: handle these cases!!! especially x87DoubleExtended!!!
-  else if (&Node->getValue().getSemantics() == &llvm::APFloat::IEEEhalf) {
-    errs() << "FloatingLiteralBits.Semantics = IEEEhalf";
-  } else if (&Node->getValue().getSemantics() ==
-             &llvm::APFloat::x87DoubleExtended) {
-    errs() << "FloatingLiteralBits.Semantics = x87DoubleExtended";
-  } else if (&Node->getValue().getSemantics() == &llvm::APFloat::IEEEquad) {
-    errs() << "FloatingLiteralBits.Semantics = IEEEquad";
-  } else if (&Node->getValue().getSemantics() ==
-             &llvm::APFloat::PPCDoubleDouble) {
-    errs() << "FloatingLiteralBits.Semantics = PPCDoubleDouble";
+  const fltSemantics *const semantics = &Node->getValue().getSemantics();
+  if (semantics == (const fltSemantics *)&APFloat::IEEEdouble) {
+    const double Value = Node->getValue().convertToDouble();
+    topHash() << *reinterpret_cast<const uint64_t *>(&Value);
+  } else if (semantics == (const fltSemantics *)&APFloat::IEEEsingle) {
+    const double Value = Node->getValue().convertToFloat();
+    topHash() << *reinterpret_cast<const uint64_t *>(&Value);
+  } else if (semantics == &APFloat::IEEEhalf ||
+             semantics == &APFloat::x87DoubleExtended ||
+             semantics == &APFloat::IEEEquad ||
+             semantics == &APFloat::PPCDoubleDouble) {
+    SmallVector<char, 30> vector;
+    Node->getValue().toString(vector);
+    std::string str;
+    str.reserve(vector.size());
+    for (const char c : vector) {
+      str += c;
+    }
+    topHash() << str;
   } else {
     assert(0 && "unknown FloatingLiteral: neither float nor double");
   }
-  topHash() << *reinterpret_cast<const uint64_t *>(&Value);
   return true;
 }
 
@@ -1183,4 +1181,3 @@ HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {
   errs() << "OMPExecutableDirectives are not implemented yet.\n";
   exit(1);
 }
-
