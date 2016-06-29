@@ -6,39 +6,10 @@ import subprocess
 from subprocess import check_output
 import datetime
 
+#TODO: die pfade alle unabhaengig machen; mkdir outputPath im skript machen
 pathToProject = os.path.abspath("../hash_projects/musl")
-hashObjectfile = os.path.abspath("wrappers/hash-objectfile")
-outputFilename = "hashRecords.txt";
+clanghashWrapper = os.path.abspath("build/wrappers/clang")
 
-class HashRecord:
-    filename = ""
-    commitID = 0
-    astHash = 0
-    objHash = 0
-    hashTime = 0
-    compileTime = 0
-    processedBytes = 0
-
-    def fill(self, filename, commitID, astHash, objHash, hashTime, compileTime, processedBytes):
-        self.filename = filename
-        self.commitID = commitID
-        self.astHash = astHash
-        self.objHash = objHash
-        self.hashTime = hashTime
-        self.compileTime = compileTime
-        self.processedBytes = processedBytes
-
-    def toDict(self):
-        return {
-            "filename" : self.filename,
-            "commitID" : self.commitID,
-            "astHash" : self.astHash,
-            "objHash" : self.objHash,
-            "hashTime" : self.hashTime,
-            "compileTime" : self.compileTime,
-            "processedBytes" : self.processedBytes
-        }
-   
 
 def getListOfCommits():
     """get all the commit ids from the project"""
@@ -53,17 +24,8 @@ def getListOfCommits():
 def checkout(commitID):
     """checkout commit with commitID"""
     os.chdir(pathToProject)
-#    subprocess.call(["git", "clean", "-f", "-q", "-x"]) #TODO: geht iwie nicht richtig...
-# => bloede idee, removed auch die sachen vom configure...
-# => vllt. auch configure noch extra aufrufen?
+    subprocess.call(["git", "clean", "-f", "-q", "-x"])
     subprocess.call(["git", "checkout", "-f", "-q", commitID])
-
-
-def getSourceFilename(objectfile):
-    """removes "obj/" from the path and replaces .o with .c"""
-    filename = objectfile[4:]
-    filename = filename[:-1] + 'c'
-    return filename
 
 
 DEBUG = 1
@@ -76,16 +38,11 @@ def log(message):
 log("Starting at %s" % datetime.datetime.now())
 
 records = []
+os.environ['CC'] = clanghashWrapper
 
 #reset to latest version
 checkout("master")
 
-try:
-    os.remove(outputFilename) #TODO: -> already gets removed by git clean
-except OSError:
-    pass
-
-f = open(outputFilename, 'a')
 commitCounter = 0
 for commitID in getListOfCommits():
     log ("hashing commit #%d" % commitCounter)
@@ -95,47 +52,15 @@ for commitID in getListOfCommits():
     subprocess.call(["make", "clean"])
     log("checkout")
     checkout(commitID)
-    log("cp Makefile")
-    subprocess.call(["cp", "../Makefile", "Makefile"])
-    log("calling make")
-    p = subprocess.Popen(["make"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.call(["./configure"])
+    log("calling make -j16")
+    p = subprocess.Popen(["make", "-j16"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
-
-
-    filename = ""
-    astHash = 0
-    objHash = 0
-    hashTime = 0
-    compileTime = 0 #TODO: measure compile time
-    processedBytes = 0
-
-    log ("looping")
-    lines = err.split("\n")
-    for line in lines:
-        log(line)
-#    log(lines) #TODO: write this to a file and break after first commit for error search
-    for line in lines:
-        if 0 == line.find("dump-ast-file"):
-            objFilename = line.split()[1];
-            filename = getSourceFilename(objFilename)
-            log(filename)
-            objHash = check_output([hashObjectfile, objFilename])
-        elif 0 == line.find("top-level-hash"):
-            astHash = line.split()[1]
-        elif 0 == line.find("processed bytes:"):
-            processedBytes = line.split()[1]
-        elif 0 == line.find("elapsed time (s):"):
-            hashTime = line.split()[1]
-            hashRecord = HashRecord()
-            hashRecord.fill(filename, commitID, astHash, objHash, hashTime, compileTime, processedBytes)
-            records.append(hashRecord.toDict())
-            
-    for record in records:
-        f.write("%s\n" % record)
-        log(record)
+    retcode = p.wait()
+    
     commitCounter += 1
-    log("finished commit %s" % commitID)
+    log("finished commit %s at %s" % (commitID, datetime.datetime.now()))
 
 log("Finished at %s" % datetime.datetime.now())
-log("Total commits: &d" % (commitCounter + 1))
+log("Total commits: %d" % (commitCounter + 1))
 

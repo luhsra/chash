@@ -1,0 +1,117 @@
+#!/usr/bin/python
+
+import sys
+import os
+import hashlib
+import logging
+import re
+from subprocess import *
+
+hashObjectfile = os.path.abspath("hash-objectfile")
+outputDir = os.path.abspath("/home/cip/2015/yb90ifym/hash_projects/muslHashes")
+
+
+class HashRecord:
+    filename = ""
+    commitID = 0
+    astHash = 0
+    objHash = 0
+    hashTime = 0
+    compileTime = 0
+    processedBytes = 0
+
+    def fill(self, filename, commitID, astHash, objHash, hashTime, compileTime, processedBytes):
+        self.filename = filename
+        self.commitID = commitID
+        self.astHash = astHash
+        self.objHash = objHash
+        self.hashTime = hashTime
+        self.compileTime = compileTime
+        self.processedBytes = processedBytes
+
+    def toDict(self):
+        return {
+            "filename" : self.filename,
+            "commitID" : self.commitID,
+            "astHash" : self.astHash,
+            "objHash" : self.objHash,
+            "hashTime" : self.hashTime,
+            "compileTime" : self.compileTime,
+            "processedBytes" : self.processedBytes
+        }
+
+
+def getSourceFilename(objectfile):
+    """removes "obj/" from the path and replaces .o with .c"""
+    filename = objectfile[4:]
+    filename = filename[:-1] + 'c'
+    return filename
+
+
+def mkpath(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    level = logging.INFO
+    if "V" in os.environ:
+        level = logging.DEBUG
+    logging.basicConfig(filename = "clang-hash.log", level=level)
+    logging.debug(str(sys.argv))
+
+    compiler = "${LLVM_C_COMPILER}"
+    plugin = "${PROJECT_BINARY_DIR}/src/libclang-hash.so"
+
+    #TODO: Zeit messen
+    x = Popen([compiler, "-fplugin=" + plugin] + args, 
+              stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
+    (stdout, stderr) = x.communicate()
+#    print stderr
+    sys.stdout.write(stdout)
+    sys.stderr.write(stderr)
+    retcode = x.wait()
+
+    kconfig = "kconfig" in "".join(args)
+
+    if "-c" in args and "-o" in args and "/dev/null" not in args and not kconfig:
+        # Save Objectfile data
+        objectfile = args[args.index("-o")+1]
+        objectfile_hash = None
+        if os.path.exists(objectfile):
+            objectfile_hash = check_output(["/home/cip/2015/yb90ifym/clang-hash/wrappers/hash-objectfile", objectfile]).strip()
+            objectfile_data = open(objectfile).read()
+        else:
+            objectfile_data = None
+
+        commitID = 0 #TODO: !!!
+        filename = ""
+        astHash = 0
+        objHash = 0
+        hashTime = 0
+        compileTime = 0
+        processedBytes = 0
+
+        lines = stderr.split("\n")
+        for line in lines:
+            if 0 == line.find("top-level-hash"):
+                astHash = line.split()[1]
+            elif 0 == line.find("processed-bytes:"):
+                processedBytes = line.split()[1]
+            elif 0 == line.find("elapsed-time-ns:"):
+                hashTime = line.split()[1]
+
+#        compileTime = #TODO: implement
+
+        hashRecord = HashRecord()
+        hashRecord.fill(filename, commitID, astHash, objectfile_hash, hashTime, compileTime, processedBytes)
+
+        outputPath = outputDir + "/" + os.path.dirname(objectfile)
+        mkpath(outputPath)
+        f = open(outputDir + "/" + objectfile + ".info", 'a')
+        f.write("%s\n" % hashRecord.toDict())
+        f.close()
+ 
+
+    sys.exit(retcode)

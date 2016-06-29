@@ -31,8 +31,8 @@ public:
       delete TopLevelHashStream;
     }
     errs() << "top-level-hash: " << HashString << "\n";
-    errs() << "processed bytes: " << ProcessedBytes << "\n";
-    errs() << "elapsed time (ns): " << std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() << "\n";
+    errs() << "processed-bytes: " << ProcessedBytes << "\n";
+    errs() << "elapsed-time-ns: " << std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() << "\n";
   }
 
 private:

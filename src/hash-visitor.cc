@@ -523,7 +523,7 @@ bool HashVisitor::VisitFloatingLiteral(const FloatingLiteral *Node) {
     }
     topHash() << str;
   } else {
-    assert(0 && "unknown FloatingLiteral: neither float nor double");
+    assert(0 && "unknown FloatingLiteral");
   }
   return true;
 }

@@ -1,4 +1,5 @@
 configure_file(clang-hash.in ${PROJECT_BINARY_DIR}/wrappers/clang-hash)
+configure_file(clang.in ${PROJECT_BINARY_DIR}/wrappers/clang)
 
 # Symlink compiler wrappers
 execute_process(
