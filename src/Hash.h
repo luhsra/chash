@@ -11,7 +11,7 @@ struct Hash : protected MurMurHash3 {
   struct Digest {
     enum { DIGEST_WORDS = Algorithm::DIGEST_WORDS };
     uint32_t Value[Algorithm::DIGEST_WORDS];
-    uint32_t Length;
+    mutable uint32_t Length; // Number of hashed bytes
 
     bool operator==(const Digest &Other) const {
       for (unsigned I = 0; I < DIGEST_WORDS; ++I) {
@@ -99,6 +99,7 @@ struct Hash : protected MurMurHash3 {
 
   Hash &operator<<(const Digest &X) {
     m_byteCount += X.Length;
+    X.Length = 0; // Include the hashed bytes only once into the hash statistic.
     return processBytes(X.Value, sizeof(X.Value));
   }
 
