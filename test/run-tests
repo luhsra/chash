@@ -329,8 +329,10 @@ def run_testcase_helper(test_case_opts, future):
             if object_files_might_not_differ and obj == other_obj:
                 continue
 
+            print object_files_might_not_differ, (obj, other_obj), (ast, other_ast)
+
             output += fail_msg("!!! Failure: Different hashes")
-            output += " {var_1} obj:{obj} ast{ast}\n".format(**locals())
+            output += " {var_1} obj:{obj} ast:{ast}\n".format(**locals())
             output += " {var_2} obj:{other_obj} ast:{other_ast}\n".format(**locals())
 
             failed = True

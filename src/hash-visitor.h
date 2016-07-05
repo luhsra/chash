@@ -64,7 +64,6 @@ class TranslationUnitHashVisitor
 public:
   // Utilities
   bool hasNodes(const DeclContext *DC);
-  void hashDeclContext(const DeclContext *DC);
 
   void hashDecl(const Decl *D);
   void hashStmt(const Stmt *Node);
@@ -79,10 +78,8 @@ public:
   /// Not interesting
   bool VisitTypedefDecl(const TypedefDecl *) { return true; }
 
-  /* Wird erst in Aufrufen geprueft */
-  // TODO: damit nur das gehasht wird was auch verwendet wird?
   bool VisitRecordDecl(const RecordDecl *D) { return true; }
-  bool VisitFieldDecl(const FieldDecl *D) { return true; }
+  bool VisitFieldDecl(const FieldDecl *D);
 
   // C Types
   bool VisitBuiltinType(const BuiltinType *T);
@@ -90,7 +87,7 @@ public:
   bool VisitArrayType(const ArrayType *T);
   bool VisitConstantArrayType(const ConstantArrayType *T);
   bool VisitVariableArrayType(const VariableArrayType *T);
-  bool VisitType(const Type *T);
+  bool VisitRecordType(const RecordType *);
   bool VisitTypedefType(const TypedefType *T);
   bool VisitComplexType(const ComplexType *T);
   bool VisitAtomicType(const AtomicType *T);
@@ -100,7 +97,6 @@ public:
   bool VisitFunctionType(const FunctionType *T);
   bool VisitFunctionProtoType(const FunctionProtoType *T);
   bool VisitEnumType(const EnumType *T);
-  bool VisitTagType(const TagType *T);
   bool VisitAttributedType(const AttributedType *T);
   bool VisitUnaryTransformType(const UnaryTransformType *T);
   bool VisitDecayedType(const DecayedType *T);
@@ -130,8 +126,7 @@ public:
   bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *Node);
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node);
   bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);
-  bool
-  VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node);
+  bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node);
   bool VisitBinaryConditionalOperator(const BinaryConditionalOperator *Node);
   bool VisitCallExpr(const CallExpr *Node);
   bool VisitOffsetOfExpr(const OffsetOfExpr *Node);
@@ -156,6 +151,7 @@ public:
   bool VisitParmVarDecl(const ParmVarDecl *D);
   // DeclaratorDecl done...
   bool VisitIndirectFieldDecl(const IndirectFieldDecl *D);
+  bool VisitFieldDecl(const IndirectFieldDecl *D);
   bool VisitValueDecl(const ValueDecl *D); // maybe called by children
   bool VisitFileScopeAsmDecl(const FileScopeAsmDecl *D);
   bool VisitCapturedDecl(const CapturedDecl *D);
@@ -318,6 +314,8 @@ protected:
   };
 
   bool DoNotHashThis = false; // Flag used to ignore Nodes such as extern Decls
+  int  inRecordType = 0; // Flag used to not follow pointers within structs
+
   std::map<const void *, const void *> SeenTypes;
 
   bool haveSeen(const void *Key, const void *Type) {

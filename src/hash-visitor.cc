@@ -19,14 +19,14 @@ std::string HashVisitor::getHash(unsigned *ProcessedBytes) {
 
 // Only called, if Decl should be visited
 void HashVisitor::hashDecl(const Decl *D) {
-  if (!D) {
-    return;
-  }
+  if (!D) return;
+
   const Hash::Digest *const SavedDigest = getHash(D); // TODO: move to if-cond
   if (SavedDigest) {
     topHash() << *SavedDigest;
     return;
   }
+
 
   // Visit in Pre-Order
   const unsigned Depth = beforeDescent();
@@ -40,8 +40,18 @@ void HashVisitor::hashDecl(const Decl *D) {
   }
 
   // Decls within functions are visited by the body.
-  if (!isa<FunctionDecl>(*D) && hasNodes(dyn_cast<DeclContext>(D)))
-    hashDeclContext(cast<DeclContext>(D));
+  if (!isa<FunctionDecl>(*D) && hasNodes(dyn_cast<DeclContext>(D))) {
+      auto DC = cast<DeclContext>(D);
+      for (const auto *const Child : DC->noload_decls()) {
+          if (isa<TranslationUnitDecl>(D)) {
+              if (isa<TypedefDecl>(Child)
+                  || isa<RecordDecl>(Child)
+                  || isa<EnumDecl>(Child))
+                  continue;
+          }
+          hashDecl(Child);
+      }
+  }
 
   // Visit attributes of the decl
   for (const Attr *const A : D->attrs()) {
@@ -75,19 +85,6 @@ bool HashVisitor::hasNodes(const DeclContext *DC) {
          DC->noload_decls_begin() != DC->noload_decls_end();
 }
 
-void HashVisitor::hashDeclContext(const DeclContext *DC) {
-  if (!DC)
-    return;
-
-  for (const auto *const D : DC->noload_decls()) {
-    // We don't need typedefs, enums and records here
-    // TODO: Do we need to exclude more?
-    if (!(isa<TagDecl>(D) || isa<TypedefDecl>(D))) {
-      hashDecl(D);
-    }
-  }
-}
-
 bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
   const Hash *const CurrentHash = pushHash();
 
@@ -107,6 +104,7 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 bool HashVisitor::VisitVarDecl(const VarDecl *D) {
   // Ignore extern declarations
   if (D->hasExternalStorage()) {
+      // FIXME: This might be very bad.
     DoNotHashThis = true;
     return true;
   }
@@ -200,7 +198,7 @@ void HashVisitor::hashType(const QualType &T) {
   bool Handled = mt_typevisitor::Visit(ActualType);
   if (!Handled) {
     errs() << "---- START unhandled type -----\n";
-    //    ActualType->dump();
+    ActualType->dump();
     errs() << "---- END unhandled type -----\n";
   }
 
@@ -233,7 +231,16 @@ bool HashVisitor::VisitBuiltinType(const BuiltinType *T) {
 
 bool HashVisitor::VisitPointerType(const PointerType *T) {
   topHash() << AstElementPointerType;
-  hashType(T->getPointeeType());
+  QualType pointee = T->getPointeeType();
+  if (inRecordType > 0) {
+      // This is somewhat of a hack, since we do not include pointee
+      // types within structs, but their short string representation
+      // (e.g., "struct foo *")
+      SplitQualType T_split = pointee.split();
+      topHash() << QualType::getAsString(T_split);
+  } else {
+      hashType(pointee);
+  }
   return true;
 }
 
@@ -339,12 +346,6 @@ bool HashVisitor::VisitEnumType(const EnumType *T) {
   return true;
 }
 
-bool HashVisitor::VisitTagType(const TagType *T) {
-  topHash() << AstElementTagType;
-  hashDecl(T->getDecl());
-  return true;
-}
-
 bool HashVisitor::VisitAttributedType(const AttributedType *T) {
   topHash() << AstElementAttributedType;
   topHash() << T->getAttrKind();
@@ -378,45 +379,35 @@ bool HashVisitor::VisitAdjustedType(const AdjustedType *T) {
 
 bool HashVisitor::VisitElaboratedType(const ElaboratedType *T) {
   topHash() << AstElementElaboratedType;
+  // FIXME: Hash NestedNameSpecifier.
   hashType(T->getNamedType());
   topHash() << T->getKeyword();
   return true;
 }
 
-bool HashVisitor::VisitType(const Type *T) {
-  if (const Hash::Digest *const D = getHash(T)) {
+
+bool HashVisitor::VisitRecordType(const RecordType *RT) {
+  if (const Hash::Digest *const D = getHash(RT)) {
     topHash() << *D;
     return true;
   }
 
-  AstElementPrefix AEPrefix;
-  const RecordType *RT = nullptr;
-  if (T->isStructureType()) {
-    AEPrefix = AstElementStructureType;
-    RT = T->getAsStructureType();
-  } else if (T->isUnionType()) {
-    AEPrefix = AstElementUnionType;
-    RT = T->getAsUnionType();
+  if (RT->isStructureType()) {
+      topHash() << AstElementStructureType;
+  } else if (RT->isUnionType()) {
+      topHash() << AstElementUnionType;
   } else {
-    return false;
+      assert(false && "Neither Union nor Struct");
+      return false;
   }
-
-  haveSeen(T, T);
-  topHash() << AEPrefix;
 
   const RecordDecl *const RD = RT->getDecl();
-  // visit Attributes of the Decl (needed because RecordDecl shouldn't be not
-  // called from hashDecl)
-  // TODO: shouldn't be not called ??? => fix comment
-  for (const Attr *const A : RD->attrs()) {
-    hashAttr(A);
-  }
 
-  for (const FieldDecl *const FD : RD->fields()) {
-    topHash() << "member"; // TODO: replace with constant
-    hashType(FD->getType());
-    hashName(FD);
-  }
+  inRecordType++; // increase and decrease inRecordType level
+  hashDecl(RD);
+  inRecordType--;
+
+
   return true;
 }
 
@@ -891,9 +882,18 @@ bool HashVisitor::VisitIndirectFieldDecl(const IndirectFieldDecl *D) {
   return true;
 }
 
+bool HashVisitor::VisitFieldDecl(const FieldDecl *FD) {
+    topHash() << AstElementFieldDecl;
+    VisitValueDecl(FD); // Call Super Function
+
+    if (FD->isBitField()) {
+        hashStmt(FD->getBitWidth());
+    }
+    return true;
+}
+
 // called by children
 bool HashVisitor::VisitValueDecl(const ValueDecl *D) {
-  topHash() << AstElementValueDecl;
   hashType(D->getType());
   hashName(D);
   return true;
