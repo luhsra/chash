@@ -33,6 +33,29 @@ public:
     errs() << "top-level-hash: " << HashString << "\n";
     errs() << "processed-bytes: " << ProcessedBytes << "\n";
     errs() << "elapsed-time-ns: " << std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() << "\n";
+    errs() << "element-hashes: [";
+    for (const auto & saved_hash : Visitor.DeclSilo) {
+        const Decl * decl = saved_hash.first;
+        const Hash::Digest & d = saved_hash.second;
+        // Only Top-level declarations
+        if (decl->getDeclContext() && isa<TranslationUnitDecl>(decl->getDeclContext())
+            && isa<NamedDecl>(decl)) {
+            if (isa<FunctionDecl>(decl)) errs() << "(\"function:";
+            else if (isa<VarDecl>(decl)) errs() << "(\"variable ";
+            else if (isa<RecordDecl>(decl)) errs() << "(\"record ";
+            else continue;
+
+
+            errs() << cast<NamedDecl>(decl)->getName();
+            errs() << "\", \"";
+            errs() << d.asString();
+            errs() << "\"), ";
+
+        }
+    }
+
+    errs() << "];";
+
   }
 
 private:

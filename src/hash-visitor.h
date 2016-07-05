@@ -27,8 +27,6 @@ class TranslationUnitHashVisitor
 
   Hash TopLevelHash;
 
-  // In this storage we save hashes for various memory objects
-  std::map<const void *, Hash::Digest> Silo;
 
   // /// Pending[i] is an action to hash an entity at level i.
   bool FirstChild;
@@ -62,6 +60,11 @@ class TranslationUnitHashVisitor
   llvm::SmallVector<Hash, 32> HashStack;
 
 public:
+  // In this storage we save hashes for various memory objects
+  std::map<const Type *, Hash::Digest> TypeSilo;
+  std::map<const Decl *, Hash::Digest> DeclSilo;
+
+
   // Utilities
   bool hasNodes(const DeclContext *DC);
 
@@ -389,13 +392,20 @@ protected:
   }
 
   // Hash Silo
-  void storeHash(const void *Obj, Hash::Digest Dig) { Silo[Obj] = Dig; }
+  void storeHash(const Type *Obj, Hash::Digest Dig) { TypeSilo[Obj] = Dig; }
+  void storeHash(const Decl *Obj, Hash::Digest Dig) { DeclSilo[Obj] = Dig; }
 
-  const Hash::Digest *getHash(const void *Obj) {
-    if (Silo.find(Obj) != Silo.end()) {
-      return &Silo[Obj];
+  const Hash::Digest *getHash(const Type *Obj) {
+    if (TypeSilo.find(Obj) != TypeSilo.end()) {
+      return &TypeSilo[Obj];
     }
     return nullptr;
+  }
+  const Hash::Digest *getHash(const Decl *Obj) {
+      if (DeclSilo.find(Obj) != DeclSilo.end()) {
+          return &DeclSilo[Obj];
+      }
+      return nullptr;
   }
 
   Hash *pushHash() {
