@@ -31,7 +31,9 @@ void HashVisitor::hashDecl(const Decl *D) {
   // Visit in Pre-Order
   const unsigned Depth = beforeDescent();
   const Hash* CurrentHash = nullptr;
-  if (D->getDeclContext() != nullptr && isa<TranslationUnitDecl>(D->getDeclContext())) {
+  if ((D->getDeclContext() != nullptr && isa<TranslationUnitDecl>(D->getDeclContext()))
+      || isa<VarDecl>(D)
+      || isa<FunctionDecl>(D)) {
     CurrentHash = pushHash();
   }
 
@@ -85,7 +87,6 @@ void HashVisitor::hashDecl(const Decl *D) {
 
     // Store hash for underlying type
     storeHash(D, CurrentDigest);
-    D->dump();
 
     // Hash into parent
     topHash() << CurrentDigest;
@@ -117,7 +118,7 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 }
 
 bool HashVisitor::VisitVarDecl(const VarDecl *D) {
-  haveSeen(D, D);
+  haveSeen(D); // Mark this variable declaration as visited, for recursive declarations
 
   topHash() << AstElementVarDecl;
   hashName(D);
@@ -186,19 +187,6 @@ void HashVisitor::hashType(const QualType &T) {
     return;
   }
 
-  if (ActualType->isStructureType()) {
-    if (haveSeen(ActualType, ActualType)) {
-      topHash() << AstElementStructureType;
-      topHash() << T.getAsString();
-      return;
-    }
-  } else if (ActualType->isUnionType()) {
-    if (haveSeen(ActualType, ActualType)) {
-      topHash() << AstElementUnionType;
-      topHash() << T.getAsString();
-      return;
-    }
-  }
 
   // Visit in Pre-Order
   const unsigned Depth = beforeDescent();
@@ -441,37 +429,29 @@ bool HashVisitor::VisitCastExpr(const CastExpr *Node) {
 bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
   // DeclRefExpr = usage of variables ("expressions which refer to variable
   // declarations")
-  const ValueDecl *const ValDecl = Node->getDecl();
   topHash() << AstElementDeclRefExpr;
-  // TODO:
-  // FIXME:	spaeter Auskommentiertes(isa-Zeug) einkommentieren (oder Problem
-  // anders beheben)
-  //		Andere Decls mehrfach referenzieren => Problem
-  //		evtl. auch Zyklus in anderer Decl
-  if (/*(isa<VarDecl>(Decl) || isa<FunctionDecl>(Decl)) && */
-      haveSeen(ValDecl, ValDecl)) {
-    if (const Hash::Digest *const D = getHash(ValDecl)) {
-      topHash() << *D;
+  hashName(Node->getFoundDecl());
+
+
+  const ValueDecl *const ValDecl = Node->getDecl();
+  if (const Hash::Digest *const D = getHash(ValDecl)) {
+    // Hash is already finished
+    topHash() << *D;
+  } else if (haveSeen(ValDecl)) {
+    // Hash is already visited, but not ready
+    assert (isa<VarDecl>(ValDecl) || isa<FunctionDecl>(ValDecl));
+    if (isa<VarDecl>(ValDecl)) {
+      topHash() << "VarDeclDummy"; // TODO: ?
+      const VarDecl *const VD = static_cast<const VarDecl *>(ValDecl);
+      dummyVarDecl(VD); // TODO: warum dummy???
     } else {
-      // if(!isa<VarDecl>(Decl) && !isa<FunctionDecl>(Decl)){
-      //	errs() << "Not a VarDecl or FunctionDecl:\n";
-      //	Decl->dump();
-      //}
-      assert(isa<VarDecl>(ValDecl) || isa<FunctionDecl>(ValDecl));
-      if (isa<VarDecl>(ValDecl)) {
-        topHash() << "VarDeclDummy"; // TODO: ?
-        const VarDecl *const VD = static_cast<const VarDecl *>(ValDecl);
-        dummyVarDecl(VD); // TODO: warum dummy???
-      } else {
-        const FunctionDecl *const FD =
-            static_cast<const FunctionDecl *>(ValDecl);
-        dummyFunctionDecl(FD); // TODO: warum dummy???
-      }
+      const FunctionDecl *const FD =
+        static_cast<const FunctionDecl *>(ValDecl);
+      dummyFunctionDecl(FD); // TODO: warum dummy???
     }
   } else {
     hashDecl(ValDecl);
   }
-  hashName(Node->getFoundDecl());
   return true;
 }
 
@@ -771,8 +751,7 @@ bool HashVisitor::VisitBlockDecl(const BlockDecl *D) {
 }
 
 bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
-  haveSeen(D, D);
-
+  haveSeen(D); // Mark this variable declaration as visited, for recursive declarations
   topHash() << AstElementFunctionDecl;
   topHash() << D->getNameInfo().getName().getAsString();
   hashStmt(D->getBody());

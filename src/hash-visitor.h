@@ -315,13 +315,12 @@ protected:
 
   int  inRecordType = 0; // Flag used to not follow pointers within structs
 
-  std::map<const void *, const void *> SeenTypes;
-
-  bool haveSeen(const void *Key, const void *Type) {
+  std::set<const void *> SeenTypes;
+  bool haveSeen(const void *Key) {
     if (SeenTypes.find(Key) != SeenTypes.end()) {
       return true;
     }
-    SeenTypes[Key] = Type;
+    SeenTypes.insert(Key);
     return false;
   }
 
