@@ -30,7 +30,10 @@ void HashVisitor::hashDecl(const Decl *D) {
 
   // Visit in Pre-Order
   const unsigned Depth = beforeDescent();
-  const Hash *const CurrentHash = pushHash();
+  const Hash* CurrentHash = nullptr;
+  if (D->getDeclContext() != nullptr && isa<TranslationUnitDecl>(D->getDeclContext())) {
+    CurrentHash = pushHash();
+  }
 
   const bool Handled = mt_declvisitor::Visit(D);
   if (!Handled) {
@@ -48,7 +51,23 @@ void HashVisitor::hashDecl(const Decl *D) {
                   || isa<RecordDecl>(Child)
                   || isa<EnumDecl>(Child))
                   continue;
+
+              // Extern variable definitions at the top-level
+              if (auto var = dyn_cast<VarDecl>(Child)) {
+                if (var->hasExternalStorage()) {
+                  continue;
+                }
+              }
+
+              if (auto func = dyn_cast<FunctionDecl>(Child)) {
+                if (func->getStorageClass() == StorageClass::SC_Extern ||
+                    func->getStorageClass() == StorageClass::SC_PrivateExtern ||
+                    !func->isThisDeclarationADefinition()) {
+                  continue;
+                }
+              }
           }
+
           hashDecl(Child);
       }
   }
@@ -60,19 +79,15 @@ void HashVisitor::hashDecl(const Decl *D) {
 
   afterDescent(Depth);
 
-  const Hash::Digest CurrentDigest = popHash(CurrentHash);
+  if (CurrentHash != nullptr) {
+    // We opened a new  hash context, close it again and hash it into the parent
+    const Hash::Digest CurrentDigest = popHash(CurrentHash);
 
-  // Do not store or hash if flag is set
-  if (DoNotHashThis) {
-    DoNotHashThis = false;
-    return;
-  }
+    // Store hash for underlying type
+    storeHash(D, CurrentDigest);
+    D->dump();
 
-  // Store hash for underlying type
-  storeHash(D, CurrentDigest);
-
-  // Hash into parent
-  if (!isa<TranslationUnitDecl>(D)) {
+    // Hash into parent
     topHash() << CurrentDigest;
   }
 }
@@ -102,12 +117,6 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 }
 
 bool HashVisitor::VisitVarDecl(const VarDecl *D) {
-  // Ignore extern declarations
-  if (D->hasExternalStorage()) {
-      // FIXME: This might be very bad.
-    DoNotHashThis = true;
-    return true;
-  }
   haveSeen(D, D);
 
   topHash() << AstElementVarDecl;
@@ -762,15 +771,6 @@ bool HashVisitor::VisitBlockDecl(const BlockDecl *D) {
 }
 
 bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
-  // Ignore extern declarations
-  if (D->getStorageClass() == StorageClass::SC_Extern ||
-      D->getStorageClass() == StorageClass::SC_PrivateExtern ||
-      !D->isThisDeclarationADefinition()) { // TODO: move condition to own
-                                            // method
-    DoNotHashThis = true;
-    return true;
-  }
-
   haveSeen(D, D);
 
   topHash() << AstElementFunctionDecl;

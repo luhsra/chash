@@ -313,7 +313,6 @@ protected:
     // AstElement = 0x1cc7935
   };
 
-  bool DoNotHashThis = false; // Flag used to ignore Nodes such as extern Decls
   int  inRecordType = 0; // Flag used to not follow pointers within structs
 
   std::map<const void *, const void *> SeenTypes;
