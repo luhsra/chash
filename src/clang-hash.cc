@@ -9,18 +9,20 @@
 using namespace clang;
 using namespace llvm;
 
+static std::chrono::high_resolution_clock::time_point start_compilation;
+
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
   HashTranslationUnitConsumer(raw_ostream *OS) : TopLevelHashStream(OS) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) {
-    const auto start = std::chrono::high_resolution_clock::now();
+    const auto start_hashing = std::chrono::high_resolution_clock::now();
 
     // Traversing the translation unit decl via a RecursiveASTVisitor
     // will visit all nodes in the AST.
     Visitor.hashDecl(Context.getTranslationUnitDecl());
 
-    const auto finish = std::chrono::high_resolution_clock::now();
+    const auto finish_hashing = std::chrono::high_resolution_clock::now();
 
     // Context.getTranslationUnitDecl()->dump();
     unsigned ProcessedBytes;
@@ -32,7 +34,8 @@ public:
     }
     errs() << "top-level-hash: " << HashString << "\n";
     errs() << "processed-bytes: " << ProcessedBytes << "\n";
-    errs() << "elapsed-time-ns: " << std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() << "\n";
+    errs() << "parse-time-ns: " << std::chrono::duration_cast<std::chrono::nanoseconds>(start_hashing-start_compilation).count() << "\n";
+    errs() << "hash-time-ns: " << std::chrono::duration_cast<std::chrono::nanoseconds>(finish_hashing-start_hashing).count() << "\n";
     errs() << "element-hashes: [";
     for (const auto & saved_hash : Visitor.DeclSilo) {
         const Decl * decl = saved_hash.first;
@@ -54,7 +57,7 @@ public:
         }
     }
 
-    errs() << "];";
+    errs() << "]";
 
   }
 
@@ -85,6 +88,8 @@ protected:
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string> &arg) override {
+      start_compilation = std::chrono::high_resolution_clock::now();
+
     for (const std::string &Arg : arg) {
       errs() << " arg = " << Arg << "\n";
 
