@@ -320,11 +320,7 @@ protected:
 
   std::set<const void *> SeenTypes;
   bool haveSeen(const void *Key) {
-    if (SeenTypes.find(Key) != SeenTypes.end()) {
-      return true;
-    }
-    SeenTypes.insert(Key);
-    return false;
+      return SeenTypes.find(Key) != SeenTypes.end();
   }
 
   bool dummyFunctionDecl(const FunctionDecl *FD) {

@@ -118,7 +118,7 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 }
 
 bool HashVisitor::VisitVarDecl(const VarDecl *D) {
-  haveSeen(D); // Mark this variable declaration as visited, for recursive declarations
+  SeenTypes.insert(D);// Mark this variable declaration as visited, for recursive declarations
 
   topHash() << AstElementVarDecl;
   hashName(D);
@@ -751,7 +751,7 @@ bool HashVisitor::VisitBlockDecl(const BlockDecl *D) {
 }
 
 bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
-  haveSeen(D); // Mark this variable declaration as visited, for recursive declarations
+  SeenTypes.insert(D);// Mark this variable declaration as visited, for recursive declarations
   topHash() << AstElementFunctionDecl;
   topHash() << D->getNameInfo().getName().getAsString();
   hashStmt(D->getBody());
