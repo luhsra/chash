@@ -7,8 +7,7 @@ import logging
 import re
 from subprocess import *
 
-hashObjectfile = os.path.abspath("hash-objectfile")
-outputDir = os.path.abspath("/home/cip/2015/yb90ifym/hash_projects/muslHashes")
+outputDir = os.path.abspath("${PROJECT_BINARY_DIR}/muslHashes")
 
 
 class HashRecord:
@@ -65,7 +64,7 @@ if __name__ == "__main__":
     plugin = "${PROJECT_BINARY_DIR}/src/libclang-hash.so"
 
     #TODO: Zeit messen
-    x = Popen([compiler, "-fplugin=" + plugin] + args, 
+    x = Popen([compiler, "-fplugin=" + plugin] + args,
               stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
     (stdout, stderr) = x.communicate()
 #    print stderr
@@ -80,7 +79,7 @@ if __name__ == "__main__":
         objectfile = args[args.index("-o")+1]
         objectfile_hash = None
         if os.path.exists(objectfile):
-            objectfile_hash = check_output(["/home/cip/2015/yb90ifym/clang-hash/wrappers/hash-objectfile", objectfile]).strip()
+            objectfile_hash = check_output(["${PROJECT_BINARY_DIR}/wrappers/hash-objectfile", objectfile]).strip()
             objectfile_data = open(objectfile).read()
         else:
             objectfile_data = None
@@ -112,6 +111,6 @@ if __name__ == "__main__":
         f = open(outputDir + "/" + objectfile + ".info", 'a')
         f.write("%s\n" % hashRecord.toDict())
         f.close()
- 
+
 
     sys.exit(retcode)
