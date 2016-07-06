@@ -5,40 +5,10 @@ import os
 import hashlib
 import logging
 import re
+import time
 from subprocess import *
 
 outputDir = os.path.abspath("${PROJECT_BINARY_DIR}/muslHashes")
-
-
-class HashRecord:
-    filename = ""
-    commitID = 0
-    astHash = 0
-    objHash = 0
-    hashTime = 0
-    compileTime = 0
-    processedBytes = 0
-
-    def fill(self, filename, commitID, astHash, objHash, hashTime, compileTime, processedBytes):
-        self.filename = filename
-        self.commitID = commitID
-        self.astHash = astHash
-        self.objHash = objHash
-        self.hashTime = hashTime
-        self.compileTime = compileTime
-        self.processedBytes = processedBytes
-
-    def toDict(self):
-        return {
-            "filename" : self.filename,
-            "commitID" : self.commitID,
-            "astHash" : self.astHash,
-            "objHash" : self.objHash,
-            "hashTime" : self.hashTime,
-            "compileTime" : self.compileTime,
-            "processedBytes" : self.processedBytes
-        }
-
 
 def getSourceFilename(objectfile):
     """removes "obj/" from the path and replaces .o with .c"""
@@ -50,7 +20,6 @@ def getSourceFilename(objectfile):
 def mkpath(path):
     if not os.path.exists(path):
         os.makedirs(path)
-
 
 if __name__ == "__main__":
     args = sys.argv[1:]
@@ -64,17 +33,17 @@ if __name__ == "__main__":
     plugin = "${PROJECT_BINARY_DIR}/src/libclang-hash.so"
 
     #TODO: Zeit messen
+    start_time = time.time()
     x = Popen([compiler, "-fplugin=" + plugin] + args,
               stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
     (stdout, stderr) = x.communicate()
+    compileTime = (time.time() - start_time) * 10e9 # nano
 #    print stderr
     sys.stdout.write(stdout)
     sys.stderr.write(stderr)
     retcode = x.wait()
 
-    kconfig = "kconfig" in "".join(args)
-
-    if "-c" in args and "-o" in args and "/dev/null" not in args and not kconfig:
+    if "-c" in args and "-o" in args and "/dev/null" not in args:
         # Save Objectfile data
         objectfile = args[args.index("-o")+1]
         objectfile_hash = None
@@ -84,32 +53,40 @@ if __name__ == "__main__":
         else:
             objectfile_data = None
 
-        commitID = 0 #TODO: !!!
-        filename = ""
-        astHash = 0
-        objHash = 0
-        hashTime = 0
-        compileTime = 0
-        processedBytes = 0
+        # Just use to set commit hash and project identifier from the outside
+        # PROJECT=musl COMMIT_HASH=`git log -1 --pretty="%H"` make
+        record = {
+            'project': os.environ.get("PROJECT"),
+            'time': time.time(), # Record current time to always find the most recent record.
+            'commit-hash': os.environ.get("COMMIT_HASH"),
+            'filename': getSourceFilename(objectfile),
+            'return-code': retcode,
+            'compile-duration': compileTime,
+            'object-hash': objectfile_hash,
+        }
 
         lines = stderr.split("\n")
         for line in lines:
-            if 0 == line.find("top-level-hash"):
-                astHash = line.split()[1]
-            elif 0 == line.find("processed-bytes:"):
-                processedBytes = line.split()[1]
-            elif 0 == line.find("elapsed-time-ns:"):
-                hashTime = line.split()[1]
-
-#        compileTime = #TODO: implement
-
-        hashRecord = HashRecord()
-        hashRecord.fill(filename, commitID, astHash, objectfile_hash, hashTime, compileTime, processedBytes)
+            if line.startswith("top-level-hash"):
+                record['ast-hash'] = line.split()[1]
+            elif line.startswith("processed-bytes:"):
+                record['processed-bytes'] = line.split()[1]
+            elif 0 == line.find("hash-time-ns:"):
+                record['hash-duration'] = line.split()[1]
+            elif line.startswith("parse-time-ns:"):
+                record['parse-duration'] = line.split()[1]
+            elif line.startswith("element-hashes:"):
+                data = line[len('element-hashes:'):]
+                try:
+                    record['element-hashes'] = eval(data)
+                except RuntimeError as e:
+                    print e
+                    pass
 
         outputPath = outputDir + "/" + os.path.dirname(objectfile)
         mkpath(outputPath)
         f = open(outputDir + "/" + objectfile + ".info", 'a')
-        f.write("%s\n" % hashRecord.toDict())
+        f.write(repr(record) + "\n")
         f.close()
 
 
