@@ -5,8 +5,10 @@ import re
 import subprocess
 from subprocess import check_output
 import datetime
+#import fnmatch
+import sys
 
-#TODO: die pfade alle unabhaengig machen; mkdir outputPath im skript machen
+#TODO: make paths independent
 pathToProject = os.path.abspath("../hash_projects/musl")
 clanghashWrapper = os.path.abspath("build/wrappers/clang")
 
@@ -34,19 +36,24 @@ def log(message):
         print message
 
 
+################################################################################
+
+commitsToHash = 0
+if (len(sys.argv) > 1):
+    commitsToHash = int(sys.argv[1])
 
 log("Starting at %s" % datetime.datetime.now())
 
-records = []
 os.environ['CC'] = clanghashWrapper
+os.environ['PROJECT'] = "musl" 
 
 #reset to latest version
 checkout("master")
 
 commitCounter = 0
 for commitID in getListOfCommits():
+    os.environ['COMMIT_HASH'] = commitID
     log ("hashing commit #%d" % commitCounter)
-    records = [] #TODO: ist das ok? sollte am schluss am besten eine einzige map sein => am besten halt einfach die oben/close klammern per hand aussenrum machen
     os.chdir(pathToProject)
     log("calling make clean")
     subprocess.call(["make", "clean"])
@@ -57,10 +64,13 @@ for commitID in getListOfCommits():
     p = subprocess.Popen(["make", "-j16"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     retcode = p.wait()
-    
+
     commitCounter += 1
     log("finished commit %s at %s" % (commitID, datetime.datetime.now()))
 
+    if (commitsToHash > 0 and commitCounter >= commitsToHash):
+        break;
+
 log("Finished at %s" % datetime.datetime.now())
-log("Total commits: %d" % (commitCounter + 1))
+log("Hashed commits: %d" % commitCounter)
 

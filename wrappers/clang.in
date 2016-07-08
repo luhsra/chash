@@ -65,6 +65,7 @@ if __name__ == "__main__":
             'return-code': retcode,
             'compile-duration': compileTime,
             'object-hash': objectfile_hash,
+            'start-time': start_time,
         }
 
         lines = stderr.split("\n")
@@ -84,6 +85,8 @@ if __name__ == "__main__":
                 except RuntimeError as e:
                     print e
                     pass
+            elif line.startswith("hash-start-time-ns"):
+                record['hash-start-time'] = line.split()[1]
 
         outputPath = outputDir + "/" + os.path.dirname(objectfile)
         mkpath(outputPath)
