@@ -5,10 +5,9 @@ import re
 import subprocess
 from subprocess import check_output
 import datetime
-#import fnmatch
 import sys
 
-#TODO: make paths independent
+#TODO: make paths independent => make project path command line argument!
 pathToProject = os.path.abspath("../hash_projects/musl")
 clanghashWrapper = os.path.abspath("build/wrappers/clang")
 

@@ -10,13 +10,6 @@ from subprocess import *
 
 outputDir = os.path.abspath("${PROJECT_BINARY_DIR}/muslHashes")
 
-def getSourceFilename(objectfile):
-    """removes "obj/" from the path and replaces .o with .c"""
-    filename = objectfile[4:]
-    filename = filename[:-1] + 'c'
-    return filename
-
-
 def mkpath(path):
     try:
         os.makedirs(path)
@@ -34,13 +27,11 @@ if __name__ == "__main__":
     compiler = "${LLVM_C_COMPILER}"
     plugin = "${PROJECT_BINARY_DIR}/src/libclang-hash.so"
 
-    #TODO: Zeit messen
     start_time = time.time()
     x = Popen([compiler, "-fplugin=" + plugin] + args,
               stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
     (stdout, stderr) = x.communicate()
     compileTime = (time.time() - start_time) * 10e9 # nano
-#    print stderr
     sys.stdout.write(stdout)
     sys.stderr.write(stderr)
     retcode = x.wait()
@@ -61,7 +52,7 @@ if __name__ == "__main__":
             'project': os.environ.get("PROJECT"),
             'time': time.time(), # Record current time to always find the most recent record.
             'commit-hash': os.environ.get("COMMIT_HASH"),
-            'filename': getSourceFilename(objectfile),
+            'filename': args[-1], #TODO: does this assumption hold?
             'return-code': retcode,
             'compile-duration': compileTime,
             'object-hash': objectfile_hash,
