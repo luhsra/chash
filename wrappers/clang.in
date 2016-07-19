@@ -57,6 +57,7 @@ if __name__ == "__main__":
             'compile-duration': compileTime,
             'object-hash': objectfile_hash,
             'start-time': start_time,
+            'object-file-size': os.stat(objectfile).st_size,
         }
 
         lines = stderr.split("\n")
