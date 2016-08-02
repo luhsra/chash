@@ -61,7 +61,11 @@ for commitID in getListOfCommits():
     subprocess.call(["make", "clean"])
     log("checkout")
     checkout(commitID)
-    subprocess.call(["./configure"])
+    try:
+        subprocess.call(["./configure"])
+    except:
+        print "no configure available anymore\n"
+        break;
     log("calling make -j16")
     startTime = time.time()
     p = subprocess.Popen(["make", "-j16"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
