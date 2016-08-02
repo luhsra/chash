@@ -170,7 +170,7 @@ def makeChangesGraph(fullRecord):
                     print "found testfile.c (2)"
                 if 'ast-hash' not in currentFiles[filename].keys():
                     print "ast-hash not in keys of file " + filename
-                    break
+                    continue
                 currentRecord = currentFiles[filename]
                 prevRecord = prevFiles[filename]
 
