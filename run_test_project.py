@@ -5,8 +5,11 @@ import re
 import subprocess
 from subprocess import check_output
 import datetime
+import time
+import sys
 
-#TODO: die pfade alle unabhaengig machen; mkdir outputPath im skript machen
+#TODO: make paths independent => make project path command line argument!
+projectName = "musl"
 pathToProject = os.path.abspath("../hash_projects/musl")
 clanghashWrapper = os.path.abspath("build/wrappers/clang")
 
@@ -34,33 +37,51 @@ def log(message):
         print message
 
 
+################################################################################
+
+commitsToHash = 0
+if (len(sys.argv) > 1):
+    commitsToHash = int(sys.argv[1])
 
 log("Starting at %s" % datetime.datetime.now())
 
-records = []
 os.environ['CC'] = clanghashWrapper
+os.environ['PROJECT'] = projectName
 
 #reset to latest version
 checkout("master")
 
 commitCounter = 0
+buildTimes = {}
 for commitID in getListOfCommits():
+    os.environ['COMMIT_HASH'] = commitID
     log ("hashing commit #%d" % commitCounter)
-    records = [] #TODO: ist das ok? sollte am schluss am besten eine einzige map sein => am besten halt einfach die oben/close klammern per hand aussenrum machen
     os.chdir(pathToProject)
     log("calling make clean")
     subprocess.call(["make", "clean"])
     log("checkout")
     checkout(commitID)
-    subprocess.call(["./configure"])
+    try:
+        subprocess.call(["./configure"])
+    except:
+        print "no configure available anymore\n"
+        break;
     log("calling make -j16")
+    startTime = time.time()
     p = subprocess.Popen(["make", "-j16"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     retcode = p.wait()
-    
+    buildTimes[commitID] = (time.time() - startTime) * 10e9 # nano
     commitCounter += 1
     log("finished commit %s at %s" % (commitID, datetime.datetime.now()))
+    if (commitsToHash > 0 and commitCounter >= commitsToHash):
+        break;
 
+#TODO: replace absolute path
+
+f = open("/home/cip/2015/yb90ifym/clang-hash/build/muslHashes/buildTimes_%s.info" % projectName, 'a')
+f.write(repr(buildTimes) + "\n")
+f.close()
 log("Finished at %s" % datetime.datetime.now())
-log("Total commits: %d" % (commitCounter + 1))
+log("Hashed commits: %d" % commitCounter)
 

@@ -10,13 +10,6 @@ from subprocess import *
 
 outputDir = os.path.abspath("${PROJECT_BINARY_DIR}/muslHashes")
 
-def getSourceFilename(objectfile):
-    """removes "obj/" from the path and replaces .o with .c"""
-    filename = objectfile[4:]
-    filename = filename[:-1] + 'c'
-    return filename
-
-
 def mkpath(path):
     try:
         os.makedirs(path)
@@ -34,13 +27,11 @@ if __name__ == "__main__":
     compiler = "${LLVM_C_COMPILER}"
     plugin = "${PROJECT_BINARY_DIR}/src/libclang-hash.so"
 
-    #TODO: Zeit messen
     start_time = time.time()
     x = Popen([compiler, "-fplugin=" + plugin] + args,
               stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
     (stdout, stderr) = x.communicate()
     compileTime = (time.time() - start_time) * 10e9 # nano
-#    print stderr
     sys.stdout.write(stdout)
     sys.stderr.write(stderr)
     retcode = x.wait()
@@ -61,10 +52,12 @@ if __name__ == "__main__":
             'project': os.environ.get("PROJECT"),
             'time': time.time(), # Record current time to always find the most recent record.
             'commit-hash': os.environ.get("COMMIT_HASH"),
-            'filename': getSourceFilename(objectfile),
+            'filename': args[-1], #TODO: does this assumption hold?
             'return-code': retcode,
             'compile-duration': compileTime,
             'object-hash': objectfile_hash,
+            'start-time': start_time,
+            'object-file-size': os.stat(objectfile).st_size,
         }
 
         lines = stderr.split("\n")
@@ -72,11 +65,11 @@ if __name__ == "__main__":
             if line.startswith("top-level-hash"):
                 record['ast-hash'] = line.split()[1]
             elif line.startswith("processed-bytes:"):
-                record['processed-bytes'] = line.split()[1]
+                record['processed-bytes'] = int(line.split()[1])
             elif 0 == line.find("hash-time-ns:"):
-                record['hash-duration'] = line.split()[1]
+                record['hash-duration'] = int(line.split()[1])
             elif line.startswith("parse-time-ns:"):
-                record['parse-duration'] = line.split()[1]
+                record['parse-duration'] = int(line.split()[1])
             elif line.startswith("element-hashes:"):
                 data = line[len('element-hashes:'):]
                 try:
@@ -84,6 +77,8 @@ if __name__ == "__main__":
                 except RuntimeError as e:
                     print e
                     pass
+            elif line.startswith("hash-start-time-ns"):
+                record['hash-start-time'] = int(line.split()[1])
 
         outputPath = outputDir + "/" + os.path.dirname(objectfile)
         mkpath(outputPath)

@@ -32,6 +32,8 @@ public:
       TopLevelHashStream->write(HashString.c_str(), HashString.length());
       delete TopLevelHashStream;
     }
+    
+    errs() << "hash-start-time-ns " << std::chrono::duration_cast<std::chrono::nanoseconds>(start_hashing.time_since_epoch()).count() << "\n";
     errs() << "top-level-hash: " << HashString << "\n";
     errs() << "processed-bytes: " << ProcessedBytes << "\n";
     errs() << "parse-time-ns: " << std::chrono::duration_cast<std::chrono::nanoseconds>(start_hashing-start_compilation).count() << "\n";
