@@ -19,7 +19,8 @@ std::string HashVisitor::getHash(unsigned *ProcessedBytes) {
 
 // Only called, if Decl should be visited
 void HashVisitor::hashDecl(const Decl *D) {
-  if (!D) return;
+  if (!D)
+    return;
 
   const Hash::Digest *const SavedDigest = getHash(D); // TODO: move to if-cond
   if (SavedDigest) {
@@ -27,13 +28,12 @@ void HashVisitor::hashDecl(const Decl *D) {
     return;
   }
 
-
   // Visit in Pre-Order
   const unsigned Depth = beforeDescent();
-  const Hash* CurrentHash = nullptr;
-  if ((D->getDeclContext() != nullptr && isa<TranslationUnitDecl>(D->getDeclContext()))
-      || isa<VarDecl>(D)
-      || isa<FunctionDecl>(D)) {
+  const Hash *CurrentHash = nullptr;
+  if ((D->getDeclContext() != nullptr &&
+       isa<TranslationUnitDecl>(D->getDeclContext())) ||
+      isa<VarDecl>(D) || isa<FunctionDecl>(D)) {
     CurrentHash = pushHash();
   }
 
@@ -46,32 +46,31 @@ void HashVisitor::hashDecl(const Decl *D) {
 
   // Decls within functions are visited by the body.
   if (!isa<FunctionDecl>(*D) && hasNodes(dyn_cast<DeclContext>(D))) {
-      auto DC = cast<DeclContext>(D);
-      for (const auto *const Child : DC->noload_decls()) {
-          if (isa<TranslationUnitDecl>(D)) {
-              if (isa<TypedefDecl>(Child)
-                  || isa<RecordDecl>(Child)
-                  || isa<EnumDecl>(Child))
-                  continue;
+    auto DC = cast<DeclContext>(D);
+    for (const auto *const Child : DC->noload_decls()) {
+      if (isa<TranslationUnitDecl>(D)) {
+        if (isa<TypedefDecl>(Child) || isa<RecordDecl>(Child) ||
+            isa<EnumDecl>(Child))
+          continue;
 
-              // Extern variable definitions at the top-level
-              if (auto var = dyn_cast<VarDecl>(Child)) {
-                if (var->hasExternalStorage()) {
-                  continue;
-                }
-              }
-
-              if (auto func = dyn_cast<FunctionDecl>(Child)) {
-                if (func->getStorageClass() == StorageClass::SC_Extern ||
-                    func->getStorageClass() == StorageClass::SC_PrivateExtern ||
-                    !func->isThisDeclarationADefinition()) {
-                  continue;
-                }
-              }
+        // Extern variable definitions at the top-level
+        if (auto var = dyn_cast<VarDecl>(Child)) {
+          if (var->hasExternalStorage()) {
+            continue;
           }
+        }
 
-          hashDecl(Child);
+        if (auto func = dyn_cast<FunctionDecl>(Child)) {
+          if (func->getStorageClass() == StorageClass::SC_Extern ||
+              func->getStorageClass() == StorageClass::SC_PrivateExtern ||
+              !func->isThisDeclarationADefinition()) {
+            continue;
+          }
+        }
       }
+
+      hashDecl(Child);
+    }
   }
 
   // Visit attributes of the decl
@@ -118,7 +117,8 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 }
 
 bool HashVisitor::VisitVarDecl(const VarDecl *D) {
-  SeenTypes.insert(D);// Mark this variable declaration as visited, for recursive declarations
+  SeenTypes.insert(D); // Mark this variable declaration as visited, for
+                       // recursive declarations
 
   topHash() << AstElementVarDecl;
   hashName(D);
@@ -187,7 +187,6 @@ void HashVisitor::hashType(const QualType &T) {
     return;
   }
 
-
   // Visit in Pre-Order
   const unsigned Depth = beforeDescent();
   const Hash *const CurrentHash = pushHash();
@@ -230,13 +229,13 @@ bool HashVisitor::VisitPointerType(const PointerType *T) {
   topHash() << AstElementPointerType;
   QualType pointee = T->getPointeeType();
   if (inRecordType > 0) {
-      // This is somewhat of a hack, since we do not include pointee
-      // types within structs, but their short string representation
-      // (e.g., "struct foo *")
-      SplitQualType T_split = pointee.split();
-      topHash() << QualType::getAsString(T_split);
+    // This is somewhat of a hack, since we do not include pointee
+    // types within structs, but their short string representation
+    // (e.g., "struct foo *")
+    SplitQualType T_split = pointee.split();
+    topHash() << QualType::getAsString(T_split);
   } else {
-      hashType(pointee);
+    hashType(pointee);
   }
   return true;
 }
@@ -382,7 +381,6 @@ bool HashVisitor::VisitElaboratedType(const ElaboratedType *T) {
   return true;
 }
 
-
 bool HashVisitor::VisitRecordType(const RecordType *RT) {
   if (const Hash::Digest *const D = getHash(RT)) {
     topHash() << *D;
@@ -390,12 +388,12 @@ bool HashVisitor::VisitRecordType(const RecordType *RT) {
   }
 
   if (RT->isStructureType()) {
-      topHash() << AstElementStructureType;
+    topHash() << AstElementStructureType;
   } else if (RT->isUnionType()) {
-      topHash() << AstElementUnionType;
+    topHash() << AstElementUnionType;
   } else {
-      assert(false && "Neither Union nor Struct");
-      return false;
+    assert(false && "Neither Union nor Struct");
+    return false;
   }
 
   const RecordDecl *const RD = RT->getDecl();
@@ -403,7 +401,6 @@ bool HashVisitor::VisitRecordType(const RecordType *RT) {
   inRecordType++; // increase and decrease inRecordType level
   hashDecl(RD);
   inRecordType--;
-
 
   return true;
 }
@@ -432,21 +429,19 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
   topHash() << AstElementDeclRefExpr;
   hashName(Node->getFoundDecl());
 
-
   const ValueDecl *const ValDecl = Node->getDecl();
   if (const Hash::Digest *const D = getHash(ValDecl)) {
     // Hash is already finished
     topHash() << *D;
   } else if (haveSeen(ValDecl)) {
     // Hash is already visited, but not ready
-    assert (isa<VarDecl>(ValDecl) || isa<FunctionDecl>(ValDecl));
+    assert(isa<VarDecl>(ValDecl) || isa<FunctionDecl>(ValDecl));
     if (isa<VarDecl>(ValDecl)) {
       topHash() << "VarDeclDummy"; // TODO: ?
       const VarDecl *const VD = static_cast<const VarDecl *>(ValDecl);
       dummyVarDecl(VD); // TODO: warum dummy???
     } else {
-      const FunctionDecl *const FD =
-        static_cast<const FunctionDecl *>(ValDecl);
+      const FunctionDecl *const FD = static_cast<const FunctionDecl *>(ValDecl);
       dummyFunctionDecl(FD); // TODO: warum dummy???
     }
   } else {
@@ -751,7 +746,8 @@ bool HashVisitor::VisitBlockDecl(const BlockDecl *D) {
 }
 
 bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
-  SeenTypes.insert(D);// Mark this variable declaration as visited, for recursive declarations
+  SeenTypes.insert(D); // Mark this variable declaration as visited, for
+                       // recursive declarations
   topHash() << AstElementFunctionDecl;
   topHash() << D->getNameInfo().getName().getAsString();
   hashStmt(D->getBody());
@@ -862,13 +858,13 @@ bool HashVisitor::VisitIndirectFieldDecl(const IndirectFieldDecl *D) {
 }
 
 bool HashVisitor::VisitFieldDecl(const FieldDecl *FD) {
-    topHash() << AstElementFieldDecl;
-    VisitValueDecl(FD); // Call Super Function
+  topHash() << AstElementFieldDecl;
+  VisitValueDecl(FD); // Call Super Function
 
-    if (FD->isBitField()) {
-        hashStmt(FD->getBitWidth());
-    }
-    return true;
+  if (FD->isBitField()) {
+    hashStmt(FD->getBitWidth());
+  }
+  return true;
 }
 
 // called by children
@@ -925,6 +921,15 @@ bool HashVisitor::VisitAttr(const Attr *A) {
   topHash() << AstElementAttr;
   topHash() << A->getKind(); // hash enum
   topHash() << A->isPackExpansion();
+#define OS topHash()
+#define dumpStmt hashStmt
+#define dumpType hashType
+#define dumpBareDeclRef hashName
+#include "clang/AST/AttrDump.inc"
+#undef dumpStmt
+#undef dumpType
+#undef dumpBareDeclRef
+#undef OS
   return true;
 }
 

@@ -27,7 +27,6 @@ class TranslationUnitHashVisitor
 
   Hash TopLevelHash;
 
-
   // /// Pending[i] is an action to hash an entity at level i.
   bool FirstChild;
   llvm::SmallVector<std::function<void()>, 32> Pending;
@@ -63,7 +62,6 @@ public:
   // In this storage we save hashes for various memory objects
   std::map<const Type *, Hash::Digest> TypeSilo;
   std::map<const Decl *, Hash::Digest> DeclSilo;
-
 
   // Utilities
   bool hasNodes(const DeclContext *DC);
@@ -129,7 +127,8 @@ public:
   bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *Node);
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *Node);
   bool VisitImaginaryLiteral(const ImaginaryLiteral *Node);
-  bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node);
+  bool
+  VisitAbstractConditionalOperator(const AbstractConditionalOperator *Node);
   bool VisitBinaryConditionalOperator(const BinaryConditionalOperator *Node);
   bool VisitCallExpr(const CallExpr *Node);
   bool VisitOffsetOfExpr(const OffsetOfExpr *Node);
@@ -316,11 +315,11 @@ protected:
     // AstElement = 0x1cc7935
   };
 
-  int  inRecordType = 0; // Flag used to not follow pointers within structs
+  int inRecordType = 0; // Flag used to not follow pointers within structs
 
   std::set<const void *> SeenTypes;
   bool haveSeen(const void *Key) {
-      return SeenTypes.find(Key) != SeenTypes.end();
+    return SeenTypes.find(Key) != SeenTypes.end();
   }
 
   bool dummyFunctionDecl(const FunctionDecl *FD) {
@@ -398,10 +397,10 @@ protected:
     return nullptr;
   }
   const Hash::Digest *getHash(const Decl *Obj) {
-      if (DeclSilo.find(Obj) != DeclSilo.end()) {
-          return &DeclSilo[Obj];
-      }
-      return nullptr;
+    if (DeclSilo.find(Obj) != DeclSilo.end()) {
+      return &DeclSilo[Obj];
+    }
+    return nullptr;
   }
 
   Hash *pushHash() {

@@ -104,12 +104,17 @@ struct Hash : protected MurMurHash3 {
   }
 
   Hash &operator<<(const Hash &Other) {
-    *this << Other.getDigest();;
+    *this << Other.getDigest();
     return *this;
   }
 
   Hash &operator<<(const std::string &X) {
     processBytes(X.c_str(), X.length());
+    return *this;
+  }
+
+  Hash &operator<<(const clang::VersionTuple &VT) {
+    *this << VT.getAsString();
     return *this;
   }
 };

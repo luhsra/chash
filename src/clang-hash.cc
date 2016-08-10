@@ -32,35 +32,43 @@ public:
       TopLevelHashStream->write(HashString.c_str(), HashString.length());
       delete TopLevelHashStream;
     }
-    
-    errs() << "hash-start-time-ns " << std::chrono::duration_cast<std::chrono::nanoseconds>(start_hashing.time_since_epoch()).count() << "\n";
+
+    errs() << "hash-start-time-ns "
+           << std::chrono::duration_cast<std::chrono::nanoseconds>(
+                  start_hashing.time_since_epoch()).count() << "\n";
     errs() << "top-level-hash: " << HashString << "\n";
     errs() << "processed-bytes: " << ProcessedBytes << "\n";
-    errs() << "parse-time-ns: " << std::chrono::duration_cast<std::chrono::nanoseconds>(start_hashing-start_compilation).count() << "\n";
-    errs() << "hash-time-ns: " << std::chrono::duration_cast<std::chrono::nanoseconds>(finish_hashing-start_hashing).count() << "\n";
+    errs() << "parse-time-ns: "
+           << std::chrono::duration_cast<std::chrono::nanoseconds>(
+                  start_hashing - start_compilation).count() << "\n";
+    errs() << "hash-time-ns: "
+           << std::chrono::duration_cast<std::chrono::nanoseconds>(
+                  finish_hashing - start_hashing).count() << "\n";
     errs() << "element-hashes: [";
-    for (const auto & saved_hash : Visitor.DeclSilo) {
-        const Decl * decl = saved_hash.first;
-        const Hash::Digest & d = saved_hash.second;
-        // Only Top-level declarations
-        if (decl->getDeclContext() && isa<TranslationUnitDecl>(decl->getDeclContext())
-            && isa<NamedDecl>(decl)) {
-            if (isa<FunctionDecl>(decl)) errs() << "(\"function:";
-            else if (isa<VarDecl>(decl)) errs() << "(\"variable ";
-            else if (isa<RecordDecl>(decl)) errs() << "(\"record ";
-            else continue;
+    for (const auto &saved_hash : Visitor.DeclSilo) {
+      const Decl *decl = saved_hash.first;
+      const Hash::Digest &d = saved_hash.second;
+      // Only Top-level declarations
+      if (decl->getDeclContext() &&
+          isa<TranslationUnitDecl>(decl->getDeclContext()) &&
+          isa<NamedDecl>(decl)) {
+        if (isa<FunctionDecl>(decl))
+          errs() << "(\"function:";
+        else if (isa<VarDecl>(decl))
+          errs() << "(\"variable ";
+        else if (isa<RecordDecl>(decl))
+          errs() << "(\"record ";
+        else
+          continue;
 
-
-            errs() << cast<NamedDecl>(decl)->getName();
-            errs() << "\", \"";
-            errs() << d.asString();
-            errs() << "\"), ";
-
-        }
+        errs() << cast<NamedDecl>(decl)->getName();
+        errs() << "\", \"";
+        errs() << d.asString();
+        errs() << "\"), ";
+      }
     }
 
     errs() << "]\n";
-
   }
 
 private:
@@ -74,7 +82,8 @@ protected:
                                                  StringRef) override {
     // Write hash database to .o.hash if the compiler produces a object file
     raw_ostream *Out = nullptr;
-    if (CI.getFrontendOpts().OutputFile != "" && CI.getFrontendOpts().OutputFile != "/dev/null") {
+    if (CI.getFrontendOpts().OutputFile != "" &&
+        CI.getFrontendOpts().OutputFile != "/dev/null") {
       std::error_code Error;
       std::string HashFile = CI.getFrontendOpts().OutputFile + ".hash";
       Out = new raw_fd_ostream(HashFile, Error, sys::fs::F_Text);
@@ -90,7 +99,7 @@ protected:
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string> &arg) override {
-      start_compilation = std::chrono::high_resolution_clock::now();
+    start_compilation = std::chrono::high_resolution_clock::now();
 
     for (const std::string &Arg : arg) {
       errs() << " arg = " << Arg << "\n";
