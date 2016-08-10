@@ -261,11 +261,14 @@ def run_testcase_helper(test_case_opts, future):
         assert os.path.exists(source_file)
         assert not os.path.exists(object_file)
 
+        this_cc = get_tag(test_case, "compile-command-%s" % variant, compile_command)
+        this_cflags = get_tag(test_case, "compile-flags-%s" % variant, compile_flags)
+
         cmd = "{compiler} -c {source_file} -o {object_file} {flags}".format(
-            compiler=compile_command,
+            compiler=this_cc,
             source_file=source_file,
             object_file=object_file,
-            flags=compile_flags)
+            flags=this_cflags)
         (ret_compiler, x, _, __) = run_command(cmd)
         assert os.path.exists(source_file)
 
@@ -288,7 +291,7 @@ def run_testcase_helper(test_case_opts, future):
             cmd=hash_command,
             source_file=source_file,
             object_file=object_file, # Won't be overriden
-            flags=compile_flags)
+            flags=this_cflags)
         (ret_hasher, x, _, stderr) = run_command(cmd)
         if (LOGLEVEL >= LOGLEVEL_NORMAL and ret_hasher != 0 and not known_to_fail) or LOGLEVEL >= LOGLEVEL_DEBUG :
             output += x
