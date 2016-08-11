@@ -396,10 +396,11 @@ bool HashVisitor::VisitRecordType(const RecordType *RT) {
   }
 
   const RecordDecl *const RD = RT->getDecl();
-
+  topHash() << AstElementRecordDecl;
   inRecordType++; // increase and decrease inRecordType level
   hashDecl(RD);
   inRecordType--;
+  topHash() << ~AstElementRecordDecl;
 
   return true;
 }
@@ -860,6 +861,7 @@ bool HashVisitor::VisitIndirectFieldDecl(const IndirectFieldDecl *D) {
     hashDecl(*I);
   }
   VisitValueDecl(D);
+  topHash() << ~AstElementIndirectFieldDecl;
   return true;
 }
 
@@ -974,7 +976,7 @@ void HashVisitor::hashStmt(const Stmt *Node) {
   if (!Node)
     return;
 
-  bool Handled = mt_stmtvisitor::Visit(Node);
+  const bool Handled = mt_stmtvisitor::Visit(Node);
   if (!Handled) {
     errs() << "---- START unhandled statement ----\n";
     //    Node->dump();
@@ -994,6 +996,7 @@ bool HashVisitor::VisitCompoundStmt(const CompoundStmt *Node) {
        I != E; ++I) {
     hashStmt(*I);
   }
+  topHash() << ~AstElementCompoundStmt;
   return true;
 }
 
@@ -1041,6 +1044,7 @@ bool HashVisitor::VisitIfStmt(const IfStmt *Node) {
   topHash() << AstElementIfStmt;
   hashStmt(Node->getConditionVariableDeclStmt());
   hashStmt(Node->getCond());
+  errs() << "hash then block\n";
   hashStmt(Node->getThen());
   hashStmt(Node->getElse());
   return true;

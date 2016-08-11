@@ -301,9 +301,9 @@ protected:
     // TODO: sort these:
     AstElementImaginaryLiteral = 0xe340180e,
     AstElementOffsetOfNode = 0x17f2d532,
-    AstElementFieldDecl = 0xac0c83d4 // TODO!
+    AstElementFieldDecl = 0xac0c83d4,
 
-    // AstElement = 0x27892cea
+    AstElementRecordDecl = 0x27892cea
     // AstElement = 0x4ed393c3
     // AstElement = 0x2e2321ad
     // AstElement = 0xfe447195
