@@ -5,6 +5,8 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
+#include <fstream>
+#include <unistd.h>
 
 using namespace clang;
 using namespace llvm;
@@ -22,6 +24,31 @@ public:
     // will visit all nodes in the AST.
     Visitor.hashDecl(Context.getTranslationUnitDecl());
 
+    // Get command line arguments
+    const std::string PPID(std::to_string(getppid()));
+    const std::string FilePath = "/proc/" + PPID + "/cmdline";
+    std::ifstream CommandLine(FilePath);
+    if (CommandLine.good()) {
+      std::list<std::string> CommandLineArgs;
+      std::string Arg;
+      do {
+        getline(CommandLine, Arg, '\0');
+        if ("-o" == Arg) {
+          // throw away next parameter (name of outfile)
+          getline(CommandLine, Arg, '\0');
+          continue;
+        }
+        if (Arg.size() > 2 && Arg.compare(Arg.size() - 2, 2, ".c") == 0)
+          continue; // don't hash source filename
+
+        CommandLineArgs.push_back(Arg);
+      } while (Arg.size());
+
+      Visitor.hashCommandLine(CommandLineArgs);
+    } else {
+      errs() << "Warning: could not open file \"" << FilePath
+             << "\", cannot hash command line arguments.\n";
+    }
     const auto finish_hashing = std::chrono::high_resolution_clock::now();
 
     // Context.getTranslationUnitDecl()->dump();

@@ -414,6 +414,13 @@ void HashVisitor::hashName(const NamedDecl *ND) {
   }
 }
 
+void
+HashVisitor::hashCommandLine(const std::list<std::string> &CommandLineArgs) {
+  for (const auto &Arg : CommandLineArgs) {
+    TopLevelHash << Arg;
+  }
+}
+
 // Expressions
 bool HashVisitor::VisitCastExpr(const CastExpr *Node) {
   topHash() << AstElementCastExpr;

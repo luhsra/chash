@@ -73,6 +73,8 @@ public:
 
   void hashName(const NamedDecl *ND);
 
+  void hashCommandLine(const std::list<std::string> &CommandLineArgs);
+
   // C Declarations
   bool VisitTranslationUnitDecl(const TranslationUnitDecl *Unit);
   bool VisitVarDecl(const VarDecl *D);
