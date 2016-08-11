@@ -86,11 +86,11 @@ for commitID in getListOfCommits():
 
     buildTimes[commitID] = {}
     buildTimes[commitID]['filesChanged'] = changedInsertionsDeletions[0]
-    if "insertions" in lastLine: 
+    if "insertion" in lastLine: 
         buildTimes[commitID]['insertions'] = changedInsertionsDeletions[1]
-        if "deletions" in lastLine:
+        if "deletion" in lastLine:
             buildTimes[commitID]['deletions'] = changedInsertionsDeletions[2]
-    elif "deletions" in lastLine:
+    elif "deletion" in lastLine:
         buildTimes[commitID]['deletions'] = changedInsertionsDeletions[1]
 
     try:
