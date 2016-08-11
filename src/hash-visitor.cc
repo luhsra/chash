@@ -22,8 +22,7 @@ void HashVisitor::hashDecl(const Decl *D) {
   if (!D)
     return;
 
-  const Hash::Digest *const SavedDigest = getHash(D); // TODO: move to if-cond
-  if (SavedDigest) {
+  if (const Hash::Digest *const SavedDigest = getHash(D)) {
     topHash() << *SavedDigest;
     return;
   }
@@ -46,7 +45,7 @@ void HashVisitor::hashDecl(const Decl *D) {
 
   // Decls within functions are visited by the body.
   if (!isa<FunctionDecl>(*D) && hasNodes(dyn_cast<DeclContext>(D))) {
-    auto DC = cast<DeclContext>(D);
+    const auto DC = cast<DeclContext>(D);
     for (const auto *const Child : DC->noload_decls()) {
       if (isa<TranslationUnitDecl>(D)) {
         if (isa<TypedefDecl>(Child) || isa<RecordDecl>(Child) ||
@@ -54,13 +53,13 @@ void HashVisitor::hashDecl(const Decl *D) {
           continue;
 
         // Extern variable definitions at the top-level
-        if (auto var = dyn_cast<VarDecl>(Child)) {
+        if (const auto var = dyn_cast<VarDecl>(Child)) {
           if (var->hasExternalStorage()) {
             continue;
           }
         }
 
-        if (auto func = dyn_cast<FunctionDecl>(Child)) {
+        if (const auto func = dyn_cast<FunctionDecl>(Child)) {
           if (func->getStorageClass() == StorageClass::SC_Extern ||
               func->getStorageClass() == StorageClass::SC_PrivateExtern ||
               !func->isThisDeclarationADefinition()) {
@@ -191,7 +190,7 @@ void HashVisitor::hashType(const QualType &T) {
   const unsigned Depth = beforeDescent();
   const Hash *const CurrentHash = pushHash();
 
-  bool Handled = mt_typevisitor::Visit(ActualType);
+  const bool Handled = mt_typevisitor::Visit(ActualType);
   if (!Handled) {
     errs() << "---- START unhandled type -----\n";
     ActualType->dump();

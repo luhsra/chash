@@ -73,24 +73,23 @@ public:
                   finish_hashing - start_hashing).count() << "\n";
     errs() << "element-hashes: [";
     for (const auto &saved_hash : Visitor.DeclSilo) {
-      const Decl *decl = saved_hash.first;
-      const Hash::Digest &d = saved_hash.second;
+      const Decl *D = saved_hash.first;
+      const Hash::Digest &Dig = saved_hash.second;
       // Only Top-level declarations
-      if (decl->getDeclContext() &&
-          isa<TranslationUnitDecl>(decl->getDeclContext()) &&
-          isa<NamedDecl>(decl)) {
-        if (isa<FunctionDecl>(decl))
+      if (D->getDeclContext() &&
+          isa<TranslationUnitDecl>(D->getDeclContext()) && isa<NamedDecl>(D)) {
+        if (isa<FunctionDecl>(D))
           errs() << "(\"function:";
-        else if (isa<VarDecl>(decl))
+        else if (isa<VarDecl>(D))
           errs() << "(\"variable ";
-        else if (isa<RecordDecl>(decl))
+        else if (isa<RecordDecl>(D))
           errs() << "(\"record ";
         else
           continue;
 
-        errs() << cast<NamedDecl>(decl)->getName();
+        errs() << cast<NamedDecl>(D)->getName();
         errs() << "\", \"";
-        errs() << d.asString();
+        errs() << Dig.asString();
         errs() << "\"), ";
       }
     }
@@ -133,10 +132,10 @@ protected:
 
       // Example error handling.
       if (Arg == "-an-error") {
-        DiagnosticsEngine &D = CI.getDiagnostics();
-        unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-                                            "invalid argument '%0'");
-        D.Report(DiagID) << Arg;
+        DiagnosticsEngine &DiagEngine = CI.getDiagnostics();
+        const unsigned DiagID = DiagEngine.getCustomDiagID(
+            DiagnosticsEngine::Error, "invalid argument '%0'");
+        DiagEngine.Report(DiagID) << Arg;
         return false;
       }
     }
