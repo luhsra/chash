@@ -10,6 +10,6 @@ void foo()
 
 
 /*
- * check-name: BUG
+ * check-name: Assignment before/after block end (CompoundStmt)
  * assert-ast: A != B
  */
