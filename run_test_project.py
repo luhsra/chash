@@ -113,7 +113,7 @@ for commitID in getListOfCommits():
 
 #TODO: replace absolute path
 
-f = open("/home/cip/2015/yb90ifym/clang-hash/build/muslHashes/buildTimes_%s.info" % projectName, 'a')
+f = open("/home/cip/2015/yb90ifym/clang-hash/build/muslHashes/commitInfo_%s.info" % projectName, 'a')
 f.write(repr(buildTimes) + "\n")
 f.close()
 log("Finished at %s" % datetime.datetime.now())
