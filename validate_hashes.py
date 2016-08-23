@@ -127,7 +127,6 @@ def getSortedCommitIDList(fullRecord):
 ################################################################################
 
 def makeBuildTimeGraph(fullRecord):
-    commitNr = 0;
     sortedCommitIDs = getSortedCommitIDList(fullRecord)
     iterCommits = iter(sortedCommitIDs)
     prevCommit = fullRecord[next(iterCommits)]
@@ -181,7 +180,6 @@ def makeBuildTimeGraph(fullRecord):
             totalParsingTimes.append(totalParsingTime)
             totalHashingTimes.append(totalHashingTime)
 
-            commitNr += 1
             prevCommit = currentCommit        
 
     fig, ax = plt.subplots()
@@ -203,53 +201,70 @@ def makeBuildTimeGraph(fullRecord):
 ################################################################################
 
 def makeChangesGraph(fullRecord):
-    commitNr = 0;
     sortedCommitIDs = getSortedCommitIDList(fullRecord)
     iterCommits = iter(sortedCommitIDs)
     prevCommit = fullRecord[next(iterCommits)]
 
-#    if True:
-    with open(pathToRecords + "/../changes.csv", 'w') as f_changes:
-        f_changes.write("%s;%s;%s;%s\n" % ("commitHash", "differentAstHash", "differentObjHash", "same"))
+    differentAstHashes = []
+    differentObjHashes = []
+    sameHashes = []
+
+#    f_changes = open(pathToRecords + "/../changes.csv", 'w')
+#    f_changes.write("%s;%s;%s;%s\n" % ("commitHash", "differentAstHash", "differentObjHash", "same"))
  
-        for commitID in iterCommits:
-            currentCommit = fullRecord[commitID]
-            currentFiles = currentCommit['files']
-            prevFiles = prevCommit['files']
-            same = 0
-            differentAstHash = 0
-            differentObjHash = 0
-            print commitID
+    for commitID in iterCommits:
+        print commitID
+        
+        currentCommit = fullRecord[commitID]
+        currentFiles = currentCommit['files']
+        prevFiles = prevCommit['files']
+        same = 0
+        differentAstHash = 0
+        differentObjHash = 0
 
-            for filename in currentFiles:
-                if 'ast-hash' not in currentFiles[filename].keys():
-                    if filename[-2:] != '.s':
-                        print "ast-hash not in keys of file " + filename
+        for filename in currentFiles:
+            if 'ast-hash' not in currentFiles[filename].keys():
+                if filename[-2:] != '.s':
+                    print "ast-hash not in keys of file " + filename
+                continue
+            currentRecord = currentFiles[filename]
+            if filename not in prevFiles:
+                if 'src/' + filename in prevFiles:
+                    print "file %s changed place to src/" % filename
+                    prevRecord = prevFiles['src/' + filename]
+                else:
+                    print "ERROR, MISSING FILE: %s not in prev, continue with next commit" % filename
                     continue
-                currentRecord = currentFiles[filename]
-                if filename not in prevFiles:
-                    if 'src/' + filename in prevFiles:
-                        print "file %s changed place to src/" % filename
-                        prevRecord = prevFiles['src/' + filename]
-                    else:
-                        print "ERROR, MISSING FILE: %s not in prev, continue with next commit" % filename
-                        continue
-                else:
-                    prevRecord = prevFiles[filename]
+            else:
+                prevRecord = prevFiles[filename]
 
-                if prevRecord['object-hash'] != currentRecord['object-hash']:
-                    differentObjHash += 1
-                    differentAstHash += 1
-                elif prevRecord['ast-hash'] != currentRecord['ast-hash']:
-                    differentAstHash += 1
-                else:
-                    same += 1
-    
-            f_changes.write("%s;%s;%s;%s\n" % (commitID, differentAstHash, differentObjHash, same))
-            #TODO: don't save as csv, but also as dict!
-            commitNr += 1
-            prevCommit = currentCommit
+            if prevRecord['object-hash'] != currentRecord['object-hash']:
+                differentObjHash += 1
+                differentAstHash += 1
+            elif prevRecord['ast-hash'] != currentRecord['ast-hash']:
+                differentAstHash += 1
+            else:
+                same += 1
 
+        differentAstHashes.append(differentAstHash)
+        differentObjHashes.append(differentObjHash)
+        sameHashes.append(same)
+
+#        f_changes.write("%s;%s;%s;%s\n" % (commitID, differentAstHash, differentObjHash, same))
+        prevCommit = currentCommit
+
+    fig, ax = plt.subplots()
+
+    ax.plot(differentAstHashes, label='astHash differs')
+    ax.plot(differentObjHashes, label='objHash differs')
+    ax.plot(sameHashes, label='unchanged')
+
+    box = ax.get_position()
+    lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
+
+    plt.xlabel('commits')
+    plt.ylabel('#changes')
+    fig.savefig(pathToRecords + '/../changes.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 ################################################################################
 
@@ -259,9 +274,9 @@ if (len(sys.argv) > 1):
     pathToRecords = sys.argv[1]
     pathToFullRecordFile = pathToRecords + FULLRECORDFILENAME
 
-    print time.ctime()
+#    print time.ctime()
 
-    validateRecords()
+#    validateRecords()
 
     print time.ctime()
 
@@ -282,8 +297,8 @@ if (len(sys.argv) > 1):
         f.close()
         print "built full record, wrote to" + pathToFullRecordFile
 
-    makeBuildTimeGraph(fullRecord)
-    print "finished BuildTimeGraph"
+#    makeBuildTimeGraph(fullRecord)
+#    print "finished BuildTimeGraph"
     makeChangesGraph(fullRecord)
     print "finished ChangesGraph"
     
