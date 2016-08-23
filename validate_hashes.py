@@ -4,6 +4,9 @@ import fnmatch
 import os
 import sys
 from operator import itemgetter
+import time
+import matplotlib.pyplot as plt
+
 
 FULLRECORDFILENAME = "/../fullRecord.info"
 COMMITINFOFILENAME = "/../commitInfo_musl.info"
@@ -129,8 +132,15 @@ def makeBuildTimeGraph(fullRecord):
     iterCommits = iter(sortedCommitIDs)
     prevCommit = fullRecord[next(iterCommits)]
 
-    with open(pathToRecords + "/../times.csv", 'w') as f_times:
-        f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % ("commitHash", "buildTime", "optimalBuildTime", "astHashBuildTime", "compileTimeOnly", "withoutCompileTime", "totalParsingTime", "totalHashingTime"))
+    buildTimes = []
+    optimalBuildTimes = []
+    astHashBuildTimes = []
+    onlyCompileTimes = []
+    totalParsingTimes = []
+    totalHashingTimes = []
+    if True:
+#    with open(pathToRecords + "/../times.csv", 'w') as f_times:
+#        f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % ("commitHash", "buildTime", "optimalBuildTime", "astHashBuildTime", "compileTimeOnly", "withoutCompileTime", "totalParsingTime", "totalHashingTime"))
  
         for commitID in iterCommits:
             currentCommit = fullRecord[commitID]
@@ -140,30 +150,55 @@ def makeBuildTimeGraph(fullRecord):
             prevFiles = prevCommit['files']
             compileTimeOnly = 0 # ns
             totalParsingTime = 0 # ns
-        
+            totalHashingTime = 0 # ns
+
             for filename in currentFiles:
                 if 'ast-hash' not in currentFiles[filename].keys():
                     break
                 currentRecord = currentFiles[filename]
                 prevRecord = prevFiles[filename]
-            
-                compileTimeOnly += currentRecord['compile-duration'] # ns
+           
+                compileDuration = currentRecord['compile-duration'] / 10 # ns #TODO: /10-BUG
+                compileTimeOnly += compileDuration # ns
                 totalParsingTime += currentRecord['parse-duration'] # ns
+                totalHashingTime += currentRecord['hash-duration'] # ns
 
                 if prevRecord['object-hash'] == currentRecord['object-hash']:
-                    totalOptimalRedundantCompileTime += currentRecord['compile-duration'] # ns
+                    totalOptimalRedundantCompileTime += compileDuration #ns
                 if prevRecord['ast-hash'] == currentRecord['ast-hash']:
-                    totalASTHashRedundantCompileTime += currentRecord['compile-duration'] # ns
+                    totalASTHashRedundantCompileTime += compileDuration # ns
 
-            buildTime = currentCommit['build-time'] # ns
+            buildTime = currentCommit['build-time'] / 10 # ns #TODO: /10-BUG
             optimalBuildTime = buildTime - totalOptimalRedundantCompileTime # = buildTime - sum(compileTime(file) if objhash(file) unchanged)
             astHashBuildTime = buildTime - totalASTHashRedundantCompileTime # = buildTime - sum(compileTime(file) if asthash(file) unchanged)
 
-            f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % (commitID, buildTime, optimalBuildTime, astHashBuildTime, compileTimeOnly, buildTime - compileTimeOnly, totalParsingTime, buildTime - compileTimeOnly - totalParsingTime))
+#            f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % (commitID, buildTime, optimalBuildTime, astHashBuildTime, compileTimeOnly, buildTime - compileTimeOnly, totalParsingTime, totalHashingTime))
+        
+            buildTimes.append(buildTime)
+            optimalBuildTimes.append(optimalBuildTime)
+            astHashBuildTimes.append(astHashBuildTime)
+            onlyCompileTimes.append(compileTimeOnly)
+            totalParsingTimes.append(totalParsingTime)
+            totalHashingTimes.append(totalHashingTime)
 
             commitNr += 1
             prevCommit = currentCommit        
 
+    fig, ax = plt.subplots()
+
+    ax.plot(buildTimes, label='build time')
+    ax.plot(astHashBuildTimes, label='astHash build time')
+    ax.plot(optimalBuildTimes, label='optimal build time')
+    ax.plot(onlyCompileTimes, label='compile time only')
+    ax.plot(totalParsingTimes, label='total parsing time')
+    ax.plot(totalHashingTimes, label='total hashing time')
+
+    box = ax.get_position()
+    lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
+
+    plt.xlabel('commits')
+    plt.ylabel('time in ns')
+    fig.savefig(pathToRecords + '/../buildTimes.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 ################################################################################
 
@@ -173,6 +208,7 @@ def makeChangesGraph(fullRecord):
     iterCommits = iter(sortedCommitIDs)
     prevCommit = fullRecord[next(iterCommits)]
 
+#    if True:
     with open(pathToRecords + "/../changes.csv", 'w') as f_changes:
         f_changes.write("%s;%s;%s;%s\n" % ("commitHash", "differentAstHash", "differentObjHash", "same"))
  
@@ -196,7 +232,7 @@ def makeChangesGraph(fullRecord):
                         print "file %s changed place to src/" % filename
                         prevRecord = prevFiles['src/' + filename]
                     else:
-                        print "ERROR, MISSING FILE: %s not in prev, going on to next commit" % filename
+                        print "ERROR, MISSING FILE: %s not in prev, continue with next commit" % filename
                         continue
                 else:
                     prevRecord = prevFiles[filename]
@@ -223,7 +259,11 @@ if (len(sys.argv) > 1):
     pathToRecords = sys.argv[1]
     pathToFullRecordFile = pathToRecords + FULLRECORDFILENAME
 
+    print time.ctime()
+
     validateRecords()
+
+    print time.ctime()
 
     fullRecord = {}
     if os.path.isfile(pathToFullRecordFile):
@@ -233,7 +273,12 @@ if (len(sys.argv) > 1):
     else:
         fullRecord = buildFullRecord()
         f = open(pathToFullRecordFile, 'w')
-        f.write(repr(fullRecord) + "\n")
+        try:
+            f.write(repr(fullRecord) + "\n")
+        except MemoryError as me:
+            print me
+            print time.ctime()
+            raise
         f.close()
         print "built full record, wrote to" + pathToFullRecordFile
 
@@ -241,7 +286,8 @@ if (len(sys.argv) > 1):
     print "finished BuildTimeGraph"
     makeChangesGraph(fullRecord)
     print "finished ChangesGraph"
-
+    
+    print time.ctime()
 else:
     print "Missing path to record files.\nUsage:\n\t%s pathToRecords" % sys.argv[0]
 
