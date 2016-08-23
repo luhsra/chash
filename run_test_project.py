@@ -31,6 +31,13 @@ def checkout(commitID):
     subprocess.call(["git", "checkout", "-f", "-q", commitID])
 
 
+def getCommitTime(commitID):
+    os.chdir(pathToProject)
+    commitTime = check_output(["git", "show", "-s", "--format=%ct", commitID])
+    return commitTime.replace('\n', '')
+
+
+
 DEBUG = 1
 def log(message):
     if (DEBUG == 1):
@@ -85,6 +92,7 @@ for commitID in getListOfCommits():
     changedInsertionsDeletions = [int(s) for s in lastLine.split() if s.isdigit()]
 
     buildTimes[commitID] = {}
+    buildTimes[commitID]['commit-time'] = getCommitTime(commitID)
     buildTimes[commitID]['filesChanged'] = changedInsertionsDeletions[0]
     if "insertion" in lastLine: 
         buildTimes[commitID]['insertions'] = changedInsertionsDeletions[1]
@@ -103,7 +111,7 @@ for commitID in getListOfCommits():
     p = subprocess.Popen(["make", "-j16"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     retcode = p.wait()
-    buildTimes[commitID]['build-time'] = (time.time() - startTime) * 10e9 # nano
+    buildTimes[commitID]['build-time'] = (time.time() - startTime) * 10e9 # nano #TODO: 10e8?
     commitCounter += 1
     log("finished commit %s at %s" % (commitID, datetime.datetime.now()))
     if (commitsToHash > 0 and commitCounter >= commitsToHash):
