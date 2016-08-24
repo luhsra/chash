@@ -12,7 +12,7 @@ import sys
 projectName = "musl"
 pathToProject = os.path.abspath("../hash_projects/musl")
 clanghashWrapper = os.path.abspath("build/wrappers/clang")
-
+commitInfoFilePath = os.path.abspath("build/muslHashes/commitInfo_%s.info" % projectName)
 
 def getListOfCommits():
     """get all the commit ids from the project"""
@@ -48,13 +48,15 @@ def log(message):
 
 commitsToHash = 0
 commitsFrom = 0
-commitsTo = 0
 if len(sys.argv) > 2:
-    commitsToFrom = int(sys.argv[1])#TODO: finish this check if it is working
+    commitsFrom = int(sys.argv[1]) - 1
     commitsTo = int(sys.argv[2])
+    assert commitsFrom >= 0
+    assert commitsTo >= commitsFrom
+    commitsToHash = commitsTo - commitsFrom
 elif len(sys.argv) > 1:
     commitsToHash = int(sys.argv[1])
-    
+    assert commitsToHash > 0
 
 log("Starting at %s" % datetime.datetime.now())
 
@@ -67,7 +69,7 @@ checkout("master")
 commitCounter = 0
 buildTimes = {}
 for commitID in getListOfCommits():
-    if commitsFrom != 0:
+    if commitsFrom > commitCounter:
         commitCounter += 1
         continue
     os.environ['COMMIT_HASH'] = commitID
@@ -114,14 +116,10 @@ for commitID in getListOfCommits():
     buildTimes[commitID]['build-time'] = int((time.time() - startTime) * 1e9) # nano
     commitCounter += 1
     log("finished commit %s at %s" % (commitID, datetime.datetime.now()))
-    if (commitsToHash > 0 and commitCounter >= commitsToHash):
-        break
-    if (commitsTo > 0 and commitCounter > commitsTo):
+    if (commitsToHash > 0 and commitCounter >= (commitsToHash + commitsFrom)):
         break
 
-#TODO: replace absolute path
-
-f = open("/home/cip/2015/yb90ifym/clang-hash/build/muslHashes/commitInfo_%s.info" % projectName, 'a')
+f = open(commitInfoFilePath, 'a')
 f.write(repr(buildTimes) + "\n")
 f.close()
 log("Finished at %s" % datetime.datetime.now())
