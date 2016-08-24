@@ -111,7 +111,7 @@ for commitID in getListOfCommits():
     p = subprocess.Popen(["make", "-j16"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     retcode = p.wait()
-    buildTimes[commitID]['build-time'] = (time.time() - startTime) * 10e9 # nano #TODO: 10e8?
+    buildTimes[commitID]['build-time'] = (time.time() - startTime) * 1e9 # nano
     commitCounter += 1
     log("finished commit %s at %s" % (commitID, datetime.datetime.now()))
     if (commitsToHash > 0 and commitCounter >= commitsToHash):

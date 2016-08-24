@@ -31,7 +31,7 @@ if __name__ == "__main__":
     x = Popen([compiler, "-fplugin=" + plugin] + args,
               stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
     (stdout, stderr) = x.communicate()
-    compileTime = (time.time() - start_time) * 10e9 # nano
+    compileTime = (time.time() - start_time) * 1e9 # nano
     sys.stdout.write(stdout)
     sys.stderr.write(stderr)
     retcode = x.wait()
