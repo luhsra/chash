@@ -79,7 +79,7 @@ def validateHashes(recordList):
 #
 ################################################################################
 
-def buildFullRecord(pathToFullRecordFile):
+def buildFullRecordTo(pathToFullRecordFile):
     fullRecord = {}
     if os.path.isfile(pathToFullRecordFile):
         with open(pathToFullRecordFile, 'r') as fullRecordFile:
@@ -105,22 +105,11 @@ def buildFullRecord():
     '''Builds a complete record from all the single hash records.
        The records are grouped by the commitIDs'''
     fullRecord = {}
-#TODO: kann ja eigentlich das alles gleich mit in commitInfo reinschreiben/ergaenzen
     with open(pathToRecords + COMMITINFOFILENAME, 'r') as commitInfoFile:
-        commitInfo = eval(commitInfoFile.read())
-        #TODO: replace fillRecord[commitID] und commitInfo[commitID] with local vars/refs
-        for commitID in commitInfo:
-            fullRecord[commitID] = {}
-            fullRecord[commitID]['commit-time'] = commitInfo[commitID]['commit-time']
-            fullRecord[commitID]['build-time'] = commitInfo[commitID]['build-time']
+        fullRecord = eval(commitInfoFile.read())
+        for commitID in fullRecord:
             fullRecord[commitID]['files'] = {}
-            fullRecord[commitID]['filesChanged'] = commitInfo[commitID]['filesChanged'] #TODO: rename files-changed
             
-            if 'insertions' in commitInfo[commitID]:
-                fullRecord[commitID]['insertions'] = commitInfo[commitID]['insertions']
-            if 'deletions' in commitInfo[commitID]:
-                fullRecord[commitID]['deletions'] = commitInfo[commitID]['deletions']
-        
     for recordFilename in getListOfFiles(pathToRecords):
         for line in open(recordFilename):
             data = eval(line)
@@ -150,50 +139,50 @@ def makeBuildTimeGraph(fullRecord):
     onlyCompileTimes = []
     totalParsingTimes = []
     totalHashingTimes = []
-    if True:
-#    with open(pathToRecords + "/../times.csv", 'w') as f_times:
-#        f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % ("commitHash", "buildTime", "optimalBuildTime", "astHashBuildTime", "compileTimeOnly", "withoutCompileTime", "totalParsingTime", "totalHashingTime"))
+
+#    f_times = open(pathToRecords + "/../times.csv", 'w')
+#    f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % ("commitHash", "buildTime", "optimalBuildTime", "astHashBuildTime", "compileTimeOnly", "withoutCompileTime", "totalParsingTime", "totalHashingTime"))
  
-        for commitID in iterCommits:
-            currentCommit = fullRecord[commitID]
-            totalOptimalRedundantCompileTime = 0 # ns
-            totalASTHashRedundantCompileTime = 0 # ns
-            currentFiles = currentCommit['files']
-            prevFiles = prevCommit['files']
-            compileTimeOnly = 0 # ns
-            totalParsingTime = 0 # ns
-            totalHashingTime = 0 # ns
+    for commitID in iterCommits:
+        currentCommit = fullRecord[commitID]
+        totalOptimalRedundantCompileTime = 0 # ns
+        totalASTHashRedundantCompileTime = 0 # ns
+        currentFiles = currentCommit['files']
+        prevFiles = prevCommit['files']
+        compileTimeOnly = 0 # ns
+        totalParsingTime = 0 # ns
+        totalHashingTime = 0 # ns
 
-            for filename in currentFiles:
-                if 'ast-hash' not in currentFiles[filename].keys():
-                    break
-                currentRecord = currentFiles[filename]
-                prevRecord = prevFiles[filename]
+        for filename in currentFiles:
+            if 'ast-hash' not in currentFiles[filename].keys():
+                break
+            currentRecord = currentFiles[filename]
+            prevRecord = prevFiles[filename]
            
-                compileDuration = currentRecord['compile-duration'] / 10 # ns #TODO: /10-BUG
-                compileTimeOnly += compileDuration # ns
-                totalParsingTime += currentRecord['parse-duration'] # ns
-                totalHashingTime += currentRecord['hash-duration'] # ns
+            compileDuration = currentRecord['compile-duration'] / 10 # ns #TODO: /10-BUG
+            compileTimeOnly += compileDuration # ns
+            totalParsingTime += currentRecord['parse-duration'] # ns
+            totalHashingTime += currentRecord['hash-duration'] # ns
 
-                if prevRecord['object-hash'] == currentRecord['object-hash']:
-                    totalOptimalRedundantCompileTime += compileDuration #ns
-                if prevRecord['ast-hash'] == currentRecord['ast-hash']:
-                    totalASTHashRedundantCompileTime += compileDuration # ns
+            if prevRecord['object-hash'] == currentRecord['object-hash']:
+                totalOptimalRedundantCompileTime += compileDuration #ns
+            if prevRecord['ast-hash'] == currentRecord['ast-hash']:
+                totalASTHashRedundantCompileTime += compileDuration # ns
 
-            buildTime = currentCommit['build-time'] / 10 # ns #TODO: /10-BUG
-            optimalBuildTime = buildTime - totalOptimalRedundantCompileTime # = buildTime - sum(compileTime(file) if objhash(file) unchanged)
-            astHashBuildTime = buildTime - totalASTHashRedundantCompileTime # = buildTime - sum(compileTime(file) if asthash(file) unchanged)
+        buildTime = currentCommit['build-time'] / 10 # ns #TODO: /10-BUG
+        optimalBuildTime = buildTime - totalOptimalRedundantCompileTime # = buildTime - sum(compileTime(file) if objhash(file) unchanged)
+        astHashBuildTime = buildTime - totalASTHashRedundantCompileTime # = buildTime - sum(compileTime(file) if asthash(file) unchanged)
 
-#            f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % (commitID, buildTime, optimalBuildTime, astHashBuildTime, compileTimeOnly, buildTime - compileTimeOnly, totalParsingTime, totalHashingTime))
+#        f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % (commitID, buildTime, optimalBuildTime, astHashBuildTime, compileTimeOnly, buildTime - compileTimeOnly, totalParsingTime, totalHashingTime))
         
-            buildTimes.append(buildTime)
-            optimalBuildTimes.append(optimalBuildTime)
-            astHashBuildTimes.append(astHashBuildTime)
-            onlyCompileTimes.append(compileTimeOnly)
-            totalParsingTimes.append(totalParsingTime)
-            totalHashingTimes.append(totalHashingTime)
+        buildTimes.append(buildTime)
+        optimalBuildTimes.append(optimalBuildTime)
+        astHashBuildTimes.append(astHashBuildTime)
+        onlyCompileTimes.append(compileTimeOnly)
+        totalParsingTimes.append(totalParsingTime)
+        totalHashingTimes.append(totalHashingTime)
 
-            prevCommit = currentCommit        
+        prevCommit = currentCommit        
 
     fig, ax = plt.subplots()
 
@@ -297,14 +286,14 @@ if (len(sys.argv) > 1):
     validateRecords()
     print "finished validating at %s" % time.ctime()
 
-#    fullRecord = buildFullRecord(pathToFullRecordFile)
-#    print "finished building/loading full record at %s" % time.ctime()
+    fullRecord = buildFullRecordTo(pathToFullRecordFile)
+    print "finished building/loading full record at %s" % time.ctime()
 
-#    makeBuildTimeGraph(fullRecord)
-#    print "finished BuildTimeGraph at %s" % time.ctime()
+    makeBuildTimeGraph(fullRecord)
+    print "finished BuildTimeGraph at %s" % time.ctime()
 
-#    makeChangesGraph(fullRecord)
-#    print "finished ChangesGraph at %s" % time.ctime()
+    makeChangesGraph(fullRecord)
+    print "finished ChangesGraph at %s" % time.ctime()
     
     print "Finished at %s" % time.ctime()
 else:
