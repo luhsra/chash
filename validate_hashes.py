@@ -37,12 +37,11 @@ def validateRecords():
         validateHashes(records)
     print "Errors: %d, Infos: %d, Missing: %d" % (errorCount, astDifferObjSameCount, missingCount)
 
- 
+
 def validateHashes(recordList):
     #TODO: also sort this, perhaps execute on fullRecords or check against sorted commitIDs
     global errorCount, astDifferObjSameCount, missingCount
     #TODO: this method assumes that all records are from the same object file
-    recordList.reverse() # glaube die sind im moment falsch herum sortiert (neuester als erstes)
     iterRecords = iter(recordList)
     prevRecord = next(iterRecords)
     filename = prevRecord['filename']
@@ -53,19 +52,12 @@ def validateHashes(recordList):
         return
     
     for record in iterRecords:
-#TODO        if prevRecord['start-time'] > record['start-time']:
-#TODO            print "Error: wrong order of records"
-            #TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if prevRecord['start-time'] > record['start-time']:
+            print "Error: wrong order of records" #TODO: fix, then remove this
         if 'ast-hash' not in record.keys() or 'object-hash' not in record.keys():
             print "ERROR: stopping validating for file %s; no ast-hash available for commit %s" % (filename, record['commit-hash'])
             break
 
-#        if prevRecord['ast-hash'] == record['ast-hash']:
-#            if prevRecord['object-hash'] != record['object-hash']:
-#                printHashInfo("ast hashes same, object hashes differ", prevRecord, record)
-#                errorCount += 1
-        #TODO: deckt nicht das obere if auch alle faelle vom unteren mit ab?
-        #TODO: refactoren, das obere kann man weglassen...
         if prevRecord['object-hash'] != record['object-hash']:
             if prevRecord['ast-hash'] == record['ast-hash']:
                 printHashInfo("object hashes differ, ast hashes same", prevRecord, record)
@@ -87,12 +79,33 @@ def validateHashes(recordList):
 #
 ################################################################################
 
+def buildFullRecord(pathToFullRecordFile):
+    fullRecord = {}
+    if os.path.isfile(pathToFullRecordFile):
+        with open(pathToFullRecordFile, 'r') as fullRecordFile:
+            fullRecord = eval(fullRecordFile.read())
+            print "read full record from " + pathToFullRecordFile
+    else:
+        fullRecord = buildFullRecord()
+        f = open(pathToFullRecordFile, 'w')
+        try:
+            f.write(repr(fullRecord) + "\n")
+        except MemoryError as me:
+            print me
+            raise
+        finally:
+            print time.ctime()
+            f.close()
+        print "built full record, wrote to" + pathToFullRecordFile
+
+    return fullRecord
+
 
 def buildFullRecord():
     '''Builds a complete record from all the single hash records.
        The records are grouped by the commitIDs'''
     fullRecord = {}
-
+#TODO: kann ja eigentlich das alles gleich mit in commitInfo reinschreiben/ergaenzen
     with open(pathToRecords + COMMITINFOFILENAME, 'r') as commitInfoFile:
         commitInfo = eval(commitInfoFile.read())
         #TODO: replace fillRecord[commitID] und commitInfo[commitID] with local vars/refs
@@ -101,7 +114,7 @@ def buildFullRecord():
             fullRecord[commitID]['commit-time'] = commitInfo[commitID]['commit-time']
             fullRecord[commitID]['build-time'] = commitInfo[commitID]['build-time']
             fullRecord[commitID]['files'] = {}
-            fullRecord[commitID]['filesChanged'] = commitInfo[commitID]['filesChanged']
+            fullRecord[commitID]['filesChanged'] = commitInfo[commitID]['filesChanged'] #TODO: rename files-changed
             
             if 'insertions' in commitInfo[commitID]:
                 fullRecord[commitID]['insertions'] = commitInfo[commitID]['insertions']
@@ -208,6 +221,7 @@ def makeChangesGraph(fullRecord):
     differentAstHashes = []
     differentObjHashes = []
     sameHashes = []
+    fileCounts = []
 
 #    f_changes = open(pathToRecords + "/../changes.csv", 'w')
 #    f_changes.write("%s;%s;%s;%s\n" % ("commitHash", "differentAstHash", "differentObjHash", "same"))
@@ -221,6 +235,7 @@ def makeChangesGraph(fullRecord):
         same = 0
         differentAstHash = 0
         differentObjHash = 0
+        fileCount = 0
 
         for filename in currentFiles:
             if 'ast-hash' not in currentFiles[filename].keys():
@@ -246,24 +261,28 @@ def makeChangesGraph(fullRecord):
             else:
                 same += 1
 
+            fileCount += 1
+
         differentAstHashes.append(differentAstHash)
         differentObjHashes.append(differentObjHash)
         sameHashes.append(same)
+        fileCounts.append(fileCount)
 
 #        f_changes.write("%s;%s;%s;%s\n" % (commitID, differentAstHash, differentObjHash, same))
         prevCommit = currentCommit
 
     fig, ax = plt.subplots()
 
+    ax.plot(fileCounts, label='#objfiles')
+    ax.plot(sameHashes, label='unchanged')
     ax.plot(differentAstHashes, label='astHash differs')
     ax.plot(differentObjHashes, label='objHash differs')
-    ax.plot(sameHashes, label='unchanged')
 
     box = ax.get_position()
     lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
 
     plt.xlabel('commits')
-    plt.ylabel('#changes')
+    plt.ylabel('#files')
     fig.savefig(pathToRecords + '/../changes.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 ################################################################################
@@ -273,36 +292,21 @@ def makeChangesGraph(fullRecord):
 if (len(sys.argv) > 1):
     pathToRecords = sys.argv[1]
     pathToFullRecordFile = pathToRecords + FULLRECORDFILENAME
+    print "Starting at %s" % time.ctime()
 
-#    print time.ctime()
+    validateRecords()
+    print "finished validating at %s" % time.ctime()
 
-#    validateRecords()
-
-    print time.ctime()
-
-    fullRecord = {}
-    if os.path.isfile(pathToFullRecordFile):
-        with open(pathToFullRecordFile, 'r') as fullRecordFile:
-            fullRecord = eval(fullRecordFile.read())
-            print "read full record from " + pathToFullRecordFile
-    else:
-        fullRecord = buildFullRecord()
-        f = open(pathToFullRecordFile, 'w')
-        try:
-            f.write(repr(fullRecord) + "\n")
-        except MemoryError as me:
-            print me
-            print time.ctime()
-            raise
-        f.close()
-        print "built full record, wrote to" + pathToFullRecordFile
+#    fullRecord = buildFullRecord(pathToFullRecordFile)
+#    print "finished building/loading full record at %s" % time.ctime()
 
 #    makeBuildTimeGraph(fullRecord)
-#    print "finished BuildTimeGraph"
-    makeChangesGraph(fullRecord)
-    print "finished ChangesGraph"
+#    print "finished BuildTimeGraph at %s" % time.ctime()
+
+#    makeChangesGraph(fullRecord)
+#    print "finished ChangesGraph at %s" % time.ctime()
     
-    print time.ctime()
+    print "Finished at %s" % time.ctime()
 else:
     print "Missing path to record files.\nUsage:\n\t%s pathToRecords" % sys.argv[0]
 
