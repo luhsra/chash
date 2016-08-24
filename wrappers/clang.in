@@ -50,7 +50,6 @@ if __name__ == "__main__":
         # PROJECT=musl COMMIT_HASH=`git log -1 --pretty="%H"` make
         record = {
             'project': os.environ.get("PROJECT"),
-            'time': time.time(), # Record current time to always find the most recent record.
             'commit-hash': os.environ.get("COMMIT_HASH"),
             'filename': args[-1], #TODO: does this assumption hold?
             'return-code': retcode,
