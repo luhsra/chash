@@ -81,22 +81,24 @@ def validateHashes(recordList):
 
 def buildFullRecordTo(pathToFullRecordFile):
     fullRecord = {}
-    if os.path.isfile(pathToFullRecordFile):
-        with open(pathToFullRecordFile, 'r') as fullRecordFile:
-            fullRecord = eval(fullRecordFile.read())
-            print "read full record from " + pathToFullRecordFile
-    else:
-        fullRecord = buildFullRecord()
-        f = open(pathToFullRecordFile, 'w')
-        try:
-            f.write(repr(fullRecord) + "\n")
-        except MemoryError as me:
-            print me
-            raise
-        finally:
-            print time.ctime()
-            f.close()
-        print "built full record, wrote to" + pathToFullRecordFile
+    # this leads to being Killed by OS due to tremendous memory consumtion...
+    #if os.path.isfile(pathToFullRecordFile):
+    #    with open(pathToFullRecordFile, 'r') as fullRecordFile:
+    #        print "loading full record from " + pathToFullRecordFile
+    #        fullRecord = eval(fullRecordFile.read())
+    #        print "read full record from " + pathToFullRecordFile
+    #else:
+    fullRecord = buildFullRecord()
+    f = open(pathToFullRecordFile, 'w')
+    try:
+        f.write(repr(fullRecord) + "\n")
+    except MemoryError as me:
+        print me
+        raise
+    finally:
+        print time.ctime()
+        f.close()
+    print "built full record, wrote to" + pathToFullRecordFile
 
     return fullRecord
 
@@ -121,10 +123,10 @@ def buildFullRecord():
 
     return fullRecord
 
+################################################################################
 
 def getSortedCommitIDList(fullRecord):
     return sorted(fullRecord, key=lambda x: (fullRecord[x]['commit-time']))
-
 
 ################################################################################
 
@@ -156,6 +158,9 @@ def makeBuildTimeGraph(fullRecord):
         for filename in currentFiles:
             if 'ast-hash' not in currentFiles[filename].keys():
                 break
+            if filename not in prevFiles:
+                break
+ 
             currentRecord = currentFiles[filename]
             prevRecord = prevFiles[filename]
            
