@@ -46,44 +46,51 @@ if __name__ == "__main__":
         else:
             objectfile_data = None
 
+        filename = ""
+        for arg in args:
+            if arg[-2:] == '.c':
+                filename = arg
+                break
+        
+        if filename != "": # don't need non-C-files
         # Just use to set commit hash and project identifier from the outside
         # PROJECT=musl COMMIT_HASH=`git log -1 --pretty="%H"` make
-        record = {
-            'project': os.environ.get("PROJECT"),
-            'commit-hash': os.environ.get("COMMIT_HASH"),
-            'filename': args[-1], #TODO: does this assumption hold?
-            'return-code': retcode,
-            'compile-duration': compileTime,
-            'object-hash': objectfile_hash,
-            'start-time': start_time,
-            'object-file-size': os.stat(objectfile).st_size,
-        }
+            record = {
+                'project': os.environ.get("PROJECT"),
+                'commit-hash': os.environ.get("COMMIT_HASH"),
+                'filename': filename,
+                'return-code': retcode,
+                'compile-duration': compileTime,
+                'object-hash': objectfile_hash,
+                'start-time': start_time,
+                'object-file-size': os.stat(objectfile).st_size,
+            }
 
-        lines = stderr.split("\n")
-        for line in lines:
-            if line.startswith("top-level-hash"):
-                record['ast-hash'] = line.split()[1]
-            elif line.startswith("processed-bytes:"):
-                record['processed-bytes'] = int(line.split()[1])
-            elif 0 == line.find("hash-time-ns:"):
-                record['hash-duration'] = int(line.split()[1])
-            elif line.startswith("parse-time-ns:"):
-                record['parse-duration'] = int(line.split()[1])
-            elif line.startswith("element-hashes:"):
-                data = line[len('element-hashes:'):]
-                try:
-                    record['element-hashes'] = eval(data)
-                except RuntimeError as e:
-                    print e
-                    pass
-            elif line.startswith("hash-start-time-ns"):
-                record['hash-start-time'] = int(line.split()[1])
+            lines = stderr.split("\n")
+            for line in lines:
+                if line.startswith("top-level-hash"):
+                    record['ast-hash'] = line.split()[1]
+                elif line.startswith("processed-bytes:"):
+                    record['processed-bytes'] = int(line.split()[1])
+                elif 0 == line.find("hash-time-ns:"):
+                    record['hash-duration'] = int(line.split()[1])
+                elif line.startswith("parse-time-ns:"):
+                    record['parse-duration'] = int(line.split()[1])
+                elif line.startswith("element-hashes:"):
+                    data = line[len('element-hashes:'):]
+                    try:
+                        record['element-hashes'] = eval(data)
+                    except RuntimeError as e:
+                        print e
+                        pass
+                elif line.startswith("hash-start-time-ns"):
+                    record['hash-start-time'] = int(line.split()[1])
 
-        outputPath = outputDir + "/" + os.path.dirname(objectfile)
-        mkpath(outputPath)
-        f = open(outputDir + "/" + objectfile + ".info", 'a')
-        f.write(repr(record) + "\n")
-        f.close()
+            outputPath = outputDir + "/" + os.path.dirname(objectfile)
+            mkpath(outputPath)
+            f = open(outputDir + "/" + objectfile + ".info", 'a')
+            f.write(repr(record) + "\n")
+            f.close()
 
 
     sys.exit(retcode)
