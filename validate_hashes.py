@@ -79,6 +79,41 @@ def validateHashes(recordList):
 #
 ################################################################################
 
+
+keyTranslationToNr = {
+    'start-time':       0,
+    'hash-start-time':  1,
+    'object-hash':      2,
+    'return-code':      3,
+    'parse-duration':   4,
+    'object-file-size': 5,
+    'processed-bytes':  6,
+    'hash-duration':    7,
+    'filename':         8,
+    'project':          9,
+    'compile-duration': 10,
+    'ast-hash':         11,
+    'commit-hash':      12,
+    'element-hashes':   13,
+    'commit-time':      14,
+    'build-time':       15,
+    'files':            16,
+    'filesChanged':     17,
+    'insertions':       18,
+    'deletions':        19,
+    'time':200 #backwards compatibility, remove
+}
+keyTranslationFromNr = {v: k for k, v in keyTranslationToNr.items()}
+
+keyTranslation = keyTranslationToNr.copy()
+keyTranslation.update(keyTranslationFromNr)
+
+
+def tr(key):
+    return keyTranslation[key]
+
+
+
 def buildFullRecordTo(pathToFullRecordFile):
     fullRecord = {}
     # this leads to being Killed by OS due to tremendous memory consumtion...
@@ -98,7 +133,7 @@ def buildFullRecordTo(pathToFullRecordFile):
     finally:
         print time.ctime()
         f.close()
-    print "built full record, wrote to" + pathToFullRecordFile
+    print "built full record, wrote to " + pathToFullRecordFile
 
     return fullRecord
 
@@ -108,25 +143,35 @@ def buildFullRecord():
        The records are grouped by the commitIDs'''
     fullRecord = {}
     with open(pathToRecords + COMMITINFOFILENAME, 'r') as commitInfoFile:
-        fullRecord = eval(commitInfoFile.read())
-        for commitID in fullRecord:
-            fullRecord[commitID]['files'] = {}
+        commitInfo = eval(commitInfoFile.read())
+        for commitID in commitInfo:
+            fullRecord[commitID] = {}
+            fullRecord[commitID][tr('commit-time')] = commitInfo[commitID]['commit-time']
+            fullRecord[commitID][tr('build-time')] = commitInfo[commitID]['build-time']
+            fullRecord[commitID][tr('files')] = {}
+            fullRecord[commitID][tr('filesChanged')] = commitInfo[commitID]['filesChanged'] #TODO: rename files-changed
             
+            if 'insertions' in commitInfo[commitID]:
+                fullRecord[commitID][tr('insertions')] = commitInfo[commitID]['insertions']
+            if 'deletions' in commitInfo[commitID]:
+                fullRecord[commitID][tr('deletions')] = commitInfo[commitID]['deletions']
+
     for recordFilename in getListOfFiles(pathToRecords):
         for line in open(recordFilename):
             data = eval(line)
             commitID = data['commit-hash']
             del data['commit-hash']
             filename = data['filename']
-            del data['filename']       
-            fullRecord[commitID]['files'][filename] = data
+            del data['filename']
+            dataNewKeys = {tr(k): v for k, v in data.items()} 
+            fullRecord[commitID][tr('files')][filename] = dataNewKeys
 
     return fullRecord
 
 ################################################################################
 
 def getSortedCommitIDList(fullRecord):
-    return sorted(fullRecord, key=lambda x: (fullRecord[x]['commit-time']))
+    return sorted(fullRecord, key=lambda x: (fullRecord[x][tr('commit-time')]))
 
 ################################################################################
 
@@ -149,32 +194,32 @@ def makeBuildTimeGraph(fullRecord):
         currentCommit = fullRecord[commitID]
         totalOptimalRedundantCompileTime = 0 # ns
         totalASTHashRedundantCompileTime = 0 # ns
-        currentFiles = currentCommit['files']
-        prevFiles = prevCommit['files']
+        currentFiles = currentCommit[tr('files')]
+        prevFiles = prevCommit[tr('files')]
         compileTimeOnly = 0 # ns
         totalParsingTime = 0 # ns
         totalHashingTime = 0 # ns
-
+        
         for filename in currentFiles:
-            if 'ast-hash' not in currentFiles[filename].keys():
+            if tr('ast-hash') not in currentFiles[filename].keys():
                 break
             if filename not in prevFiles:
                 break
- 
+
             currentRecord = currentFiles[filename]
             prevRecord = prevFiles[filename]
-           
-            compileDuration = currentRecord['compile-duration'] / 10 # ns #TODO: /10-BUG
-            compileTimeOnly += compileDuration # ns
-            totalParsingTime += currentRecord['parse-duration'] # ns
-            totalHashingTime += currentRecord['hash-duration'] # ns
 
-            if prevRecord['object-hash'] == currentRecord['object-hash']:
+            compileDuration = currentRecord[tr('compile-duration')]# /20 # ns
+            compileTimeOnly += compileDuration # ns
+            totalParsingTime += currentRecord[tr('parse-duration')]# /20 # ns
+            totalHashingTime += currentRecord[tr('hash-duration')] # ns
+
+            if prevRecord[tr('object-hash')] == currentRecord[tr('object-hash')]:
                 totalOptimalRedundantCompileTime += compileDuration #ns
-            if prevRecord['ast-hash'] == currentRecord['ast-hash']:
+            if prevRecord[tr('ast-hash')] == currentRecord[tr('ast-hash')]:
                 totalASTHashRedundantCompileTime += compileDuration # ns
 
-        buildTime = currentCommit['build-time'] / 10 # ns #TODO: /10-BUG
+        buildTime = currentCommit[tr('build-time')] # ns
         optimalBuildTime = buildTime - totalOptimalRedundantCompileTime # = buildTime - sum(compileTime(file) if objhash(file) unchanged)
         astHashBuildTime = buildTime - totalASTHashRedundantCompileTime # = buildTime - sum(compileTime(file) if asthash(file) unchanged)
 
@@ -187,7 +232,7 @@ def makeBuildTimeGraph(fullRecord):
         totalParsingTimes.append(totalParsingTime)
         totalHashingTimes.append(totalHashingTime)
 
-        prevCommit = currentCommit        
+        prevCommit = currentCommit
 
     fig, ax = plt.subplots()
 
@@ -221,18 +266,17 @@ def makeChangesGraph(fullRecord):
 #    f_changes.write("%s;%s;%s;%s\n" % ("commitHash", "differentAstHash", "differentObjHash", "same"))
  
     for commitID in iterCommits:
-        print commitID
         
         currentCommit = fullRecord[commitID]
-        currentFiles = currentCommit['files']
-        prevFiles = prevCommit['files']
+        currentFiles = currentCommit[tr('files')]
+        prevFiles = prevCommit[tr('files')]
         same = 0
         differentAstHash = 0
         differentObjHash = 0
         fileCount = 0
 
         for filename in currentFiles:
-            if 'ast-hash' not in currentFiles[filename].keys():
+            if tr('ast-hash') not in currentFiles[filename].keys():
                 if filename[-2:] != '.s':
                     print "ast-hash not in keys of file " + filename
                 continue
@@ -247,10 +291,10 @@ def makeChangesGraph(fullRecord):
             else:
                 prevRecord = prevFiles[filename]
 
-            if prevRecord['object-hash'] != currentRecord['object-hash']:
+            if prevRecord[tr('object-hash')] != currentRecord[tr('object-hash')]:
                 differentObjHash += 1
                 differentAstHash += 1
-            elif prevRecord['ast-hash'] != currentRecord['ast-hash']:
+            elif prevRecord[tr('ast-hash')] != currentRecord[tr('ast-hash')]:
                 differentAstHash += 1
             else:
                 same += 1
@@ -288,8 +332,8 @@ if (len(sys.argv) > 1):
     pathToFullRecordFile = pathToRecords + FULLRECORDFILENAME
     print "Starting at %s" % time.ctime()
 
-    validateRecords()
-    print "finished validating at %s" % time.ctime()
+#    validateRecords()
+#    print "finished validating at %s" % time.ctime()
 
     fullRecord = buildFullRecordTo(pathToFullRecordFile)
     print "finished building/loading full record at %s" % time.ctime()
@@ -297,8 +341,8 @@ if (len(sys.argv) > 1):
     makeBuildTimeGraph(fullRecord)
     print "finished BuildTimeGraph at %s" % time.ctime()
 
-    makeChangesGraph(fullRecord)
-    print "finished ChangesGraph at %s" % time.ctime()
+#    makeChangesGraph(fullRecord)
+#    print "finished ChangesGraph at %s" % time.ctime()
     
     print "Finished at %s" % time.ctime()
 else:
