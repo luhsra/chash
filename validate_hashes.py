@@ -8,6 +8,7 @@ import time
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
+import matplotlib.mlab as mlab
 
 
 FULLRECORDFILENAME = "/../fullRecord.info"
@@ -207,6 +208,7 @@ def makeBuildTimeGraph(fullRecord):
         totalHashDuration = 0 # ns
         for filename in currentFiles:
             if tr('ast-hash') not in currentFiles[filename].keys():
+                #TODO: s.u., fix!
                 continue
             if filename not in prevFiles:
                 continue
@@ -280,6 +282,92 @@ def makeBuildTimeGraph(fullRecord):
     fig.savefig(pathToRecords + '/../buildTimeComposition.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
+################################################################################
+
+def makeTimeHistograms(fullRecord):
+    #TODO: for parsing, hashing, compiling
+    sortedCommitIDs = getSortedCommitIDList(fullRecord)
+    iterCommits = iter(sortedCommitIDs)
+    prevCommit = fullRecord[next(iterCommits)]
+
+    #TODO: den ersten commit auch behandeln!!!
+
+    parseTimes = []
+    hashTimes = []
+    compileTimes = []
+
+    currentFiles = prevCommit[tr('files')]
+    for filename in currentFiles:
+        if tr('ast-hash') not in currentFiles[filename].keys():
+            print "error: missing AST hash for file %s" % filename
+            continue
+        parseTime = currentFiles[filename][tr('parse-duration')] / 1e6 # ns to ms
+        parseTimes.append(parseTime) 
+        hashTime = currentFiles[filename][tr('hash-duration')] / 1e6
+        hashTimes.append(hashTime) 
+        compileTime = currentFiles[filename][tr('compile-duration')] / 1e6
+        compileTimes.append(compileTime) 
+
+
+
+    for commitID in iterCommits:
+        currentCommit = fullRecord[commitID] 
+        currentFiles = currentCommit[tr('files')]
+        prevFiles = prevCommit[tr('files')]
+
+        for filename in currentFiles:
+            if tr('ast-hash') not in currentFiles[filename].keys():
+                print "error: missing AST hash for file %s" % filename
+                continue
+            if filename not in prevFiles:
+                continue
+    
+            currentRecord = currentFiles[filename]
+            prevRecord = prevFiles[filename]
+
+            if prevRecord[tr('object-hash')] != currentRecord[tr('object-hash')]:
+                parseTime = currentFiles[filename][tr('parse-duration')] / 1e6 # ns to ms
+                parseTimes.append(parseTime) 
+                hashTime = currentFiles[filename][tr('hash-duration')] / 1e6
+                hashTimes.append(hashTime) 
+                compileTime = currentFiles[filename][tr('compile-duration')] / 1e6
+                compileTimes.append(compileTime) 
+
+
+
+
+    #TODO: understand params and vars
+    hist, bins = np.histogram(parseTimes, bins=50)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+    fig, ax = plt.subplots()
+    plt.xlabel('time')
+    plt.ylabel('#files')
+    ax.bar(center, hist, align='center', width=width)
+    fig.savefig(pathToRecords + '/../parseTimeHistogram.png')#, bbox_extra_artists=(lgd,), bbox_inche    s='tight')
+
+
+    hist, bins = np.histogram(hashTimes, bins=50)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+    fig, ax = plt.subplots()
+    plt.xlabel('time')
+    plt.ylabel('#files')
+    ax.bar(center, hist, align='center', width=width)
+    fig.savefig(pathToRecords + '/../hashTimeHistogram.png')#, bbox_extra_artists=(lgd,), bbox_inche    s='tight')
+
+
+    hist, bins = np.histogram(compileTimes, bins=50)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+    fig, ax = plt.subplots()
+    plt.xlabel('time')
+    plt.ylabel('#files')
+    ax.bar(center, hist, align='center', width=width)
+    fig.savefig(pathToRecords + '/../compileTimeHistogram.png')#, bbox_extra_artists=(lgd,), bbox_inche    s='tight')
+
+
+
 
 ################################################################################
 
@@ -297,7 +385,6 @@ def makeChangesGraph(fullRecord):
 #    f_changes.write("%s;%s;%s;%s\n" % ("commitHash", "differentAstHash", "differentObjHash", "same"))
  
     for commitID in iterCommits:
-        
         currentCommit = fullRecord[commitID]
         currentFiles = currentCommit[tr('files')]
         prevFiles = prevCommit[tr('files')]
@@ -369,6 +456,9 @@ if (len(sys.argv) > 1):
 
     makeBuildTimeGraph(fullRecord)
     print "finished BuildTimeGraph at %s" % time.ctime()
+
+    makeTimeHistograms(fullRecord)
+    print "finished timeHistograms at %s" % time.ctime()
 
     makeChangesGraph(fullRecord)
     print "finished ChangesGraph at %s" % time.ctime()
