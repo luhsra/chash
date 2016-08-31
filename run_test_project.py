@@ -8,6 +8,9 @@ import datetime
 import time
 import sys
 
+make_j = 16
+
+
 #TODO: make paths independent => make project path command line argument!
 projectName = "musl"
 pathToProject = os.path.abspath("../hash_projects/musl")
@@ -48,6 +51,7 @@ def log(message):
 
 commitsToHash = 0
 commitsFrom = 0
+sliceID = '-1' 
 if len(sys.argv) > 2:
     commitsFrom = int(sys.argv[1]) - 1
     commitsTo = int(sys.argv[2])
@@ -58,16 +62,22 @@ elif len(sys.argv) > 1:
     commitsToHash = int(sys.argv[1])
     assert commitsToHash > 0
 
+for i in range(0, len(sys.argv)):
+    if sys.argv[i] == '-id':
+       sliceID = sys.argv[i] 
+ 
+
 log("Starting at %s" % datetime.datetime.now())
 
 os.environ['CC'] = clanghashWrapper
 os.environ['PROJECT'] = projectName
+os.environ['SLICE_ID'] = sliceID
 
 #reset to latest version
 checkout("master")
 
 commitCounter = 0
-buildTimes = {}
+commitInfo = {}
 for commitID in getListOfCommits():
     if commitsFrom > commitCounter:
         commitCounter += 1
@@ -93,34 +103,36 @@ for commitID in getListOfCommits():
     lastLine = lines[index]
     changedInsertionsDeletions = [int(s) for s in lastLine.split() if s.isdigit()]
 
-    buildTimes[commitID] = {}
-    buildTimes[commitID]['commit-time'] = getCommitTime(commitID)
-    buildTimes[commitID]['filesChanged'] = changedInsertionsDeletions[0]
+    commitInfo[commitID] = {}
+    commitInfo[commitID]['commit-time'] = int(getCommitTime(commitID))
+    commitInfo[commitID]['files-changed'] = changedInsertionsDeletions[0]
     if "insertion" in lastLine: 
-        buildTimes[commitID]['insertions'] = changedInsertionsDeletions[1]
+        commitInfo[commitID]['insertions'] = changedInsertionsDeletions[1]
         if "deletion" in lastLine:
-            buildTimes[commitID]['deletions'] = changedInsertionsDeletions[2]
+            commitInfo[commitID]['deletions'] = changedInsertionsDeletions[2]
     elif "deletion" in lastLine:
-        buildTimes[commitID]['deletions'] = changedInsertionsDeletions[1]
+        commitInfo[commitID]['deletions'] = changedInsertionsDeletions[1]
 
     try:
+        configureStartTime = time.time() 
         subprocess.call(["./configure"])
-    except:
+        commitInfo[commitID]['configure-time'] = int((time.time() - configureStartTime) * 1e9) # ns
+    except OSError:
         print "no configure available anymore\n"
         break
-    log("calling make -j16")
+    log("calling make -j%d" % make_j)
     startTime = time.time()
-    p = subprocess.Popen(["make", "-j16"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(["make", "-j%d" % make_j], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     retcode = p.wait()
-    buildTimes[commitID]['build-time'] = int((time.time() - startTime) * 1e9) # nano
+    commitInfo[commitID]['build-time'] = int((time.time() - startTime) * 1e9) * make_j # nano * nr of threads
     commitCounter += 1
     log("finished commit %s at %s" % (commitID, datetime.datetime.now()))
     if (commitsToHash > 0 and commitCounter >= (commitsToHash + commitsFrom)):
         break
 
 f = open(commitInfoFilePath, 'a')
-f.write(repr(buildTimes) + "\n")
+f.write(repr(commitInfo) + "\n")
 f.close()
 log("Finished at %s" % datetime.datetime.now())
 log("Hashed commits: %d" % (commitCounter - commitsFrom))
