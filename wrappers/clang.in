@@ -8,6 +8,7 @@ import re
 import time
 from subprocess import *
 
+
 outputDir = os.path.abspath("${PROJECT_BINARY_DIR}/muslHashes")
 
 def mkpath(path):
@@ -48,7 +49,7 @@ if __name__ == "__main__":
 
         filename = ""
         for arg in args:
-            if arg[-2:] == '.c':
+            if arg.endswith('.c'):
                 filename = arg
                 break
         
@@ -59,8 +60,9 @@ if __name__ == "__main__":
                 'project': os.environ.get("PROJECT"),
                 'commit-hash': os.environ.get("COMMIT_HASH"),
                 'filename': filename,
+                'obj-file': objectfile,
                 'return-code': retcode,
-                'compile-duration': compileTime,
+                'compile-duration': compileTime, # time the compiler was running (incl. parse-duration)
                 'object-hash': objectfile_hash,
                 'start-time': start_time,
                 'object-file-size': os.stat(objectfile).st_size,
@@ -86,9 +88,15 @@ if __name__ == "__main__":
                 elif line.startswith("hash-start-time-ns"):
                     record['hash-start-time'] = int(line.split()[1])
 
+#            sliceID = os.environ.get("SLICE_ID")
+#            if sliceID == '-1':
+            outFilename = outputDir + "/" + objectfile + ".info"
+#            else:
+#                outFilename = outputDir + "/" + objectfile + "_" + sliceID + ".info"
+
             outputPath = outputDir + "/" + os.path.dirname(objectfile)
             mkpath(outputPath)
-            f = open(outputDir + "/" + objectfile + ".info", 'a')
+            f = open(outFilename, 'a')
             f.write(repr(record) + "\n")
             f.close()
 
