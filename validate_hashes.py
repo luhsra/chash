@@ -6,6 +6,8 @@ import sys
 from operator import itemgetter
 import time
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import numpy as np
 
 
 FULLRECORDFILENAME = "/../fullRecord.info"
@@ -91,17 +93,16 @@ keyTranslationToNr = {
     'hash-duration':    7,
     'filename':         8,
     'project':          9,
-    'compile-duration': 10,
+    'compile-duration': 10, # time the compiler was running (incl. parse-duration)
     'ast-hash':         11,
     'commit-hash':      12,
     'element-hashes':   13,
     'commit-time':      14,
-    'build-time':       15,
+    'build-time':       15, # time the 'make -jx' command took, times x 
     'files':            16,
-    'filesChanged':     17,
+    'files-changed':    17,
     'insertions':       18,
-    'deletions':        19,
-    'time':200 #backwards compatibility, remove
+    'deletions':        19
 }
 keyTranslationFromNr = {v: k for k, v in keyTranslationToNr.items()}
 
@@ -111,7 +112,6 @@ keyTranslation.update(keyTranslationFromNr)
 
 def tr(key):
     return keyTranslation[key]
-
 
 
 def buildFullRecordTo(pathToFullRecordFile):
@@ -149,7 +149,7 @@ def buildFullRecord():
             fullRecord[commitID][tr('commit-time')] = commitInfo[commitID]['commit-time']
             fullRecord[commitID][tr('build-time')] = commitInfo[commitID]['build-time']
             fullRecord[commitID][tr('files')] = {}
-            fullRecord[commitID][tr('filesChanged')] = commitInfo[commitID]['filesChanged'] #TODO: rename files-changed
+            fullRecord[commitID][tr('files-changed')] = commitInfo[commitID]['files-changed']
             
             if 'insertions' in commitInfo[commitID]:
                 fullRecord[commitID][tr('insertions')] = commitInfo[commitID]['insertions']
@@ -161,10 +161,12 @@ def buildFullRecord():
             data = eval(line)
             commitID = data['commit-hash']
             del data['commit-hash']
-            filename = data['filename']
-            del data['filename']
+            
+            objFilename = data['obj-file']
+            del data['obj-file']
+            
             dataNewKeys = {tr(k): v for k, v in data.items()} 
-            fullRecord[commitID][tr('files')][filename] = dataNewKeys
+            fullRecord[commitID][tr('files')][objFilename] = dataNewKeys
 
     return fullRecord
 
@@ -180,75 +182,104 @@ def makeBuildTimeGraph(fullRecord):
     iterCommits = iter(sortedCommitIDs)
     prevCommit = fullRecord[next(iterCommits)]
 
-    buildTimes = []
+    measuredBuildTimes = []
     optimalBuildTimes = []
-    astHashBuildTimes = []
-    onlyCompileTimes = []
-    totalParsingTimes = []
-    totalHashingTimes = []
+    optimalClangHashBuildTimes = []
+    realClangHashBuildTimes = []
 
-#    f_times = open(pathToRecords + "/../times.csv", 'w')
-#    f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % ("commitHash", "buildTime", "optimalBuildTime", "astHashBuildTime", "compileTimeOnly", "withoutCompileTime", "totalParsingTime", "totalHashingTime"))
+    parseTimes = []
+    hashTimes = []
+    compileTimes = []
+    diffToBuildTime = []
+
+    #f_times = open(pathToRecords + "/../times.csv", 'w')
+    #f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % ("commitHash", "buildTime", "optimalBuildTime", "astHashBuildTime", "compileTimeOnly", "withoutCompileTime", "totalParsingTime", "totalHashingTime"))
  
     for commitID in iterCommits:
         currentCommit = fullRecord[commitID]
+        totalOptimalRedundantTime = 0 # ns
         totalOptimalRedundantCompileTime = 0 # ns
         totalASTHashRedundantCompileTime = 0 # ns
         currentFiles = currentCommit[tr('files')]
         prevFiles = prevCommit[tr('files')]
-        compileTimeOnly = 0 # ns
-        totalParsingTime = 0 # ns
-        totalHashingTime = 0 # ns
-        
+        totalCompileDuration = 0 # ns # incl. parsing time #TODO:!!!
+        totalParseDuration = 0 # ns
+        totalHashDuration = 0 # ns
         for filename in currentFiles:
             if tr('ast-hash') not in currentFiles[filename].keys():
-                break
+                continue
             if filename not in prevFiles:
-                break
+                continue
 
             currentRecord = currentFiles[filename]
             prevRecord = prevFiles[filename]
 
-            compileDuration = currentRecord[tr('compile-duration')]# /20 # ns
-            compileTimeOnly += compileDuration # ns
-            totalParsingTime += currentRecord[tr('parse-duration')]# /20 # ns
-            totalHashingTime += currentRecord[tr('hash-duration')] # ns
+            parseDuration = currentRecord[tr('parse-duration')] # ns
+            hashDuration = currentRecord[tr('hash-duration')] # ns
+            compileDuration = currentRecord[tr('compile-duration')] - parseDuration # ns
 
+            totalParseDuration += parseDuration
+            totalHashDuration += hashDuration
+            totalCompileDuration += compileDuration
+ 
             if prevRecord[tr('object-hash')] == currentRecord[tr('object-hash')]:
-                totalOptimalRedundantCompileTime += compileDuration #ns
+                totalOptimalRedundantTime += compileDuration + hashDuration + parseDuration #ns
+                totalOptimalRedundantCompileTime += compileDuration
             if prevRecord[tr('ast-hash')] == currentRecord[tr('ast-hash')]:
                 totalASTHashRedundantCompileTime += compileDuration # ns
 
         buildTime = currentCommit[tr('build-time')] # ns
-        optimalBuildTime = buildTime - totalOptimalRedundantCompileTime # = buildTime - sum(compileTime(file) if objhash(file) unchanged)
-        astHashBuildTime = buildTime - totalASTHashRedundantCompileTime # = buildTime - sum(compileTime(file) if asthash(file) unchanged)
+        optimalBuildTime = buildTime - totalOptimalRedundantTime # = buildTime - sum((clangTime(file) + hashTime) if objhash(file) unchanged)
+        realAstHashBuildTime = buildTime - totalASTHashRedundantCompileTime # = buildTime - sum(compileTime(file) if asthash(file) unchanged)
+        optimalAstHashBuildTime = buildTime - totalOptimalRedundantCompileTime
 
-#        f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % (commitID, buildTime, optimalBuildTime, astHashBuildTime, compileTimeOnly, buildTime - compileTimeOnly, totalParsingTime, totalHashingTime))
-        
-        buildTimes.append(buildTime)
-        optimalBuildTimes.append(optimalBuildTime)
-        astHashBuildTimes.append(astHashBuildTime)
-        onlyCompileTimes.append(compileTimeOnly)
-        totalParsingTimes.append(totalParsingTime)
-        totalHashingTimes.append(totalHashingTime)
+        #f_times.write("%s;%s;%s;%s;%s;%s;%s;%s\n" % (commitID, buildTime, optimalBuildTime, astHashBuildTime, totalCompileDuration, buildTime - compileTimeOnly, totalParseDuration, totalHashDuration))
+
+
+        measuredBuildTimes.append(buildTime / 1e6) # nano to milli
+        optimalBuildTimes.append(optimalBuildTime / 1e6)
+        optimalClangHashBuildTimes.append(optimalAstHashBuildTime / 1e6)
+        realClangHashBuildTimes.append(realAstHashBuildTime / 1e6)
+
+        parseTimes.append(totalParseDuration / 1e9) # nano to seconds
+        hashTimes.append(totalHashDuration / 1e9)
+        compileTimes.append(totalCompileDuration / 1e9)
+        diffToBuildTime.append((buildTime - totalParseDuration - totalHashDuration - totalCompileDuration) / 1e9)
 
         prevCommit = currentCommit
 
+    # plot build time graph
+
     fig, ax = plt.subplots()
 
-    ax.plot(buildTimes, label='build time')
-    ax.plot(astHashBuildTimes, label='astHash build time')
+    ax.plot(measuredBuildTimes, label='measured build time')
+    ax.plot(realClangHashBuildTimes, label='real clang-hash build time')
+    ax.plot(optimalClangHashBuildTimes, label='optimal clang-hash build time')
     ax.plot(optimalBuildTimes, label='optimal build time')
-    ax.plot(onlyCompileTimes, label='compile time only')
-    ax.plot(totalParsingTimes, label='total parsing time')
-    ax.plot(totalHashingTimes, label='total hashing time')
 
-    box = ax.get_position()
     lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
 
     plt.xlabel('commits')
-    plt.ylabel('time in ns')
+    plt.ylabel('time in ms')
     fig.savefig(pathToRecords + '/../buildTimes.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+    # plot build time graph
+    x = np.arange(1, len(parseTimes)+1)
+
+    fig, ax = plt.subplots()
+    ax.stackplot(x, [parseTimes, hashTimes, compileTimes, diffToBuildTime], colors=['#008800','#FF0000','#0000FF', '#000000'])
+    plt.xlim(1,len(parseTimes))
+    plt.xlabel('commits')
+    plt.ylabel('time in s')
+    lgd = ax.legend([mpatches.Patch(color='#000000'),
+                     mpatches.Patch(color='#0000FF'),
+                     mpatches.Patch(color='#FF0000'),
+                     mpatches.Patch(color='#008800')],
+                    ['remaining build time','compile time', 'hash time', 'parse time'],
+                    loc='center left', bbox_to_anchor=(1, 0.5))
+    fig.savefig(pathToRecords + '/../buildTimeComposition.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+
 
 ################################################################################
 
@@ -277,8 +308,6 @@ def makeChangesGraph(fullRecord):
 
         for filename in currentFiles:
             if tr('ast-hash') not in currentFiles[filename].keys():
-                if filename[-2:] != '.s':
-                    print "ast-hash not in keys of file " + filename
                 continue
             currentRecord = currentFiles[filename]
             if filename not in prevFiles:
@@ -341,8 +370,8 @@ if (len(sys.argv) > 1):
     makeBuildTimeGraph(fullRecord)
     print "finished BuildTimeGraph at %s" % time.ctime()
 
-#    makeChangesGraph(fullRecord)
-#    print "finished ChangesGraph at %s" % time.ctime()
+    makeChangesGraph(fullRecord)
+    print "finished ChangesGraph at %s" % time.ctime()
     
     print "Finished at %s" % time.ctime()
 else:
