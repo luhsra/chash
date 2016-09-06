@@ -187,6 +187,7 @@ def getSortedCommitIDList(fullRecord):
 
 ################################################################################
 
+
 def plotBuildTimeGraph(measuredBuildTimes, realClangHashBuildTimes, optimalClangHashBuildTimes, optimalBuildTimes): # times in ms
     fig, ax = plt.subplots()
 
@@ -219,6 +220,42 @@ def plotBuildTimeCompositionGraph(parseTimes, hashTimes, compileTimes, diffToBui
                     loc='center left', bbox_to_anchor=(1, 0.5))
     fig.savefig(pathToRecords + '/../buildTimeComposition.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
 
+
+def plotTimeHistogram(times, filename):
+    #TODO: understand params and vars
+    hist, bins = np.histogram(times, bins=50)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+    fig, ax = plt.subplots()
+    plt.xlabel('time [ms]')
+    plt.ylabel('#files')
+    ax.bar(center, hist, align='center', width=width)
+    fig.savefig(pathToRecords + filename)#, bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+
+def plotTimeHistograms(parseTimes, hashTimes, compileTimes): # times in ms
+    plotTimeHistogram(parseTimes, '/../parseTimeHistogram.png')
+    plotTimeHistogram(hashTimes, '/../hashTimeHistogram.png')
+    plotTimeHistogram(compileTimes, '/../compileTimeHistogram.png')
+
+
+def plotChangesGraph(fileCounts, sameHashes, differentAstHashes, differentObjHashes):
+    fig, ax = plt.subplots()
+
+    ax.plot(fileCounts, label='#objfiles')
+    ax.plot(sameHashes, label='unchanged')
+    ax.plot(differentAstHashes, label='astHash differs')
+    ax.plot(differentObjHashes, label='objHash differs')
+
+    box = ax.get_position()
+    lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
+
+    plt.xlabel('commits')
+    plt.ylabel('#files')
+    fig.savefig(pathToRecords + '/../changes.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+
+################################################################################
 
 
 def makeBuildTimeGraph(fullRecord):
@@ -301,19 +338,18 @@ def makeBuildTimeGraph(fullRecord):
 ################################################################################
 
 def makeTimeHistograms(fullRecord):
-    #TODO: for parsing, hashing, compiling
+    '''plot histograms for parsing, hashing, compiling'''
+
     sortedCommitIDs = getSortedCommitIDList(fullRecord)
     iterCommits = iter(sortedCommitIDs)
     prevCommit = fullRecord[next(iterCommits)]
-
-    #TODO: den ersten commit auch behandeln!!!
 
     parseTimes = []
     hashTimes = []
     compileTimes = []
 
     currentFiles = prevCommit[tr('files')]
-    for filename in currentFiles:
+    for filename in currentFiles: # deal with first commit
         if tr('ast-hash') not in currentFiles[filename].keys():
             print "error: missing AST hash for file %s" % filename
             continue
@@ -323,7 +359,6 @@ def makeTimeHistograms(fullRecord):
         hashTimes.append(hashTime) 
         compileTime = currentFiles[filename][tr('compile-duration')] / 1e6
         compileTimes.append(compileTime) 
-
 
 
     for commitID in iterCommits:
@@ -349,43 +384,11 @@ def makeTimeHistograms(fullRecord):
                 compileTime = currentFiles[filename][tr('compile-duration')] / 1e6
                 compileTimes.append(compileTime) 
 
-
-
-
-    #TODO: understand params and vars
-    hist, bins = np.histogram(parseTimes, bins=50)
-    width = 0.7 * (bins[1] - bins[0])
-    center = (bins[:-1] + bins[1:]) / 2
-    fig, ax = plt.subplots()
-    plt.xlabel('time [ms]')
-    plt.ylabel('#files')
-    ax.bar(center, hist, align='center', width=width)
-    fig.savefig(pathToRecords + '/../parseTimeHistogram.png')#, bbox_extra_artists=(lgd,), bbox_inche    s='tight')
-
-
-    hist, bins = np.histogram(hashTimes, bins=50)
-    width = 0.7 * (bins[1] - bins[0])
-    center = (bins[:-1] + bins[1:]) / 2
-    fig, ax = plt.subplots()
-    plt.xlabel('time [ms]')
-    plt.ylabel('#files')
-    ax.bar(center, hist, align='center', width=width)
-    fig.savefig(pathToRecords + '/../hashTimeHistogram.png')#, bbox_extra_artists=(lgd,), bbox_inche    s='tight')
-
-
-    hist, bins = np.histogram(compileTimes, bins=50)
-    width = 0.7 * (bins[1] - bins[0])
-    center = (bins[:-1] + bins[1:]) / 2
-    fig, ax = plt.subplots()
-    plt.xlabel('time [ms]')
-    plt.ylabel('#files')
-    ax.bar(center, hist, align='center', width=width)
-    fig.savefig(pathToRecords + '/../compileTimeHistogram.png')#, bbox_extra_artists=(lgd,), bbox_inche    s='tight')
-
-
+    plotTimeHistograms(parseTimes, hashTimes, compileTimes)
 
 
 ################################################################################
+
 
 def makeChangesGraph(fullRecord):
     sortedCommitIDs = getSortedCommitIDList(fullRecord)
@@ -444,19 +447,8 @@ def makeChangesGraph(fullRecord):
 #        f_changes.write("%s;%s;%s;%s\n" % (commitID, differentAstHash, differentObjHash, same))
         prevCommit = currentCommit
 
-    fig, ax = plt.subplots()
+    plotChangesGraph(fileCounts, sameHashes, differentAstHashes, differentObjHashes)
 
-    ax.plot(fileCounts, label='#objfiles')
-    ax.plot(sameHashes, label='unchanged')
-    ax.plot(differentAstHashes, label='astHash differs')
-    ax.plot(differentObjHashes, label='objHash differs')
-
-    box = ax.get_position()
-    lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
-
-    plt.xlabel('commits')
-    plt.ylabel('#files')
-    fig.savefig(pathToRecords + '/../changes.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 ################################################################################
 
