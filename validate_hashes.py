@@ -43,6 +43,8 @@ def validateRecords():
 
 def validateHashes(recordList):
     #TODO: also sort this, perhaps execute on fullRecords or check against sorted commitIDs
+    #also TODO: collect data from all files before validating (changing paths src and crt)
+    #TODO: validate return-code!
     global errorCount, astDifferObjSameCount, missingCount
     #TODO: this method assumes that all records are from the same object file
     iterRecords = iter(recordList)
@@ -125,17 +127,16 @@ def buildFullRecordTo(pathToFullRecordFile):
     #        print "read full record from " + pathToFullRecordFile
     #else:
     fullRecord = buildFullRecord()
-    f = open(pathToFullRecordFile, 'w')
-    try:
-        f.write(repr(fullRecord) + "\n")
-    except MemoryError as me:
-        print me
-        raise
-    finally:
-        print time.ctime()
-        f.close()
-    print "built full record, wrote to " + pathToFullRecordFile
-
+#    f = open(pathToFullRecordFile, 'w')
+#    try:
+#        f.write(repr(fullRecord) + "\n")
+#    except MemoryError as me:
+#        print me
+#        raise
+#    finally:
+#        print time.ctime()
+#        f.close()
+#    print "built full record, wrote to " + pathToFullRecordFile
     return fullRecord
 
 
@@ -165,6 +166,14 @@ def buildFullRecord():
             
             objFilename = data['obj-file']
             del data['obj-file']
+
+            
+            # del everything I don't need
+            del data['return-code']
+            del data['element-hashes']
+            del data['project']
+            del data['processed-bytes']
+            del data['object-file-size']
             
             dataNewKeys = {tr(k): v for k, v in data.items()} 
             fullRecord[commitID][tr('files')][objFilename] = dataNewKeys
@@ -177,6 +186,40 @@ def getSortedCommitIDList(fullRecord):
     return sorted(fullRecord, key=lambda x: (fullRecord[x][tr('commit-time')]))
 
 ################################################################################
+
+def plotBuildTimeGraph(measuredBuildTimes, realClangHashBuildTimes, optimalClangHashBuildTimes, optimalBuildTimes): # times in ms
+    fig, ax = plt.subplots()
+
+    ax.plot(measuredBuildTimes, label='measured build time')
+    ax.plot(realClangHashBuildTimes, label='real clang-hash build time')
+    ax.plot(optimalClangHashBuildTimes, label='optimal clang-hash build time')
+    ax.plot(optimalBuildTimes, label='optimal build time')
+
+    lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
+
+    plt.xlabel('commits')
+    plt.ylabel('time [ms]')
+    fig.savefig(pathToRecords + '/../buildTimes.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+
+def plotBuildTimeCompositionGraph(parseTimes, hashTimes, compileTimes, diffToBuildTime): # times in s
+    fig, ax = plt.subplots()
+    
+    ax.stackplot(np.arange(1, len(parseTimes)+1), # x axis
+                 [parseTimes, hashTimes, compileTimes, diffToBuildTime],
+                 colors=['#008800','#FF0000','#0000FF', '#000000'])
+    plt.xlim(1,len(parseTimes))
+    plt.xlabel('commits')
+    plt.ylabel('time [s]')
+    lgd = ax.legend([mpatches.Patch(color='#000000'),
+                     mpatches.Patch(color='#0000FF'),
+                     mpatches.Patch(color='#FF0000'),
+                     mpatches.Patch(color='#008800')],
+                    ['remaining build time','compile time', 'hash time', 'parse time'],
+                    loc='center left', bbox_to_anchor=(1, 0.5))
+    fig.savefig(pathToRecords + '/../buildTimeComposition.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+
 
 def makeBuildTimeGraph(fullRecord):
     sortedCommitIDs = getSortedCommitIDList(fullRecord)
@@ -250,36 +293,9 @@ def makeBuildTimeGraph(fullRecord):
 
         prevCommit = currentCommit
 
-    # plot build time graph
+    plotBuildTimeGraph(measuredBuildTimes, realClangHashBuildTimes, optimalClangHashBuildTimes, optimalBuildTimes)
 
-    fig, ax = plt.subplots()
-
-    ax.plot(measuredBuildTimes, label='measured build time')
-    ax.plot(realClangHashBuildTimes, label='real clang-hash build time')
-    ax.plot(optimalClangHashBuildTimes, label='optimal clang-hash build time')
-    ax.plot(optimalBuildTimes, label='optimal build time')
-
-    lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
-
-    plt.xlabel('commits')
-    plt.ylabel('time in ms')
-    fig.savefig(pathToRecords + '/../buildTimes.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
-
-    # plot build time graph
-    x = np.arange(1, len(parseTimes)+1)
-
-    fig, ax = plt.subplots()
-    ax.stackplot(x, [parseTimes, hashTimes, compileTimes, diffToBuildTime], colors=['#008800','#FF0000','#0000FF', '#000000'])
-    plt.xlim(1,len(parseTimes))
-    plt.xlabel('commits')
-    plt.ylabel('time in s')
-    lgd = ax.legend([mpatches.Patch(color='#000000'),
-                     mpatches.Patch(color='#0000FF'),
-                     mpatches.Patch(color='#FF0000'),
-                     mpatches.Patch(color='#008800')],
-                    ['remaining build time','compile time', 'hash time', 'parse time'],
-                    loc='center left', bbox_to_anchor=(1, 0.5))
-    fig.savefig(pathToRecords + '/../buildTimeComposition.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plotBuildTimeCompositionGraph(parseTimes, hashTimes, compileTimes, diffToBuildTime)
 
 
 ################################################################################
@@ -341,7 +357,7 @@ def makeTimeHistograms(fullRecord):
     width = 0.7 * (bins[1] - bins[0])
     center = (bins[:-1] + bins[1:]) / 2
     fig, ax = plt.subplots()
-    plt.xlabel('time')
+    plt.xlabel('time [ms]')
     plt.ylabel('#files')
     ax.bar(center, hist, align='center', width=width)
     fig.savefig(pathToRecords + '/../parseTimeHistogram.png')#, bbox_extra_artists=(lgd,), bbox_inche    s='tight')
@@ -351,7 +367,7 @@ def makeTimeHistograms(fullRecord):
     width = 0.7 * (bins[1] - bins[0])
     center = (bins[:-1] + bins[1:]) / 2
     fig, ax = plt.subplots()
-    plt.xlabel('time')
+    plt.xlabel('time [ms]')
     plt.ylabel('#files')
     ax.bar(center, hist, align='center', width=width)
     fig.savefig(pathToRecords + '/../hashTimeHistogram.png')#, bbox_extra_artists=(lgd,), bbox_inche    s='tight')
@@ -361,7 +377,7 @@ def makeTimeHistograms(fullRecord):
     width = 0.7 * (bins[1] - bins[0])
     center = (bins[:-1] + bins[1:]) / 2
     fig, ax = plt.subplots()
-    plt.xlabel('time')
+    plt.xlabel('time [ms]')
     plt.ylabel('#files')
     ax.bar(center, hist, align='center', width=width)
     fig.savefig(pathToRecords + '/../compileTimeHistogram.png')#, bbox_extra_artists=(lgd,), bbox_inche    s='tight')
@@ -401,6 +417,9 @@ def makeChangesGraph(fullRecord):
                 if 'src/' + filename in prevFiles:
                     print "file %s changed place to src/" % filename
                     prevRecord = prevFiles['src/' + filename]
+                elif 'crt/' + filename in prevFiles:
+                    print "file %s changed place to crt/" % filename
+                    prevRecord = prevFiles['crt/' + filename]
                 else:
                     print "ERROR, MISSING FILE: %s not in prev, continue with next commit" % filename
                     continue
