@@ -623,15 +623,17 @@ bool HashVisitor::VisitBinaryConditionalOperator(
 
 bool HashVisitor::VisitCallExpr(const CallExpr *Node) {
   topHash() << AstElementCallExpr;
+  ++ignoreFunctionBody;
   hashType(Node->getType());
   if (const FunctionDecl *const FD = Node->getDirectCallee()) {
-    hashName(FD);
+    hashDecl(FD);
   } else {
     hashStmt(Node->getCallee());
   }
   for (unsigned I = 0, E = Node->getNumArgs(); I < E; ++I) {
     hashStmt(Node->getArg(I));
   }
+  --ignoreFunctionBody;
   return true;
 }
 
@@ -757,7 +759,9 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
                        // recursive declarations
   topHash() << AstElementFunctionDecl;
   topHash() << D->getNameInfo().getName().getAsString();
-  hashStmt(D->getBody());
+  if (ignoreFunctionBody == 0) {
+    hashStmt(D->getBody());
+  }
   topHash() << D->isDefined();
   topHash() << D->isThisDeclarationADefinition();
   topHash() << D->isVariadic();
@@ -777,6 +781,12 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
   topHash() << D->getStorageClass(); // static and stuff
   topHash() << D->isInlineSpecified();
   topHash() << D->isInlined();
+
+  if (D->hasAttrs()) {
+    for (const Attr *const A : D->getAttrs()) {
+      hashAttr(A);
+    }
+  }
 
   // hash all parameters
   for (const ParmVarDecl *const PVD : D->parameters()) {
