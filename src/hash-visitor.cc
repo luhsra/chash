@@ -53,17 +53,28 @@ void HashVisitor::hashDecl(const Decl *D) {
           continue;
 
         // Extern variable definitions at the top-level
-        if (const auto var = dyn_cast<VarDecl>(Child)) {
-          if (var->hasExternalStorage()) {
+        if (const auto VD = dyn_cast<VarDecl>(Child)) {
+          if (VD->hasExternalStorage()) {
             continue;
           }
         }
 
-        if (const auto func = dyn_cast<FunctionDecl>(Child)) {
-          if (func->getStorageClass() == StorageClass::SC_Extern ||
-              func->getStorageClass() == StorageClass::SC_PrivateExtern ||
-              !func->isThisDeclarationADefinition()) {
-            continue;
+        if (const auto FD = dyn_cast<FunctionDecl>(Child)) {
+          if (FD->getStorageClass() == StorageClass::SC_Extern ||
+              FD->getStorageClass() == StorageClass::SC_PrivateExtern ||
+              !FD->isThisDeclarationADefinition()) {
+            bool doHashing = false;
+            // look for alias attribute. if alias, hash, else ignore
+            if (FD->hasAttrs()) {
+              for (const Attr *const A : FD->getAttrs()) {
+                if (A->getKind() == attr::Kind::Alias) {
+                  doHashing = true;
+                  break;
+                }
+              }
+            }
+            if (!doHashing)
+              continue;
           }
         }
       }
@@ -101,9 +112,6 @@ bool HashVisitor::hasNodes(const DeclContext *DC) {
 
 bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
   const Hash *const CurrentHash = pushHash();
-
-  // TODO:
-  // FIXME Hash Compiler Options
 
   afterChildren([=] {
     storeHash(Unit, popHash(CurrentHash));
@@ -782,6 +790,7 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
   topHash() << D->isInlineSpecified();
   topHash() << D->isInlined();
 
+  // hash all attributes
   if (D->hasAttrs()) {
     for (const Attr *const A : D->getAttrs()) {
       hashAttr(A);

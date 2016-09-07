@@ -31,6 +31,7 @@ class TranslationUnitHashVisitor
   bool FirstChild;
   llvm::SmallVector<std::function<void()>, 32> Pending;
 
+  /// Counter to handle recursion when hashing function calls
   int ignoreFunctionBody = 0;
 
   /// Hash a child of the current node.
