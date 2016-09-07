@@ -375,7 +375,7 @@ def run_testcase(test_case):
 
 def run_test_suite(tests):
     tests_failed = 0
-    tests_known_fail = 1
+    tests_known_fail = 0
 
     running_tests = []
 
