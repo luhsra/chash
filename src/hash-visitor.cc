@@ -1063,7 +1063,6 @@ bool HashVisitor::VisitIfStmt(const IfStmt *Node) {
   topHash() << AstElementIfStmt;
   hashStmt(Node->getConditionVariableDeclStmt());
   hashStmt(Node->getCond());
-  errs() << "hash then block\n";
   hashStmt(Node->getThen());
   hashStmt(Node->getElse());
   return true;
