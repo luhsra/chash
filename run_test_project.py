@@ -72,6 +72,7 @@ log("Starting at %s" % datetime.datetime.now())
 os.environ['CC'] = clanghashWrapper
 os.environ['PROJECT'] = projectName
 os.environ['SLICE_ID'] = sliceID
+os.environ['STOP_IF_SAME_HASH'] = '0'
 
 #reset to latest version
 checkout("master")

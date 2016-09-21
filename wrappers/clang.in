@@ -9,7 +9,7 @@ import time
 from subprocess import *
 
 
-outputDir = os.path.abspath("${PROJECT_BINARY_DIR}/muslHashes")
+outputDir = os.path.abspath("${PROJECT_BINARY_DIR}/muslHashes") #"/srv/scratch/yb90ifym/muslHashes"
 
 def mkpath(path):
     try:
@@ -27,6 +27,10 @@ if __name__ == "__main__":
 
     compiler = "${LLVM_C_COMPILER}"
     plugin = "${PROJECT_BINARY_DIR}/src/libclang-hash.so"
+
+    stop_if_hash_same = os.environ.get('STOP_IF_SAME_HASH')
+    if stop_if_hash_same is '1':
+        args.insert(0, "-Xclang -plugin-arg-" + plugin + " -stop-if-same-hash")
 
     start_time = time.time()
     x = Popen([compiler, "-fplugin=" + plugin] + args,
