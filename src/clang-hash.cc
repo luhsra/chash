@@ -7,28 +7,34 @@
 #include <chrono>
 #include <fstream>
 #include <unistd.h>
+#include <utime.h>
 
 using namespace clang;
 using namespace llvm;
 
-static std::chrono::high_resolution_clock::time_point start_compilation;
+static std::chrono::high_resolution_clock::time_point StartCompilation;
 
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
-  HashTranslationUnitConsumer(raw_ostream *OS) : TopLevelHashStream(OS) {}
+  HashTranslationUnitConsumer(raw_ostream *OS,
+                              const std::string &PrevHashString,
+                              const std::string &OutFile)
+      : TopLevelHashStream(OS), PreviousHashString(PrevHashString),
+        OutputFile(OutFile) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) {
-    const auto start_hashing = std::chrono::high_resolution_clock::now();
+    const auto StartHashing = std::chrono::high_resolution_clock::now();
 
     // Traversing the translation unit decl via a RecursiveASTVisitor
     // will visit all nodes in the AST.
     Visitor.hashDecl(Context.getTranslationUnitDecl());
 
+    bool StopIfSameHash = false;
     // Get command line arguments
     const std::string PPID(std::to_string(getppid()));
     const std::string FilePath = "/proc/" + PPID + "/cmdline";
     std::ifstream CommandLine(FilePath);
-    if (CommandLine.good()) {
+    if (CommandLine.good()) { // TODO: move this to own method
       std::list<std::string> CommandLineArgs;
       std::string Arg;
       do {
@@ -41,6 +47,11 @@ public:
         if (Arg.size() > 2 && Arg.compare(Arg.size() - 2, 2, ".c") == 0)
           continue; // don't hash source filename
 
+        if ("-stop-if-same-hash" == Arg) {
+          StopIfSameHash = true;
+          continue; // also don't hash this
+        }
+
         CommandLineArgs.push_back(Arg);
       } while (Arg.size());
 
@@ -49,32 +60,38 @@ public:
       errs() << "Warning: could not open file \"" << FilePath
              << "\", cannot hash command line arguments.\n";
     }
-    const auto finish_hashing = std::chrono::high_resolution_clock::now();
+    const auto FinishHashing = std::chrono::high_resolution_clock::now();
 
     // Context.getTranslationUnitDecl()->dump();
     unsigned ProcessedBytes;
     const std::string HashString = Visitor.getHash(&ProcessedBytes);
 
+    const bool StopCompiling =
+        StopIfSameHash && (HashString == PreviousHashString);
+    if (StopCompiling)
+      utime(OutputFile.c_str(), nullptr); // touch file
+
     if (TopLevelHashStream) {
-      TopLevelHashStream->write(HashString.c_str(), HashString.length());
+      if (!StopCompiling)
+        TopLevelHashStream->write(HashString.c_str(), HashString.length());
       delete TopLevelHashStream;
     }
 
     errs() << "hash-start-time-ns "
            << std::chrono::duration_cast<std::chrono::nanoseconds>(
-                  start_hashing.time_since_epoch()).count() << "\n";
+                  StartHashing.time_since_epoch()).count() << "\n";
     errs() << "top-level-hash: " << HashString << "\n";
     errs() << "processed-bytes: " << ProcessedBytes << "\n";
     errs() << "parse-time-ns: "
            << std::chrono::duration_cast<std::chrono::nanoseconds>(
-                  start_hashing - start_compilation).count() << "\n";
+                  StartHashing - StartCompilation).count() << "\n";
     errs() << "hash-time-ns: "
            << std::chrono::duration_cast<std::chrono::nanoseconds>(
-                  finish_hashing - start_hashing).count() << "\n";
+                  FinishHashing - StartHashing).count() << "\n";
     errs() << "element-hashes: [";
-    for (const auto &saved_hash : Visitor.DeclSilo) {
-      const Decl *D = saved_hash.first;
-      const Hash::Digest &Dig = saved_hash.second;
+    for (const auto &SavedHash : Visitor.DeclSilo) {
+      const Decl *D = SavedHash.first;
+      const Hash::Digest &Dig = SavedHash.second;
       // Only Top-level declarations
       if (D->getDeclContext() &&
           isa<TranslationUnitDecl>(D->getDeclContext()) && isa<NamedDecl>(D)) {
@@ -93,12 +110,16 @@ public:
         errs() << "\"), ";
       }
     }
-
     errs() << "]\n";
+    if (StopCompiling) {
+      exit(0);
+    }
   }
 
 private:
   raw_ostream *const TopLevelHashStream;
+  const std::string PreviousHashString;
+  const std::string OutputFile;
   TranslationUnitHashVisitor Visitor;
 };
 
@@ -106,28 +127,30 @@ class HashTranslationUnitAction : public PluginASTAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef) override {
+
+    const std::string &OutputFile = CI.getFrontendOpts().OutputFile;
+    const std::string HashFile = OutputFile + ".hash";
+    const std::string PreviousHashString = getHashFromFile(HashFile);
+
     // Write hash database to .o.hash if the compiler produces a object file
     raw_ostream *Out = nullptr;
-    if (CI.getFrontendOpts().OutputFile != "" &&
-        CI.getFrontendOpts().OutputFile != "/dev/null") {
+    if (OutputFile != "" && OutputFile != "/dev/null") {
       std::error_code Error;
-      std::string HashFile = CI.getFrontendOpts().OutputFile + ".hash";
       Out = new raw_fd_ostream(HashFile, Error, sys::fs::F_Text);
-      errs() << "dump-ast-file: " << CI.getFrontendOpts().OutputFile << " "
-             << HashFile << "\n";
+      errs() << "dump-ast-file: " << OutputFile << " " << HashFile << "\n";
       if (Error) {
-        errs() << "Could not open ast-hash file: "
-               << CI.getFrontendOpts().OutputFile << "\n";
+        errs() << "Could not open ast-hash file: " << OutputFile << "\n";
       }
     }
-    return make_unique<HashTranslationUnitConsumer>(Out);
+    return make_unique<HashTranslationUnitConsumer>(Out, PreviousHashString,
+                                                    OutputFile);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
-                 const std::vector<std::string> &arg) override {
-    start_compilation = std::chrono::high_resolution_clock::now();
+                 const std::vector<std::string> &Args) override {
+    StartCompilation = std::chrono::high_resolution_clock::now();
 
-    for (const std::string &Arg : arg) {
+    for (const std::string &Arg : Args) {
       errs() << " arg = " << Arg << "\n";
 
       // Example error handling.
@@ -139,7 +162,7 @@ protected:
         return false;
       }
     }
-    if (arg.size() && arg[0] == "help") {
+    if (Args.size() && Args[0] == "help") {
       // FIXME
       PrintHelp(errs());
     }
@@ -152,6 +175,20 @@ protected:
 
   void PrintHelp(raw_ostream &Out) {
     Out << "Help for PrintFunctionNames plugin goes here\n";
+  }
+
+private:
+  const std::string getHashFromFile(const std::string &FilePath) {
+    std::string HashString;
+    std::ifstream FileStream(FilePath);
+    if (FileStream.good()) {
+      getline(FileStream, HashString);
+      errs() << FilePath << ": old hash string: " << HashString << "\n";
+    } else {
+      errs() << "Warning: could not open file \"" << FilePath
+             << "\", cannot read previous hash.\n";
+    }
+    return HashString;
   }
 };
 
