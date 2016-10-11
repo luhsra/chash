@@ -273,7 +273,7 @@ def plotTimeHistogram(times, filename):
     plt.xlabel('time [ms]')
     plt.ylabel('#files')
     ax.bar(center, hist, align='center', width=width)
-    fig.savefig(filename)#, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    fig.savefig(filename)
 
 
 def plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, filename):
@@ -283,6 +283,12 @@ def plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, filename):
     plt.hist(data, bins, alpha=0.7, label=['parsing', 'hashing', 'compiling'])
     plt.legend(loc='upper right')
     fig.savefig(filename)
+
+    fig, ax = plt.subplots()
+    data = [parseTimes, hashTimes, compileTimes]
+    plt.boxplot(data, 0, 'rs', 0)#, [5, 95])
+    fig.savefig(filename[:-4] + '_boxplots.png')
+
 
 
 def plot_time_histograms1(data):
