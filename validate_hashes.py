@@ -39,6 +39,14 @@ BUILD_TIME_DATA_FILENAME = 'buildTimeData' + CSV_EXTENSION
 CHANGES_DATA_FILENAME = 'changesData' + CSV_EXTENSION
 SINGLE_TIMES_DATA_FILENAME = 'singleTimesData' + CSV_EXTENSION
 
+# CSV headers
+BUILD_TIME_DATA_HEADER = ['measuredBuildTimes', 'realClangHashBuildTimes', 'optimalClangHashBuildTimes', 'optimalBuildTimes']
+BUILD_TIME_COMPOSITION_DATA_HEADER = ['totalParseTimes', 'totalHashTimes', 'totalCompileTimes', 'diffToBuildTime']
+CHANGES_DATA_HEADER = ['fileCount','sameHashes', 'differentAstHashes', 'differentObjHashes']
+SINGLE_TIMES_DATA_HEADER = ['parsing', 'hashing', 'compiling']
+
+
+
 
 def abs_path(filename):
     """Prepends the absolute path to the filename.
@@ -128,7 +136,8 @@ keyTranslationToNr = {
     'files':            16,
     'files-changed':    17,
     'insertions':       18,
-    'deletions':        19
+    'deletions':        19,
+    'other': 20 #TODO: remove, just 4 testing
 }
 keyTranslationFromNr = {v: k for k, v in keyTranslationToNr.items()}
 
@@ -216,6 +225,9 @@ def getSortedCommitIDList(fullRecord):
 ################################################################################
 
 
+def plot_build_time_graph1(data):
+    plotBuildTimeGraph(data[0], data[1], data[2], data[3])
+
 def plotBuildTimeGraph(measuredBuildTimes, realClangHashBuildTimes, optimalClangHashBuildTimes, optimalBuildTimes): # times in s
     fig, ax = plt.subplots()
 
@@ -230,6 +242,9 @@ def plotBuildTimeGraph(measuredBuildTimes, realClangHashBuildTimes, optimalClang
     plt.ylabel('time [ms]')
     fig.savefig(abs_path(BUILD_TIMES_GRAPH_FILENAME), bbox_extra_artists=(lgd,), bbox_inches='tight')
 
+
+def plot_build_time_composition_graph1(data):
+    plotBuildTimeCompositionGraph(data[0], data[1], data[2], data[3])
 
 def plotBuildTimeCompositionGraph(parseTimes, hashTimes, compileTimes, diffToBuildTime): # times in s
     fig, ax = plt.subplots()
@@ -274,12 +289,18 @@ def plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, filename):
     fig.savefig(filename)#, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
+def plot_time_histograms1(data):
+    plotTimeHistograms(data[0], data[1], data[2])
+
 def plotTimeHistograms(parseTimes, hashTimes, compileTimes): # times in ms
     plotTimeHistogram(parseTimes, abs_path(PARSE_TIME_HISTOGRAM_FILENAME))
     plotTimeHistogram(hashTimes, abs_path(HASH_TIME_HISTOGRAM_FILENAME))
     plotTimeHistogram(compileTimes, abs_path(COMPILE_TIME_HISTOGRAM_FILENAME))
 #    plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, abs_path(BUILD_TIME_HISTOGRAM_FILENAME))
 
+
+def plot_changes_graph1(data):
+    plotChangesGraph(data[0], data[1], data[2], data[3])
 
 def plotChangesGraph(fileCounts, sameHashes, differentAstHashes, differentObjHashes):
     fig, ax = plt.subplots()
@@ -299,7 +320,7 @@ def plotChangesGraph(fileCounts, sameHashes, differentAstHashes, differentObjHas
 
 ################################################################################
 
-def writeToCSV(data, columnNames, filename):
+def write_to_csv(data, columnNames, filename):
     with open(filename, "w") as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(columnNames)
@@ -471,21 +492,17 @@ def makeGraphs(fullRecord):
     plotChangesGraph(fileCounts, sameHashes, differentAstHashes, differentObjHashes)
 
     # save data to csv files
-    buildTimeDataHeader = ['measuredBuildTimes', 'realClangHashBuildTimes', 'optimalClangHashBuildTimes', 'optimalBuildTimes']
     buildTimeData = np.column_stack((measuredBuildTimes, realClangHashBuildTimes, optimalClangHashBuildTimes, optimalBuildTimes))
-    writeToCSV(buildTimeData, buildTimeDataHeader, abs_path(BUILD_TIME_DATA_FILENAME))
+    write_to_csv(buildTimeData, BUILD_TIME_DATA_HEADER, abs_path(BUILD_TIME_DATA_FILENAME))
 
-    buildTimeCompositionDataHeader = ['totalParseTimes', 'totalHashTimes', 'totalCompileTimes', 'diffToBuildTime']
     buildTimeCompositionData = np.column_stack((totalParseTimes, totalHashTimes, totalCompileTimes, diffToBuildTime))
-    writeToCSV(buildTimeCompositionData, buildTimeCompositionDataHeader, abs_path(BUILD_TIME_COMPOSITION_DATA_FILENAME))
+    write_to_csv(buildTimeCompositionData, BUILD_TIME_COMPOSITION_DATA_HEADER, abs_path(BUILD_TIME_COMPOSITION_DATA_FILENAME))
 
-    singleTimesDataHeader = ['parsing', 'hashing', 'compiling']
     singleTimesData = np.column_stack((parseTimes, hashTimes, compileTimes))
-    writeToCSV(singleTimesData, singleTimesDataHeader, abs_path(SINGLE_TIMES_DATA_FILENAME))
+    write_to_csv(singleTimesData, SINGLE_TIMES_DATA_HEADER, abs_path(SINGLE_TIMES_DATA_FILENAME))
 
-    changesDataHeader = ['fileCount','sameHashes', 'differentAstHashes', 'differentObjHashes']
     changesData = np.column_stack((fileCounts, sameHashes, differentAstHashes, differentObjHashes))
-    writeToCSV(changesData, changesDataHeader, abs_path(CHANGES_DATA_FILENAME))
+    write_to_csv(changesData, CHANGES_DATA_HEADER, abs_path(CHANGES_DATA_FILENAME))
 
 ################################################################################
 """functions for reading data from the csv files to skip full record building"""
@@ -496,14 +513,45 @@ def csv_files_are_existing():
             and os.path.isfile(abs_path(CHANGES_DATA_FILENAME))
             and os.path.isfile(abs_path(SINGLE_TIMES_DATA_FILENAME)))
 
+def read_from_csv(filename, columnNames):
+    data = []
+    with open(filename) as csv_file:
+        reader = csv.reader(csv_file)
+        is_header_row = True
+        for row in reader:
+            if is_header_row:
+                for col in row:
+                    data.append([])
+                is_header_row = False
+            else:
+                colnum = 0
+                for col in row:
+                    data[colnum].append(float(col))
+                    colnum += 1
+    return data
+
 
 def read_csv_data_and_plot_graphs():
     """Build the graphs from the data from the csv files from previous runs
     to save time by skipping the whole "full record" building.
     """
-    #TODO: implement
-    return 0
-   
+
+    build_time_data = read_from_csv(abs_path(BUILD_TIME_DATA_FILENAME), BUILD_TIME_DATA_HEADER)
+    plot_build_time_graph1(build_time_data)
+
+
+    build_time_composition_data = read_from_csv(abs_path(BUILD_TIME_COMPOSITION_DATA_FILENAME), BUILD_TIME_COMPOSITION_DATA_HEADER)
+    plot_build_time_composition_graph1(build_time_composition_data)
+
+
+    changes_data = read_from_csv(abs_path(CHANGES_DATA_FILENAME), CHANGES_DATA_HEADER)
+    plot_changes_graph1(changes_data)
+
+
+    single_times_data = read_from_csv(abs_path(SINGLE_TIMES_DATA_FILENAME), SINGLE_TIMES_DATA_HEADER)
+    plot_time_histograms1(single_times_data)
+
+
 
 
 ################################################################################
