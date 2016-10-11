@@ -277,16 +277,12 @@ def plotTimeHistogram(times, filename):
 
 
 def plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, filename):
-    times = np.column_stack((parseTimes, hashTimes, compileTimes))
+    bins = np.linspace(0, 5000, 50)
+    data = np.vstack([parseTimes, hashTimes, compileTimes]).T
     fig, ax = plt.subplots()
-    hist = ax.hist(times, bins=50, label=['parsing', 'hashing', 'compiling'])
-    width = 0.7 * (bins[1] - bins[0])
-    center = (bins[:-1] + bins[1:]) / 2
-
-    plt.xlabel('time [ms]')
-    plt.ylabel('#files')
-    ax.bar(center, hist, align='center', width=width)
-    fig.savefig(filename)#, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.hist(data, bins, alpha=0.7, label=['parsing', 'hashing', 'compiling'])
+    plt.legend(loc='upper right')
+    fig.savefig(filename)
 
 
 def plot_time_histograms1(data):
@@ -296,7 +292,7 @@ def plotTimeHistograms(parseTimes, hashTimes, compileTimes): # times in ms
     plotTimeHistogram(parseTimes, abs_path(PARSE_TIME_HISTOGRAM_FILENAME))
     plotTimeHistogram(hashTimes, abs_path(HASH_TIME_HISTOGRAM_FILENAME))
     plotTimeHistogram(compileTimes, abs_path(COMPILE_TIME_HISTOGRAM_FILENAME))
-#    plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, abs_path(BUILD_TIME_HISTOGRAM_FILENAME))
+    plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, abs_path(BUILD_TIME_HISTOGRAM_FILENAME))
 
 
 def plot_changes_graph1(data):
