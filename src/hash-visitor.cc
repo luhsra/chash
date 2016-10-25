@@ -916,7 +916,7 @@ bool HashVisitor::VisitCapturedDecl(const CapturedDecl *D) {
   }
   topHash() << D->isNothrow();
 
-  for (const ImplicitParamDecl *const IPD : D->params()) {
+  for (const ImplicitParamDecl *const IPD : D->parameters()) {
     if (!IPD) {
       errs() << "nullptr in CapturedDecl!";
       exit(1);
