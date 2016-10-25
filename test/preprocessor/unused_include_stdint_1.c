@@ -1,4 +1,4 @@
-#include <stdio.h> {{A}}
+#include <stdint.h> {{A}}
 
 int variable;
 {{B}}

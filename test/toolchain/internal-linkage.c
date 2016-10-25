@@ -11,7 +11,7 @@ void foo() {
 
 /*
  * check-name: internal linkage name changes
- * compile-command: /usr/bin/gcc
+ * compile-command: /usr/bin/env gcc
  * compile-flags: -fdata-sections -Wall
  * assert-ast: A == B
  */

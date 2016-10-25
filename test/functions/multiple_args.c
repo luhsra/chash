@@ -3,5 +3,6 @@ void func(int a) {}     {{B}}
 
 /*
  * check-name: multiple_args
- * assert-obj: A != B
+ * assert-ast: A != B
+ * obj-not-diff: On Linux(obj files different) and FreeBSD (objfiles equal)
  */
