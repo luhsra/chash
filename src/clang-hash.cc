@@ -22,44 +22,15 @@ public:
       : TopLevelHashStream(OS), PreviousHashString(PrevHashString),
         OutputFile(OutFile) {}
 
-  virtual void HandleTranslationUnit(clang::ASTContext &Context) {
+  virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
     const auto StartHashing = std::chrono::high_resolution_clock::now();
 
     // Traversing the translation unit decl via a RecursiveASTVisitor
     // will visit all nodes in the AST.
     Visitor.hashDecl(Context.getTranslationUnitDecl());
 
-    bool StopIfSameHash = false;
-    // Get command line arguments
-    const std::string PPID(std::to_string(getppid()));
-    const std::string FilePath = "/proc/" + PPID + "/cmdline";
-    std::ifstream CommandLine(FilePath);
-    if (CommandLine.good()) { // TODO: move this to own method
-      std::list<std::string> CommandLineArgs;
-      std::string Arg;
-      do {
-        getline(CommandLine, Arg, '\0');
-        if ("-o" == Arg) {
-          // throw away next parameter (name of outfile)
-          getline(CommandLine, Arg, '\0');
-          continue;
-        }
-        if (Arg.size() > 2 && Arg.compare(Arg.size() - 2, 2, ".c") == 0)
-          continue; // don't hash source filename
+    const bool StopIfSameHash = hashCommandLineArguments();
 
-        if ("-stop-if-same-hash" == Arg) {
-          StopIfSameHash = true;
-          continue; // also don't hash this
-        }
-
-        CommandLineArgs.push_back(Arg);
-      } while (Arg.size());
-
-      Visitor.hashCommandLine(CommandLineArgs);
-    } else {
-      errs() << "Warning: could not open file \"" << FilePath
-             << "\", cannot hash command line arguments.\n";
-    }
     const auto FinishHashing = std::chrono::high_resolution_clock::now();
 
     // Context.getTranslationUnitDecl()->dump();
@@ -69,7 +40,7 @@ public:
     const bool StopCompiling =
         StopIfSameHash && (HashString == PreviousHashString);
     if (StopCompiling)
-      utime(OutputFile.c_str(), nullptr); // touch file
+      utime(OutputFile.c_str(), nullptr); // touch object file
 
     if (TopLevelHashStream) {
       if (!StopCompiling)
@@ -117,6 +88,42 @@ public:
   }
 
 private:
+  // Returns true if the -stop-if-same-hash flag is set, else false.
+  bool hashCommandLineArguments() {
+    bool StopIfSameHash = false;
+    // Get command line arguments
+    const std::string PPID{std::to_string(getppid())};
+    const std::string FilePath = "/proc/" + PPID + "/cmdline";
+    std::ifstream CommandLine{FilePath};
+    if (CommandLine.good()) { // TODO: move this to own method?
+      std::list<std::string> CommandLineArgs;
+      std::string Arg;
+      do {
+        getline(CommandLine, Arg, '\0');
+        if ("-o" == Arg) {
+          // throw away next parameter (name of outfile)
+          getline(CommandLine, Arg, '\0');
+          continue;
+        }
+        if (Arg.size() > 2 && Arg.compare(Arg.size() - 2, 2, ".c") == 0)
+          continue; // don't hash source filename
+
+        if ("-stop-if-same-hash" == Arg) {
+          StopIfSameHash = true;
+          continue; // also don't hash this (plugin argument)
+        }
+
+        CommandLineArgs.push_back(Arg);
+      } while (Arg.size());
+
+      Visitor.hashCommandLine(CommandLineArgs);
+    } else {
+      errs() << "Warning: could not open file \"" << FilePath
+             << "\", cannot hash command line arguments.\n";
+    }
+    return StopIfSameHash;
+  }
+
   raw_ostream *const TopLevelHashStream;
   const std::string PreviousHashString;
   const std::string OutputFile;
@@ -127,7 +134,6 @@ class HashTranslationUnitAction : public PluginASTAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef) override {
-
     const std::string &OutputFile = CI.getFrontendOpts().OutputFile;
     const std::string HashFile = OutputFile + ".hash";
     const std::string PreviousHashString = getHashFromFile(HashFile);
