@@ -43,8 +43,8 @@ public:
       utime(OutputFile.c_str(), nullptr); // touch object file
 
     if (TopLevelHashStream) {
-      if (!StopCompiling)
-        TopLevelHashStream->write(HashString.c_str(), HashString.length());
+//      if (!StopCompiling) //TODO: need to rewrite file everytime, gets cleared on open(): FIX THIS
+          TopLevelHashStream->write(HashString.c_str(), HashString.length());
       delete TopLevelHashStream;
     }
 
@@ -108,7 +108,7 @@ private:
         if (Arg.size() > 2 && Arg.compare(Arg.size() - 2, 2, ".c") == 0)
           continue; // don't hash source filename
 
-        if ("-stop-if-same-hash" == Arg) {
+        if (Arg.find("-stop-if-same-hash") != std::string::npos) {
           StopIfSameHash = true;
           continue; // also don't hash this (plugin argument)
         }
@@ -142,7 +142,7 @@ protected:
     raw_ostream *Out = nullptr;
     if (OutputFile != "" && OutputFile != "/dev/null") {
       std::error_code Error;
-      Out = new raw_fd_ostream(HashFile, Error, sys::fs::F_Text);
+      Out = new raw_fd_ostream(HashFile, Error, sys::fs::F_Text); //TODO: this overrides/clears .hash file. currently rewriting file after check. FIX THIS!
       errs() << "dump-ast-file: " << OutputFile << " " << HashFile << "\n";
       if (Error) {
         errs() << "Could not open ast-hash file: " << OutputFile << "\n";
