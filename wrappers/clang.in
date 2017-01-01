@@ -9,7 +9,9 @@ import time
 from subprocess import *
 
 
-outputDir = os.path.abspath("${PROJECT_BINARY_DIR}/muslHashes") #"/srv/scratch/yb90ifym/muslHashes"
+#TODO: put this in env variable? set via command line param in test-script
+outputDir = "/srv/scratch/yb90ifym/muslHashes"
+#os.path.abspath("${PROJECT_BINARY_DIR}/muslHashes")
 
 def mkpath(path):
     try:
@@ -29,9 +31,10 @@ if __name__ == "__main__":
     plugin = "${PROJECT_BINARY_DIR}/src/libclang-hash.so"
 
     stop_if_hash_same = os.environ.get('STOP_IF_SAME_HASH')
-    if stop_if_hash_same is '1':
+    if stop_if_hash_same is '1' or "-stop-if-same-hash" in args:
+        args.remove("-stop-if-same-hash")
         args.insert(0, "-Xclang -plugin-arg-" + plugin + " -stop-if-same-hash")
-
+    
     start_time = time.time()
     x = Popen([compiler, "-fplugin=" + plugin] + args,
               stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
@@ -60,9 +63,13 @@ if __name__ == "__main__":
         if filename != "": # don't need non-C-files
         # Just use to set commit hash and project identifier from the outside
         # PROJECT=musl COMMIT_HASH=`git log -1 --pretty="%H"` make
+            run_id = os.environ.get('RUN_ID');
+            if run_id is None:
+                run_id = 0
+
             record = {
                 'project': os.environ.get("PROJECT"),
-                'commit-hash': os.environ.get("COMMIT_HASH"),
+#                'commit-hash': os.environ.get("COMMIT_HASH"), # do not save this if with stopping compilation
                 'filename': filename,
                 'obj-file': objectfile,
                 'return-code': retcode,
@@ -70,6 +77,7 @@ if __name__ == "__main__":
                 'object-hash': objectfile_hash,
                 'start-time': start_time,
                 'object-file-size': os.stat(objectfile).st_size,
+                'run_id': int(run_id), # for run with stopping compilation
             }
 
             lines = stderr.split("\n")
@@ -92,6 +100,7 @@ if __name__ == "__main__":
                 elif line.startswith("hash-start-time-ns"):
                     record['hash-start-time'] = int(line.split()[1])
 
+            #TODO: implement parallel building!!!
 #            sliceID = os.environ.get("SLICE_ID")
 #            if sliceID == '-1':
             outFilename = outputDir + "/" + objectfile + ".info"
