@@ -22,7 +22,7 @@ FULL_RECORD_FILENAME = 'fullRecord' + INFO_EXTENSION
 COMMIT_INFO_FILENAME = 'commitInfo_musl' + INFO_EXTENSION
 
 # graph filenames
-PNG_EXTENSION = '.png'
+PNG_EXTENSION = '.pdf' #TODO: rename to sth. like GRAPH_FILE_EXTENSION
 PARSE_TIME_HISTOGRAM_FILENAME = 'parseTimeHistogram' + PNG_EXTENSION
 HASH_TIME_HISTOGRAM_FILENAME = 'hashTimeHistogram' + PNG_EXTENSION
 COMPILE_TIME_HISTOGRAM_FILENAME = 'compileTimeHistogram' + PNG_EXTENSION
@@ -186,7 +186,11 @@ def buildFullRecord():
         for commitID in commitInfo:
             fullRecord[commitID] = {}
             fullRecord[commitID][tr('commit-time')] = commitInfo[commitID]['commit-time']
-            fullRecord[commitID][tr('build-time')] = commitInfo[commitID]['build-time']
+            print commitID
+            if 'build-time' in commitInfo[commitID]:
+                fullRecord[commitID][tr('build-time')] = commitInfo[commitID]['build-time']
+            else:
+                fullRecord[commitID][tr('build-time')] = 0
             fullRecord[commitID][tr('files')] = {}
             fullRecord[commitID][tr('files-changed')] = commitInfo[commitID]['files-changed']
             
@@ -246,22 +250,32 @@ def plotBuildTimeGraph(measuredBuildTimes, realClangHashBuildTimes, optimalClang
 def plot_build_time_composition_graph1(data):
     plotBuildTimeCompositionGraph(data[0], data[1], data[2], data[3])
 
+def printAvg(data, name):
+    print 'avg %s: %f' % (name, sum(data)/float(len(data)))
+
+parseColor, hashColor, compileColor, remainColor = ('#FFFF66','#FF0000','#3399FF','#008800') 
+
 def plotBuildTimeCompositionGraph(parseTimes, hashTimes, compileTimes, diffToBuildTime): # times in s
     fig, ax = plt.subplots()
-    
+
     ax.stackplot(np.arange(1, len(parseTimes)+1), # x axis
-                 [parseTimes, hashTimes, compileTimes, diffToBuildTime],
-                 colors=['#008800','#FF0000','#0000FF', '#000000'])
+#                 [parseTimes, hashTimes, compileTimes, diffToBuildTime],
+                  [[i/60 for i in parseTimes], [i/60 for i in hashTimes], [i/60 for i in compileTimes], [i/60 for i in diffToBuildTime]],
+                 colors=[parseColor,hashColor,compileColor,remainColor], edgecolor='none')
     plt.xlim(1,len(parseTimes))
     plt.xlabel('commits')
-    plt.ylabel('time [s]')
-    lgd = ax.legend([mpatches.Patch(color='#000000'),
-                     mpatches.Patch(color='#0000FF'),
-                     mpatches.Patch(color='#FF0000'),
-                     mpatches.Patch(color='#008800')],
+    plt.ylabel('time [min]')
+    lgd = ax.legend([mpatches.Patch(color=remainColor),
+                     mpatches.Patch(color=compileColor),
+                     mpatches.Patch(color=hashColor),
+                     mpatches.Patch(color=parseColor)],
                     ['remaining build time','compile time', 'hash time', 'parse time'],
                     loc='center left', bbox_to_anchor=(1, 0.5))
     fig.savefig(abs_path(BUILD_TIME_COMPOSITION_FILENAME), bbox_extra_artists=(lgd,), bbox_inches='tight')
+    printAvg(parseTimes, 'parse')
+    printAvg(hashTimes, 'hash')
+    printAvg(compileTimes, 'compile')
+    printAvg(diffToBuildTime, 'remainder')
 
 
 def plotTimeHistogram(times, filename):
@@ -280,14 +294,19 @@ def plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, filename):
     bins = np.linspace(0, 5000, 50)
     data = np.vstack([parseTimes, hashTimes, compileTimes]).T
     fig, ax = plt.subplots()
-    plt.hist(data, bins, alpha=0.7, label=['parsing', 'hashing', 'compiling'])
+    plt.hist(data, bins, alpha=0.7, label=['parsing', 'hashing', 'compiling'], color=[parseColor, hashColor, compileColor])
     plt.legend(loc='upper right')
+    plt.xlabel('time [ms]')
+    plt.ylabel('#files')
     fig.savefig(filename)
 
     fig, ax = plt.subplots()
     data = [parseTimes, hashTimes, compileTimes]
-    plt.boxplot(data, 0, 'rs', 0)#, [5, 95])
-    fig.savefig(filename[:-4] + '_boxplots.png')
+    plt.boxplot(data, 0, 'rs', 0, [5, 95])
+    plt.xlabel('time [ms]')
+    plt.yticks([1, 2, 3], ['parsing', 'hashing', 'compiling'])
+    #lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
+    fig.savefig(filename[:-4] + '_boxplots' + PNG_EXTENSION)
 
 
 
@@ -306,11 +325,12 @@ def plot_changes_graph1(data):
 
 def plotChangesGraph(fileCounts, sameHashes, differentAstHashes, differentObjHashes):
     fig, ax = plt.subplots()
-
-    ax.plot(fileCounts, label='#objfiles')
-    ax.plot(sameHashes, label='unchanged')
-    ax.plot(differentAstHashes, label='astHash differs')
-    ax.plot(differentObjHashes, label='objHash differs')
+    
+    #('#FFFF66','#FF0000','#3399FF','#008800') 
+    ax.plot(fileCounts, label='#objfiles', color='#EEAD0E')#'black')
+    #ax.plot(sameHashes, label='unchanged')#, color='blue')
+    ax.plot(differentAstHashes, label='astHash differs', color=compileColor)#'#000088')
+    ax.plot(differentObjHashes, label='objHash differs', color=hashColor)#'#FFFF00') #'#0099FF')
 
     box = ax.get_position()
     lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
@@ -397,6 +417,7 @@ def makeGraphs(fullRecord):
         totalFilesChanged += currentCommit[tr('files-changed')]
 
         for filename in currentFiles:
+            fileCount += 1
             if tr('ast-hash') not in currentFiles[filename].keys():
                 print "error: missing AST hash for file %s" % filename
                 continue
@@ -451,7 +472,6 @@ def makeGraphs(fullRecord):
             else:
                 same += 1
 
-            fileCount += 1
 
         if missingFiles > currentCommit[tr('files-changed')]:
             print "!!!!FAIL!!!!"
@@ -483,7 +503,8 @@ def makeGraphs(fullRecord):
 
         prevCommit = currentCommit
         prevCommitID = commitID
-
+        if fileCount == 0:
+            print "no filecount at %s" % commitID
 
     print "missingFilesTotal: %d, missingFileErrors: %d" % (missingFilesTotal, missingFileErrors)
     print "totalFilesChanged: %d, sizes: parseTimes(%d), hashTimes(%d), compileTimes(%d)" % (totalFilesChanged, len(parseTimes), len(hashTimes), len(compileTimes))
