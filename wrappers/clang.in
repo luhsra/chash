@@ -10,8 +10,10 @@ from subprocess import *
 
 
 #TODO: put this in env variable? set via command line param in test-script
-outputDir = "/srv/scratch/yb90ifym/muslHashes"
-#os.path.abspath("${PROJECT_BINARY_DIR}/muslHashes")
+if "CLANG_HASH_OUTPUT_DIR" in os.environ:
+    outputDir = os.environ["CLANG_HASH_OUTPUT_DIR"]
+else:
+    outputDir = "/srv/scratch/yb90ifym/muslHashes"
 
 def mkpath(path):
     try:
@@ -34,7 +36,7 @@ if __name__ == "__main__":
     if stop_if_hash_same is '1' or "-stop-if-same-hash" in args:
         args.remove("-stop-if-same-hash")
         args.insert(0, "-Xclang -plugin-arg-" + plugin + " -stop-if-same-hash")
-    
+
     start_time = time.time()
     x = Popen([compiler, "-fplugin=" + plugin] + args,
               stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
@@ -59,7 +61,7 @@ if __name__ == "__main__":
             if arg.endswith('.c'):
                 filename = arg
                 break
-        
+
         if filename != "": # don't need non-C-files
         # Just use to set commit hash and project identifier from the outside
         # PROJECT=musl COMMIT_HASH=`git log -1 --pretty="%H"` make
