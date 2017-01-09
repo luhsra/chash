@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.0)
 set(CMAKE_SYSTEM_NAME Generic)
 
 # LLVM version.
-SET(LLVM_RECOMMENDED_VERSION 3.7)
+SET(LLVM_RECOMMENDED_VERSION 3.9)
 
 if(NOT DEFINED ${LLVM_ROOT})
   # find llvm-config. prefers to the one with version suffix, Ex:llvm-config-3.4
