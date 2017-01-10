@@ -58,11 +58,14 @@ class IncrementalCompilation(Experiment):
                 fd.write("\n")
 
     def rebuild(self, path, cause):
-        run_id = len(self.build_info)
-        self.build_info[run_id] = {}
-        self.build_info[run_id]['filename'] = cause
-        os.environ['RUN_ID'] = "%d" % run_id
+        run_id = len(self.build_info['builds'])
+        info = {'id': run_id, 'filename': cause}
+        self.build_info['builds'].append(info)
 
+        # We export the RUN ID to the clang wrapper script, so it can
+        # include it into the object file records
+
+        os.environ['RUN_ID'] = "%d" % run_id
         # Recompile!
         start_time = time.time()
         self.call_make(path)
@@ -70,7 +73,7 @@ class IncrementalCompilation(Experiment):
 
         # Account only nano seconds, everywhere
         build_time = int((end_time - start_time) * 1e9) * self.jobs.value
-        self.build_info[run_id]['build-time'] = build_time
+        info['build-time'] = build_time
         logging.info("Rebuild done[%s]: %s s", cause,
                      build_time / 1e9)
 
@@ -88,11 +91,11 @@ class IncrementalCompilation(Experiment):
             clanghash_wrapper = os.path.join(cl_path, "build/wrappers/clang")
 
         # Project name
-        self.project_name = os.path.basename(self.project.checkout_url())
-        os.environ["PROJECT"] = self.project_name
-        logging.info("Cloning project... %s", self.project_name)
-        self.build_info = {"project-name": self.project_name,
-                      "commit-hash": self.metadata["project-hash"]}
+        os.environ["PROJECT"] = self.project_name()
+        logging.info("Cloning project... %s", self.project_name())
+        self.build_info = {"project-name": self.project_name(),
+                           "commit-hash": self.metadata["project-hash"],
+                           'builds': []}
         with self.project as src_path:
             # First, we redirect all calls to the compiler to our
             # clang hash wrapper
@@ -108,18 +111,29 @@ class IncrementalCompilation(Experiment):
             self.rebuild(src_path, "FRESH_BUILD")
 
             # Iterate over all files
+            i = 0
             for fn in self.get_sources(src_path):
                 self.touch(fn)
                 self.rebuild(src_path, fn)
-                break
-
-
+                if i > 3:
+                    break
+                i+=1
 
         # Output the summary of this build into the statistics file.
         with open(self.stats.path, "w+") as fd:
             fd.write(repr(self.build_info))
 
+    def project_name(self):
+        return os.path.basename(self.project.checkout_url())
+
+    def variant_name(self):
+        return "%s-%s"%(self.project_name(), self.mode.value)
+
+
 if __name__ == "__main__":
     experiment = IncrementalCompilation()
-    dirname = experiment(sys.argv + ["-s"])
-    print(dirname)
+    dirname = experiment(sys.argv)
+    symlink = "IncrementalCompilation-%s" % experiment.variant_name()
+    if os.path.exists(symlink):
+        os.unlink(symlink)
+    os.symlink(dirname, symlink)
