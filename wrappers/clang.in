@@ -34,7 +34,10 @@ if __name__ == "__main__":
 
     stop_if_hash_same = os.environ.get('STOP_IF_SAME_HASH')
     if stop_if_hash_same is '1' or "-stop-if-same-hash" in args:
-        args.remove("-stop-if-same-hash")
+        try:
+            args.remove("-stop-if-same-hash")
+        except ValueError:
+            pass
         args.insert(0, "-Xclang -plugin-arg-" + plugin + " -stop-if-same-hash")
 
     start_time = time.time()
@@ -65,10 +68,7 @@ if __name__ == "__main__":
         if filename != "": # don't need non-C-files
         # Just use to set commit hash and project identifier from the outside
         # PROJECT=musl COMMIT_HASH=`git log -1 --pretty="%H"` make
-            run_id = os.environ.get('RUN_ID');
-            if run_id is None:
-                run_id = 0
-
+            run_id = os.environ.get('RUN_ID', "0");
             record = {
                 'project': os.environ.get("PROJECT"),
 #                'commit-hash': os.environ.get("COMMIT_HASH"), # do not save this if with stopping compilation
