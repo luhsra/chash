@@ -72,7 +72,7 @@ class IncrementalCompilation(Experiment):
         end_time = time.time()
 
         # Account only nano seconds, everywhere
-        build_time = int((end_time - start_time) * 1e9) * self.jobs.value
+        build_time = int((end_time - start_time) * 1e9)
         info['build-time'] = build_time
         logging.info("Rebuild done[%s]: %s s", cause,
                      build_time / 1e9)
@@ -111,23 +111,19 @@ class IncrementalCompilation(Experiment):
             self.rebuild(src_path, "FRESH_BUILD")
 
             # Iterate over all files
-            i = 0
             for fn in self.get_sources(src_path):
                 self.touch(fn)
                 self.rebuild(src_path, fn)
-                if i > 3:
-                    break
-                i+=1
 
         # Output the summary of this build into the statistics file.
         with open(self.stats.path, "w+") as fd:
             fd.write(repr(self.build_info))
 
     def project_name(self):
-        return os.path.basename(self.project.checkout_url())
+        return os.path.basename(self.metadata['project-clone-url'])
 
     def variant_name(self):
-        return "%s-%s"%(self.project_name(), self.mode.value)
+        return "%s-%s"%(self.project_name(), self.metadata['mode'])
 
 
 if __name__ == "__main__":
