@@ -83,7 +83,10 @@ public:
     }
     errs() << "]\n";
     if (StopCompiling) {
-      exit(0);
+        errs() << "skipped: true\n";
+        exit(0);
+    } else {
+        errs() << "skipped: false\n";
     }
   }
 

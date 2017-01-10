@@ -15,6 +15,9 @@ if "CLANG_HASH_OUTPUT_DIR" in os.environ:
 else:
     outputDir = "/srv/scratch/yb90ifym/muslHashes"
 
+if not os.path.exists(outputDir):
+    outputDir = None
+
 def mkpath(path):
     try:
         os.makedirs(path)
@@ -38,7 +41,7 @@ if __name__ == "__main__":
             args.remove("-stop-if-same-hash")
         except ValueError:
             pass
-        args.insert(0, "-Xclang -plugin-arg-" + plugin + " -stop-if-same-hash")
+        args.insert(0, "-Xclang -plugin-arg-clang-hash  -stop-if-same-hash")
 
     start_time = time.time()
     x = Popen([compiler, "-fplugin=" + plugin] + args,
@@ -92,6 +95,8 @@ if __name__ == "__main__":
                     record['hash-duration'] = int(line.split()[1])
                 elif line.startswith("parse-time-ns:"):
                     record['parse-duration'] = int(line.split()[1])
+                elif line.startswith("skipped: true"):
+                    record['skipped'] = True
                 elif line.startswith("element-hashes:"):
                     data = line[len('element-hashes:'):]
                     try:
@@ -102,18 +107,13 @@ if __name__ == "__main__":
                 elif line.startswith("hash-start-time-ns"):
                     record['hash-start-time'] = int(line.split()[1])
 
-            #TODO: implement parallel building!!!
-#            sliceID = os.environ.get("SLICE_ID")
-#            if sliceID == '-1':
-            outFilename = outputDir + "/" + objectfile + ".info"
-#            else:
-#                outFilename = outputDir + "/" + objectfile + "_" + sliceID + ".info"
-
-            outputPath = outputDir + "/" + os.path.dirname(objectfile)
-            mkpath(outputPath)
-            f = open(outFilename, 'a')
-            f.write(repr(record) + "\n")
-            f.close()
+            if outputDir:
+                outFilename = outputDir + "/" + objectfile + ".info"
+                outputPath = outputDir + "/" + os.path.dirname(objectfile)
+                mkpath(outputPath)
+                f = open(outFilename, 'a')
+                f.write(repr(record) + "\n")
+                f.close()
 
 
     sys.exit(retcode)
