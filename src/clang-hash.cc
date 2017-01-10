@@ -16,11 +16,13 @@ static std::chrono::high_resolution_clock::time_point StartCompilation;
 
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
-  HashTranslationUnitConsumer(raw_ostream *OS,
-                              const std::string &PrevHashString,
-                              const std::string &OutFile)
-      : TopLevelHashStream(OS), PreviousHashString(PrevHashString),
-        OutputFile(OutFile) {}
+   HashTranslationUnitConsumer(raw_ostream *HS, raw_ostream *OS,
+                               const std::string &PrevHashString,
+                               const std::string &OutFile,
+                               bool StopIfSameHash)
+      : TopLevelHashStream(HS), Terminal(OS),
+        PreviousHashString(PrevHashString),
+        OutputFile(OutFile), StopIfSameHash(StopIfSameHash) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
     const auto StartHashing = std::chrono::high_resolution_clock::now();
@@ -29,7 +31,7 @@ public:
     // will visit all nodes in the AST.
     Visitor.hashDecl(Context.getTranslationUnitDecl());
 
-    const bool StopIfSameHash = hashCommandLineArguments();
+    hashCommandLineArguments();
 
     const auto FinishHashing = std::chrono::high_resolution_clock::now();
 
@@ -40,7 +42,7 @@ public:
     const bool StopCompiling =
         StopIfSameHash && (HashString == PreviousHashString);
     if (StopCompiling)
-      utime(OutputFile.c_str(), nullptr); // touch object file
+
 
     if (TopLevelHashStream) {
 //      if (!StopCompiling) //TODO: need to rewrite file everytime, gets cleared on open(): FIX THIS
@@ -48,52 +50,53 @@ public:
       delete TopLevelHashStream;
     }
 
-    errs() << "hash-start-time-ns "
-           << std::chrono::duration_cast<std::chrono::nanoseconds>(
+    // Sometimes we do terminal output
+    if (Terminal) {
+        *Terminal << "hash-start-time-ns "
+                  << std::chrono::duration_cast<std::chrono::nanoseconds>(
                   StartHashing.time_since_epoch()).count() << "\n";
-    errs() << "top-level-hash: " << HashString << "\n";
-    errs() << "processed-bytes: " << ProcessedBytes << "\n";
-    errs() << "parse-time-ns: "
-           << std::chrono::duration_cast<std::chrono::nanoseconds>(
-                  StartHashing - StartCompilation).count() << "\n";
-    errs() << "hash-time-ns: "
-           << std::chrono::duration_cast<std::chrono::nanoseconds>(
-                  FinishHashing - StartHashing).count() << "\n";
-    errs() << "element-hashes: [";
-    for (const auto &SavedHash : Visitor.DeclSilo) {
-      const Decl *D = SavedHash.first;
-      const Hash::Digest &Dig = SavedHash.second;
-      // Only Top-level declarations
-      if (D->getDeclContext() &&
-          isa<TranslationUnitDecl>(D->getDeclContext()) && isa<NamedDecl>(D)) {
-        if (isa<FunctionDecl>(D))
-          errs() << "(\"function:";
-        else if (isa<VarDecl>(D))
-          errs() << "(\"variable ";
-        else if (isa<RecordDecl>(D))
-          errs() << "(\"record ";
-        else
-          continue;
+        *Terminal << "top-level-hash: " << HashString << "\n";
+        *Terminal << "processed-bytes: " << ProcessedBytes << "\n";
+        *Terminal << "parse-time-ns: "
+                  << std::chrono::duration_cast<std::chrono::nanoseconds>(
+                     StartHashing - StartCompilation).count() << "\n";
+        *Terminal << "hash-time-ns: "
+                  << std::chrono::duration_cast<std::chrono::nanoseconds>(
+                     FinishHashing - StartHashing).count() << "\n";
+        *Terminal << "element-hashes: [";
+        for (const auto &SavedHash : Visitor.DeclSilo) {
+            const Decl *D = SavedHash.first;
+            const Hash::Digest &Dig = SavedHash.second;
+            // Only Top-level declarations
+            if (D->getDeclContext() &&
+                isa<TranslationUnitDecl>(D->getDeclContext()) && isa<NamedDecl>(D)) {
+                if (isa<FunctionDecl>(D))
+                    *Terminal << "(\"function:";
+                else if (isa<VarDecl>(D))
+                    *Terminal << "(\"variable ";
+                else if (isa<RecordDecl>(D))
+                    *Terminal << "(\"record ";
+                else
+                    continue;
 
-        errs() << cast<NamedDecl>(D)->getName();
-        errs() << "\", \"";
-        errs() << Dig.asString();
-        errs() << "\"), ";
-      }
+                *Terminal << cast<NamedDecl>(D)->getName();
+                *Terminal << "\", \"";
+                *Terminal << Dig.asString();
+                *Terminal << "\"), ";
+            }
+        }
+        *Terminal << "]\n";
+        *Terminal << "skipped: " << (StopCompiling ? "true" : "false") << "\n";
     }
-    errs() << "]\n";
     if (StopCompiling) {
-        errs() << "skipped: true\n";
+        utime(OutputFile.c_str(), nullptr); // touch object file
         exit(0);
-    } else {
-        errs() << "skipped: false\n";
     }
   }
 
 private:
   // Returns true if the -stop-if-same-hash flag is set, else false.
-  bool hashCommandLineArguments() {
-    bool StopIfSameHash = false;
+  void hashCommandLineArguments() {
     // Get command line arguments
     const std::string PPID{std::to_string(getppid())};
     const std::string FilePath = "/proc/" + PPID + "/cmdline";
@@ -112,8 +115,10 @@ private:
           continue; // don't hash source filename
 
         if (Arg.find("-stop-if-same-hash") != std::string::npos) {
-          StopIfSameHash = true;
-          continue; // also don't hash this (plugin argument)
+            continue; // also don't hash this (plugin argument)
+        }
+        if (Arg.find("-hash-verbose") != std::string::npos) {
+            continue; // also don't hash this (plugin argument)
         }
 
         CommandLineArgs.push_back(Arg);
@@ -124,17 +129,24 @@ private:
       errs() << "Warning: could not open file \"" << FilePath
              << "\", cannot hash command line arguments.\n";
     }
-    return StopIfSameHash;
   }
 
   raw_ostream *const TopLevelHashStream;
+  raw_ostream *const Terminal;
+
   const std::string PreviousHashString;
   const std::string OutputFile;
   TranslationUnitHashVisitor Visitor;
+
+  bool StopIfSameHash;
+
 };
 
 class HashTranslationUnitAction : public PluginASTAction {
 protected:
+    bool StopIfSameHash;
+    bool Verbose;
+
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef) override {
     const std::string &OutputFile = CI.getFrontendOpts().OutputFile;
@@ -146,30 +158,30 @@ protected:
     if (OutputFile != "" && OutputFile != "/dev/null") {
       std::error_code Error;
       Out = new raw_fd_ostream(HashFile, Error, sys::fs::F_Text); //TODO: this overrides/clears .hash file. currently rewriting file after check. FIX THIS!
-      errs() << "dump-ast-file: " << OutputFile << " " << HashFile << "\n";
       if (Error) {
         errs() << "Could not open ast-hash file: " << OutputFile << "\n";
       }
     }
-    return make_unique<HashTranslationUnitConsumer>(Out, PreviousHashString,
-                                                    OutputFile);
+    raw_ostream *Terminal = nullptr;
+    if (Verbose) Terminal = &errs();
+    return make_unique<HashTranslationUnitConsumer>(Out, Terminal,
+                                                    PreviousHashString,
+                                                    OutputFile,
+                                                    StopIfSameHash);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
                  const std::vector<std::string> &Args) override {
     StartCompilation = std::chrono::high_resolution_clock::now();
-
+    Verbose = false;
+    StopIfSameHash = false;
     for (const std::string &Arg : Args) {
-      errs() << " arg = " << Arg << "\n";
-
-      // Example error handling.
-      if (Arg == "-an-error") {
-        DiagnosticsEngine &DiagEngine = CI.getDiagnostics();
-        const unsigned DiagID = DiagEngine.getCustomDiagID(
-            DiagnosticsEngine::Error, "invalid argument '%0'");
-        DiagEngine.Report(DiagID) << Arg;
-        return false;
-      }
+        if (Arg == "-hash-verbose") {
+            Verbose = true;
+        }
+        if (Arg == "-stop-if-same-hash") {
+            StopIfSameHash = true;
+        }
     }
     if (Args.size() && Args[0] == "help") {
       // FIXME
@@ -192,14 +204,18 @@ private:
     std::ifstream FileStream(FilePath);
     if (FileStream.good()) {
       getline(FileStream, HashString);
-      errs() << FilePath << ": old hash string: " << HashString << "\n";
+      if (Verbose) {
+          errs() << FilePath << ": old hash string: " << HashString << "\n";
+      }
     } else {
-      errs() << "Warning: could not open file \"" << FilePath
-             << "\", cannot read previous hash.\n";
+      if (Verbose) {
+          errs() << "Warning: could not open file \"" << FilePath
+                 << "\", cannot read previous hash.\n";
+      }
     }
     return HashString;
   }
 };
 
 static FrontendPluginRegistry::Add<HashTranslationUnitAction>
-    X("hash-unit", "hash translation unit");
+    X("clang-hash", "hash translation unit");

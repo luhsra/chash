@@ -3,4 +3,6 @@
 
 printf -v ARGS "%q " "$@"
 
-${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so $ARGS
+${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so \
+                   -Xclang -plugin-arg-clang-hash -Xclang -hash-verbose \
+                   $ARGS

@@ -7,6 +7,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 #include <string>
+#include <set>
 #include <map>
 #include <vector>
 #include <tuple>

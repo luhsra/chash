@@ -29,19 +29,25 @@ if __name__ == "__main__":
     level = logging.INFO
     if "V" in os.environ:
         level = logging.DEBUG
-    logging.basicConfig(filename = "clang-hash.log", level=level)
+    #logging.basicConfig(filename = "clang-hash.log", level=level)
     logging.debug(str(sys.argv))
 
     compiler = "${LLVM_C_COMPILER}"
     plugin = "${PROJECT_BINARY_DIR}/src/libclang-hash.so"
 
-    stop_if_hash_same = os.environ.get('STOP_IF_SAME_HASH')
-    if stop_if_hash_same is '1' or "-stop-if-same-hash" in args:
+    if os.environ.get('STOP_IF_SAME_HASH') or "-stop-if-same-hash" in args:
         try:
             args.remove("-stop-if-same-hash")
         except ValueError:
             pass
-        args.insert(0, "-Xclang -plugin-arg-clang-hash  -stop-if-same-hash")
+        args.extend(["-Xclang", "-plugin-arg-clang-hash", "-Xclang", "-stop-if-same-hash"])
+
+    if os.environ.get('HASH_VERBOSE') or "-hash-verbose" in args:
+        try:
+            args.remove("-hash-verbose")
+        except ValueError:
+            pass
+        args.extend(["-Xclang", "-plugin-arg-clang-hash", "-Xclang","-hash-verbose"])
 
     start_time = time.time()
     x = Popen([compiler, "-fplugin=" + plugin] + args,
