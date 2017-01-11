@@ -41,8 +41,6 @@ public:
 
     const bool StopCompiling =
         StopIfSameHash && (HashString == PreviousHashString);
-    if (StopCompiling)
-
 
     if (TopLevelHashStream) {
 //      if (!StopCompiling) //TODO: need to rewrite file everytime, gets cleared on open(): FIX THIS
