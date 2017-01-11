@@ -134,14 +134,10 @@ class IncrementalCompilation(Experiment):
     def project_name(self):
         return os.path.basename(self.metadata['project-clone-url'])
 
-    def variant_name(self):
-        return "%s-%s"%(self.project_name(), self.metadata['mode'])
+    def symlink_name(self):
+        return "%s-%s-%s"%(self.title, self.project_name(), self.metadata['mode'])
 
 
 if __name__ == "__main__":
     experiment = IncrementalCompilation()
     dirname = experiment(sys.argv)
-    symlink = "IncrementalCompilation-%s" % experiment.variant_name()
-    if os.path.exists(symlink):
-        os.unlink(symlink)
-    os.symlink(dirname, symlink)
