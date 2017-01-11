@@ -18,8 +18,9 @@ from versuchung.tex import DatarefDict
 
 class IncrementalCompilation(Experiment):
     inputs = {
-        "clang_hash": GitArchive("/home/stettberger/git/studenten/clang-hash/"),
-        "project": GitArchive("/home/stettberger/git/studenten/clang-hash/hash-projects/musl"),
+        "clang_hash": GitArchive("/home/stettberger/w/clang-hash/"),
+        "project": GitArchive("/home/stettberger/w/clang-hash/hash-projects/musl",
+                              shallow=True),
         "touch-only": Bool(True),
         "mode": String("normal"),
         "jobs": Integer(4),
@@ -31,15 +32,25 @@ class IncrementalCompilation(Experiment):
 
     def setup_compiler_paths(self, clang):
         os.environ['CC'] = clang
+
+    def call_configure(self, path):
+        if 'HASH_VERBOSE' in os.environ:
+            del os.environ['HASH_VERBOSE']
+        if self.project_name() == "postgresql":
+            shell("cd %s; ./configure --enable-depend", path)
+        elif self.project_name() == "musl":
+            shell("cd %s; ./configure", path)
+        else:
+            raise RuntimeError("Not a valid project")
+
+        os.environ['HASH_VERBOSE'] = '1'
         if self.mode.value == "normal":
-            os.environ['STOP_IF_SAME_HASH'] = '0'
+            if 'STOP_IF_SAME_HASH' in os.environ:
+                del os.environ['STOP_IF_SAME_HASH']
         elif self.mode.value == "clang-hash":
             os.environ['STOP_IF_SAME_HASH'] = '1'
         else:
-            sys.exit("Invalid operation mode")
-
-    def call_configure(self, path):
-        shell("cd %s; ./configure", path)
+            raise RuntimeError("Invalid operation mode")
 
     def call_make(self, path):
         shell("cd %s; make -j %s", path, str(self.jobs.value))
@@ -79,6 +90,7 @@ class IncrementalCompilation(Experiment):
 
 
     def run(self):
+        self.suspend_on_error = True
         # Determine the mode
         modes = ('normal', 'clang-hash')
         if not self.mode.value in modes:
