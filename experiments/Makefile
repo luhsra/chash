@@ -8,13 +8,25 @@ all:
 	@echo "Look at the makefile"
 
 incremental_rebuild_postgres_normal:
-	./incremental_rebuild.py -d ../versuchung-data --mode normal \
+	./incremental_rebuild.py -s -d ../versuchung-data --mode normal \
 		--jobs $(JOBS) -v \
 		--project-clone-url ${POSTGRES} \
 		--clang_hash-clone-url ${CLANG_HASH}
 
 incremental_rebuild_postgres_hash:
-	./incremental_rebuild.py -d ../versuchung-data --mode clang-hash \
+	./incremental_rebuild.py -s -d ../versuchung-data --mode clang-hash \
 		--jobs $(JOBS) -v \
 		--project-clone-url ${POSTGRES} \
+		--clang_hash-clone-url ${CLANG_HASH}
+
+incremental_rebuild_musl_normal:
+	./incremental_rebuild.py -s -d ../versuchung-data --mode normal \
+		--jobs $(JOBS) -v \
+		--project-clone-url ${MUSL} \
+		--clang_hash-clone-url ${CLANG_HASH}
+
+incremental_rebuild_musl_hash:
+	./incremental_rebuild.py -s -d ../versuchung-data --mode clang-hash \
+		--jobs $(JOBS) -v \
+		--project-clone-url ${MUSL} \
 		--clang_hash-clone-url ${CLANG_HASH}
