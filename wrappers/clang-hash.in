@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-
+# This wrapper script should be used, if you want to gather insight
+# information about the hashing process. It calls the given clang
+# compiler with our plugin and outputs the information on stderr.
 
 printf -v ARGS "%q " "$@"
 

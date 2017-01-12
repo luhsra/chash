@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+# Wrapper for clang, that supports (only) fast hash-based
+# recompilation.
+
+printf -v ARGS "%q " "$@"
+
+${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so \
+                   -Xclang -plugin-arg-clang-hash -Xclang -stop-if-same-hash \
+                   $ARGS
