@@ -48,23 +48,15 @@ class IncrementalCompilation(Experiment):
     def call_configure(self, path):
         if self.project_name() == "postgresql":
             shell("cd %s; ./configure --enable-depend", path)
-        elif self.project_name() == "musl":
+        elif self.project_name() in ("musl", "cpython"):
             shell("cd %s; ./configure", path)
+        elif self.project_name() in ('mbedtls'):
+            shell("cd %s; cmake . -DCMAKE_C_COMPILER=$CC", path)
         else:
             raise RuntimeError("Not a valid project")
 
     def call_make(self, path, cause = ""):
-        # We specialcase here for musl, since it does not employ
-        # header dependencies. IRC recommended a make clean approach,
-        # but currently clang hash does copy object files away.
-        # touching this file, we result in a reconsideration of all
-        # sources
-        if self.project_name() == "musl" and cause.endswith(".h"):
-            return shell("cd %s; touch obj/include/bits/alltypes.h && make -j %s", path,
-                         str(self.jobs.value))
-
-        return shell("cd %s; make -j %s", path,
-                     str(self.jobs.value))
+        return shell("cd %s; make -j %s", path, str(self.jobs.value))
 
     def get_sources(self, path):
         ret = []
@@ -72,6 +64,10 @@ class IncrementalCompilation(Experiment):
             for filename in filenames:
                 if filename.endswith(('.h','.c')):
                     ret.append(os.path.join(root, filename))
+        if self.project_name() == "musl":
+            # We do not touch headers that are external, since they
+            # are untouchable.
+            ret = [x for x in ret if x.endswith(".c") or "internal" in x ]
         return sorted(ret)
 
     def touch(self, path):
@@ -93,13 +89,14 @@ class IncrementalCompilation(Experiment):
         ret = self.call_make(path, cause)
         end_time = time.time()
 
-        # Call the lines that include the full compiler path
+        # Call the lines that include the full compiler path. This
+        # number is not useful, if -j N was done....
+        # Therefore, we do not record it.
         compiler_calls = len([1 for x in ret[0]
                               if x.startswith(self.CC) and '-c' in x])
         # Account only nano seconds, everywhere
         build_time = int((end_time - start_time) * 1e9)
         info['build-time'] = build_time
-        info['compiler-calls'] = compiler_calls
         logging.info("Rebuild done[%s]: %s s; CC() = %d ", cause,
                      build_time / 1e9,
                      compiler_calls)
@@ -128,7 +125,8 @@ class IncrementalCompilation(Experiment):
             self.setup_compiler_paths(cl_path)
 
             # Count the number of files
-            nr_files = len(list(self.get_sources(src_path)))
+            sources = list(self.get_sources(src_path))
+            nr_files = len(sources)
             logging.info("#files: %d", nr_files)
             self.build_info['file-count'] = nr_files
 
@@ -137,7 +135,7 @@ class IncrementalCompilation(Experiment):
             self.rebuild(src_path, "FRESH_BUILD")
 
             # Iterate over all files
-            for fn in self.get_sources(src_path):
+            for fn in sources:
                 self.touch(fn)
                 self.rebuild(src_path, fn)
 
