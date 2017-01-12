@@ -57,10 +57,12 @@ class IncrementalCompilation(Experiment):
         return shell("cd %s; make -j %s", path, str(self.jobs.value))
 
     def get_sources(self, path):
+        ret = []
         for root, dirnames, filenames in os.walk(path):
             for filename in filenames:
                 if filename.endswith(('.h','.c')):
-                    yield os.path.join(root, filename)
+                    ret.append(os.path.join(root, filename))
+        return sorted(ret)
 
     def touch(self, path):
         if self.touch_only.value:
