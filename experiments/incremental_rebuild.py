@@ -26,7 +26,6 @@ class IncrementalCompilation(Experiment):
         "jobs": Integer(4),
     }
     outputs = {
-        "hashes": Directory("hashes"),
         "stats": File("summary.dict"),
     }
 
@@ -44,6 +43,7 @@ class IncrementalCompilation(Experiment):
             raise RuntimeError("Not a valid mode")
 
         os.environ['CC'] = CC
+        self.CC = CC
 
     def call_configure(self, path):
         if self.project_name() == "postgresql":
@@ -81,11 +81,16 @@ class IncrementalCompilation(Experiment):
         ret = self.call_make(path)
         end_time = time.time()
 
+        # Call the lines that include the full compiler path
+        compiler_calls = len([1 for x in ret[0]
+                              if x.startswith(self.CC) and '-c' in x])
         # Account only nano seconds, everywhere
         build_time = int((end_time - start_time) * 1e9)
         info['build-time'] = build_time
-        logging.info("Rebuild done[%s]: %s s", cause,
-                     build_time / 1e9)
+        info['compiler-calls'] = compiler_calls
+        logging.info("Rebuild done[%s]: %s s; CC() = %d ", cause,
+                     build_time / 1e9,
+                     compiler_calls)
         return ret
 
     def run(self):
@@ -110,8 +115,10 @@ class IncrementalCompilation(Experiment):
             # clang hash wrapper
             self.setup_compiler_paths(cl_path)
 
+            # Count the number of files
             nr_files = len(list(self.get_sources(src_path)))
             logging.info("#files: %d", nr_files)
+            self.build_info['file-count'] = nr_files
 
             # Initial build of the given project
             self.call_configure(src_path)
@@ -121,6 +128,7 @@ class IncrementalCompilation(Experiment):
             for fn in self.get_sources(src_path):
                 self.touch(fn)
                 self.rebuild(src_path, fn)
+                break
 
         # Output the summary of this build into the statistics file.
         with open(self.stats.path, "w+") as fd:
@@ -130,10 +138,13 @@ class IncrementalCompilation(Experiment):
         return os.path.basename(self.metadata['project-clone-url'])
 
     def variant_name(self):
-        return "%s-%s"%(self.project_name(), self.metadata['mode'])
+        mod = "append"
+        if self.touch_only.value:
+            mod = "newline"
+        return "%s-%s-%s"%(self.project_name(), mod, self.metadata['mode'])
 
     def symlink_name(self):
-        return "%s-%s-%s"%(self.title, self.project_name(), self.metadata['mode'])
+        return "%s-%s"%(self.title, self.variant_name())
 
 
 if __name__ == "__main__":
