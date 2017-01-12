@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 from incremental_rebuild import IncrementalCompilation
+from lib import read_hash_directory
 
 class IncrementalCompilationPlots(Experiment):
     inputs =  {'results': List(IncrementalCompilation(), [])}
@@ -44,16 +45,26 @@ class IncrementalCompilationPlots(Experiment):
             build_times_all = []
             build_times_headers = []
             build_times_sources = []
+
+            #hash_info = read_hash_directory(result.hashes.path)
+            #print(hash_info)
+
             for build in records['builds']:
+                t = build['build-time'] / 1e9
+
                 if build['filename'] == "FRESH_BUILD":
+                    print(result.variant_name(), "FB", t)
                     continue
                 # Get a float in seconds
-                t = build['build-time'] / 1e9
                 build_times_all.append(t)
                 if build['filename'].endswith('.h'):
                     build_times_headers.append(t)
                 else:
                     build_times_sources.append(t)
+                if "alltypes" in build['filename']:
+                    print(result.variant_name(), t)
+
+                #print(build['id'])
 
             self.save([result.variant_name(), 'rebuild', 'avg'],
                       np.average(build_times_all))

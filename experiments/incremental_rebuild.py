@@ -21,7 +21,7 @@ class IncrementalCompilation(Experiment):
         "clang_hash": GitArchive("/home/stettberger/w/clang-hash/"),
         "project": GitArchive("/home/stettberger/w/clang-hash/hash-projects/musl",
                               shallow=True),
-        "touch-only": Bool(True),
+        "touch-only": Bool(False),
         "mode": String("normal"),
         "jobs": Integer(4),
     }
@@ -30,12 +30,22 @@ class IncrementalCompilation(Experiment):
         "stats": File("summary.dict"),
     }
 
-    def setup_compiler_paths(self, clang):
-        os.environ['CC'] = clang
+    def setup_compiler_paths(self, clang_path):
+        if self.mode.value == "normal":
+            CC = os.path.join(clang_path, "build/wrappers/clang-normal")
+        elif self.mode.value == "clang-hash":
+            CC = os.path.join(clang_path, "build/wrappers/clang-hash-stop")
+        elif self.mode.value == "ccache":
+            cache_dir = os.path.join(self.tmp_directory.path, "ccache")
+            os.mkdir(cache_dir)
+            os.environ["CCACHE_DIR"] = cache_dir
+            CC = os.path.join(clang_path, "build/wrappers/clang-ccache")
+        else:
+            raise RuntimeError("Not a valid mode")
+
+        os.environ['CC'] = CC
 
     def call_configure(self, path):
-        if 'HASH_VERBOSE' in os.environ:
-            del os.environ['HASH_VERBOSE']
         if self.project_name() == "postgresql":
             shell("cd %s; ./configure --enable-depend", path)
         elif self.project_name() == "musl":
@@ -43,17 +53,8 @@ class IncrementalCompilation(Experiment):
         else:
             raise RuntimeError("Not a valid project")
 
-        os.environ['HASH_VERBOSE'] = '1'
-        if self.mode.value == "normal":
-            if 'STOP_IF_SAME_HASH' in os.environ:
-                del os.environ['STOP_IF_SAME_HASH']
-        elif self.mode.value == "clang-hash":
-            os.environ['STOP_IF_SAME_HASH'] = '1'
-        else:
-            raise RuntimeError("Invalid operation mode")
-
     def call_make(self, path):
-        shell("cd %s; make -j %s", path, str(self.jobs.value))
+        return shell("cd %s; make -j %s", path, str(self.jobs.value))
 
     def get_sources(self, path):
         for root, dirnames, filenames in os.walk(path):
@@ -69,17 +70,15 @@ class IncrementalCompilation(Experiment):
                 fd.write("\n")
 
     def rebuild(self, path, cause):
-        run_id = len(self.build_info['builds'])
-        info = {'id': run_id, 'filename': cause}
+        info = {'filename': cause}
         self.build_info['builds'].append(info)
 
         # We export the RUN ID to the clang wrapper script, so it can
         # include it into the object file records
 
-        os.environ['RUN_ID'] = "%d" % run_id
         # Recompile!
         start_time = time.time()
-        self.call_make(path)
+        ret = self.call_make(path)
         end_time = time.time()
 
         # Account only nano seconds, everywhere
@@ -87,12 +86,12 @@ class IncrementalCompilation(Experiment):
         info['build-time'] = build_time
         logging.info("Rebuild done[%s]: %s s", cause,
                      build_time / 1e9)
-
+        return ret
 
     def run(self):
         self.suspend_on_error = True
         # Determine the mode
-        modes = ('normal', 'clang-hash')
+        modes = ('normal', 'ccache', 'clang-hash')
         if not self.mode.value in modes:
             raise RuntimeError("Mode can only be one of: %s"%modes)
 
@@ -100,10 +99,8 @@ class IncrementalCompilation(Experiment):
         logging.info("Build the Clang-Hash Plugin")
         with self.clang_hash as cl_path:
             shell("cd %s; mkdir build; cd build; cmake ..; make -j 4", cl_path)
-            clanghash_wrapper = os.path.join(cl_path, "build/wrappers/clang")
 
         # Project name
-        os.environ["PROJECT"] = self.project_name()
         logging.info("Cloning project... %s", self.project_name())
         self.build_info = {"project-name": self.project_name(),
                            "commit-hash": self.metadata["project-hash"],
@@ -111,9 +108,7 @@ class IncrementalCompilation(Experiment):
         with self.project as src_path:
             # First, we redirect all calls to the compiler to our
             # clang hash wrapper
-            self.setup_compiler_paths(clanghash_wrapper)
-            os.environ["COMMIT_HASH"] = self.metadata["project-hash"]
-            os.environ["CLANG_HASH_OUTPUT_DIR"] = self.hashes.path
+            self.setup_compiler_paths(cl_path)
 
             nr_files = len(list(self.get_sources(src_path)))
             logging.info("#files: %d", nr_files)
@@ -133,6 +128,9 @@ class IncrementalCompilation(Experiment):
 
     def project_name(self):
         return os.path.basename(self.metadata['project-clone-url'])
+
+    def variant_name(self):
+        return "%s-%s"%(self.project_name(), self.metadata['mode'])
 
     def symlink_name(self):
         return "%s-%s-%s"%(self.title, self.project_name(), self.metadata['mode'])
