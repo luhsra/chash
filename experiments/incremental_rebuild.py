@@ -128,7 +128,6 @@ class IncrementalCompilation(Experiment):
             for fn in self.get_sources(src_path):
                 self.touch(fn)
                 self.rebuild(src_path, fn)
-                break
 
         # Output the summary of this build into the statistics file.
         with open(self.stats.path, "w+") as fd:
