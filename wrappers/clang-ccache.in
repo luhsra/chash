@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+printf -v ARGS "%q " "$@"
+
+${CCACHE} ${LLVM_C_COMPILER} $ARGS
