@@ -3,10 +3,10 @@
 # Wrapper for clang, that supports (only) fast hash-based
 # recompilation.
 
-if [[ ( "$@" =~ .*" -c".* ) && ( "$@" =~ .*" -o".* ) && ! ( "$@" =~ .*"/dev/null".* ) ]]; then
-    exec ${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so \
+if [[ ( " $@" =~ .*" -c".* ) && ( "$@" =~ .*" -o".* ) && ! ( "$@" =~ .*"/dev/null".* ) ]]; then
+    ${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so \
          -Xclang -plugin-arg-clang-hash -Xclang -stop-if-same-hash \
          "$@"
 else
-    exec ${LLVM_C_COMPILER} "$@"
+    ${LLVM_C_COMPILER} "$@"
 fi
