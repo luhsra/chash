@@ -8,11 +8,22 @@
 #include <fstream>
 #include <unistd.h>
 #include <utime.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 
 using namespace clang;
 using namespace llvm;
 
 static std::chrono::high_resolution_clock::time_point StartCompilation;
+
+static char *objectfile = NULL;
+static char *objectfile_copy = NULL;
+static void link_object_file() {
+    if (objectfile && objectfile_copy) {
+        link(objectfile, objectfile_copy);
+    }
+}
 
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
@@ -47,6 +58,13 @@ public:
           TopLevelHashStream->write(HashString.c_str(), HashString.length());
       delete TopLevelHashStream;
     }
+
+    // After this binary finishes, we have to call link_object_file to
+    // copy away our object file.
+    std::string OutputFileCopy = OutputFile + ".hash_copy";
+    objectfile_copy = strdup(OutputFileCopy.c_str());
+    objectfile = strdup(OutputFile.c_str());
+    atexit(link_object_file);
 
     // Sometimes we do terminal output
     if (Terminal) {
@@ -86,10 +104,17 @@ public:
         *Terminal << "]\n";
         *Terminal << "skipped: " << (StopCompiling ? "true" : "false") << "\n";
     }
+
     if (StopCompiling) {
+        struct stat dummy;
+        // Object file not existing. Copy it from the backup
+        if (stat(OutputFile.c_str(), &dummy) == -1) {
+            link(OutputFileCopy.c_str(), OutputFile.c_str());
+        }
         utime(OutputFile.c_str(), nullptr); // touch object file
         exit(0);
     }
+
   }
 
 private:
@@ -213,7 +238,9 @@ private:
     }
     return HashString;
   }
+
 };
+
 
 static FrontendPluginRegistry::Add<HashTranslationUnitAction>
     X("clang-hash", "hash translation unit");
