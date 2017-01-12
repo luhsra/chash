@@ -53,8 +53,18 @@ class IncrementalCompilation(Experiment):
         else:
             raise RuntimeError("Not a valid project")
 
-    def call_make(self, path):
-        return shell("cd %s; make -j %s", path, str(self.jobs.value))
+    def call_make(self, path, cause = ""):
+        # We specialcase here for musl, since it does not employ
+        # header dependencies. IRC recommended a make clean approach,
+        # but currently clang hash does copy object files away.
+        # touching this file, we result in a reconsideration of all
+        # sources
+        if self.project_name() == "musl" and cause.endswith(".h"):
+            return shell("cd %s; touch obj/include/bits/alltypes.h && make -j %s", path,
+                         str(self.jobs.value))
+
+        return shell("cd %s; make -j %s", path,
+                     str(self.jobs.value))
 
     def get_sources(self, path):
         ret = []
@@ -80,7 +90,7 @@ class IncrementalCompilation(Experiment):
 
         # Recompile!
         start_time = time.time()
-        ret = self.call_make(path)
+        ret = self.call_make(path, cause)
         end_time = time.time()
 
         # Call the lines that include the full compiler path
