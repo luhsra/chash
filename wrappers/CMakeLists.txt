@@ -9,17 +9,12 @@ configure_file(clang-hash-collect.in ${PROJECT_BINARY_DIR}/wrappers/clang-hash-c
 # - clang-ccache: ccache assisted clang
 # - clang-hash-stop: clang-hash assisted clang
 
-execute_process(
-  COMMAND "${CMAKE_COMMAND}" "-E" "create_symlink"
-    "${LLVM_C_COMPILER}" "${CMAKE_CURRENT_BINARY_DIR}/clang-normal"
-)
-
 find_program(CCACHE NAMES "ccache")
 if (NOT CCACHE)
   message(ERROR "CCACHE not found")
 endif()
+configure_file(clang-normal.in ${PROJECT_BINARY_DIR}/wrappers/clang-normal)
 configure_file(clang-ccache.in ${PROJECT_BINARY_DIR}/wrappers/clang-ccache)
-
 configure_file(clang-hash-stop.in ${PROJECT_BINARY_DIR}/wrappers/clang-hash-stop)
 
 

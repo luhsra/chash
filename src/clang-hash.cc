@@ -177,6 +177,15 @@ protected:
     const std::string PreviousHashString = getHashFromFile(HashFile);
 
     // Write hash database to .o.hash if the compiler produces a object file
+    if (CI.getFrontendOpts().ProgramAction != frontend::EmitObj
+        && CI.getFrontendOpts().ProgramAction != frontend::EmitLLVM
+        && CI.getFrontendOpts().ProgramAction != frontend::EmitBC
+        && CI.getFrontendOpts().ProgramAction != frontend::ParseSyntaxOnly
+        ) {
+        errs() << "No compile\n";
+        return make_unique<ASTConsumer>();
+    }
+
     raw_ostream *Out = nullptr;
     if (OutputFile != "" && OutputFile != "/dev/null") {
       std::error_code Error;

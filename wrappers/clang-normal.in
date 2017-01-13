@@ -1,0 +1,3 @@
+#!/bin/sh
+
+exec ${LLVM_C_COMPILER} "$@" -Wno-extra-semi
