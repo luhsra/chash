@@ -16,8 +16,8 @@ define inc_template
 inc_$(shell echo $1 | tr '[:upper:]' '[:lower:]' )_$2:
 	./incremental_rebuild.py -s \
 		-d ../versuchung-data --jobs $(JOBS) \
-		-vv --clang_hash-clone-url ${CLANG_HASH} \
-		--project-clone-url ${$1} --mode $2 --dummy
+		-v --clang_hash-clone-url ${CLANG_HASH} \
+		--project-clone-url ${$1} --mode $2
 
 inc_$(shell echo $1 | tr '[:upper:]' '[:lower:]' ): inc_$(shell echo $1 | tr '[:upper:]' '[:lower:]' )_$2
 endef

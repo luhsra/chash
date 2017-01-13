@@ -78,12 +78,9 @@ class IncrementalCompilation(Experiment):
         else:
             with open(path) as fd:
                 content = fd.read()
-            if ";\n" in content:
-                content = content.replace(";\n", ";;\n", 1)
-                with open(path, "w") as fd:
-                    fd.write(content)
-            else:
-                os.utime(path, None)
+            content = "#line 1\n" + content
+            with open(path, "w") as fd:
+                fd.write(content)
 
     def rebuild(self, path, cause):
         info = {'filename': cause}
