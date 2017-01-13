@@ -48,10 +48,12 @@ class IncrementalCompilation(Experiment):
     def call_configure(self, path):
         if self.project_name() == "postgresql":
             shell("cd %s; ./configure --enable-depend", path)
-        elif self.project_name() in ("musl", "cpython"):
+        elif self.project_name() in ("musl", "cpython", "bash", "waf"):
             shell("cd %s; ./configure", path)
         elif self.project_name() in ('mbedtls'):
             shell("cd %s; cmake . -DCMAKE_C_COMPILER=$CC", path)
+        elif self.project_name() in ('lua',):
+            pass
         else:
             raise RuntimeError("Not a valid project")
 
@@ -74,8 +76,14 @@ class IncrementalCompilation(Experiment):
         if self.touch_only.value:
             os.utime(path, None)
         else:
-            with open(path, "a") as fd:
-                fd.write(";\n")
+            with open(path) as fd:
+                content = fd.read()
+            if ";\n" in content:
+                content = content.replace(";\n", ";;\n", 1)
+                with open(path, "w") as fd:
+                    fd.write(content)
+            else:
+                os.utime(path, None)
 
     def rebuild(self, path, cause):
         info = {'filename': cause}
@@ -103,7 +111,6 @@ class IncrementalCompilation(Experiment):
         return ret
 
     def run(self):
-        self.suspend_on_error = True
         # Determine the mode
         modes = ('normal', 'ccache', 'clang-hash')
         if not self.mode.value in modes:
@@ -148,8 +155,8 @@ class IncrementalCompilation(Experiment):
 
     def variant_name(self):
         mod = "append"
-        if self.touch_only.value:
-            mod = "newline"
+        if self.metadata['touch-only']:
+            mod = "touch"
         return "%s-%s-%s"%(self.project_name(), mod, self.metadata['mode'])
 
     def symlink_name(self):
