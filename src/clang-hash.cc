@@ -51,7 +51,9 @@ public:
     const std::string HashString = Visitor.getHash(&ProcessedBytes);
 
     const bool StopCompiling =
-        StopIfSameHash && (HashString == PreviousHashString);
+        StopIfSameHash
+        && (HashString == PreviousHashString)
+        && (! Context.getSourceManager().getDiagnostics().hasErrorOccurred());
 
     if (TopLevelHashStream) {
 //      if (!StopCompiling) //TODO: need to rewrite file everytime, gets cleared on open(): FIX THIS
@@ -177,12 +179,14 @@ protected:
     const std::string PreviousHashString = getHashFromFile(HashFile);
 
     // Write hash database to .o.hash if the compiler produces a object file
-    if (CI.getFrontendOpts().ProgramAction != frontend::EmitObj
-        && CI.getFrontendOpts().ProgramAction != frontend::EmitLLVM
-        && CI.getFrontendOpts().ProgramAction != frontend::EmitBC
-        && CI.getFrontendOpts().ProgramAction != frontend::ParseSyntaxOnly
-        ) {
-        errs() << "No compile\n";
+    if ((CI.getFrontendOpts().ProgramAction == frontend::EmitObj
+         || CI.getFrontendOpts().ProgramAction == frontend::EmitBC
+         || CI.getFrontendOpts().ProgramAction == frontend::EmitLLVM)
+        && OutputFile != "" && OutputFile != "/dev/null") {
+        /* OK.Let's run */
+    } else if  (CI.getFrontendOpts().ProgramAction == frontend::ParseSyntaxOnly) {
+        /* OK Let's run */
+    } else {
         return make_unique<ASTConsumer>();
     }
 

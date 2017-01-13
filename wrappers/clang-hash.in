@@ -1,10 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # This wrapper script should be used, if you want to gather insight
 # information about the hashing process. It calls the given clang
 # compiler with our plugin and outputs the information on stderr.
 
-printf -v ARGS "%q " "$@"
-
-${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so \
+exec ${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so \
                    -Xclang -plugin-arg-clang-hash -Xclang -hash-verbose \
-                   $ARGS
+                   "$@"
