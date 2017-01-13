@@ -5,47 +5,20 @@ POSTGRESQL = ${CLANG_HASH}/hash-projects/postgresql
 CPYTHON = ${CLANG_HASH}/hash-projects/cpython
 MBEDTLS = ${CLANG_HASH}/hash-projects/mbedtls --project-ref development
 
-
-
 all:
 	@echo "Look at the makefile"
 
-INC = ./incremental_rebuild.py -s -d ../versuchung-data --jobs $(JOBS) \
-	-vv --clang_hash-clone-url ${CLANG_HASH} --dummy
+define inc_template
+inc_$(shell echo $1 | tr '[:upper:]' '[:lower:]' )_$2:
+	./incremental_rebuild.py -s \
+		-d ../versuchung-data --jobs $(JOBS) \
+		-v --clang_hash-clone-url ${CLANG_HASH} \
+		--project-clone-url ${$1} --mode $2
 
+inc_$(shell echo $1 | tr '[:upper:]' '[:lower:]' ): inc_$(shell echo $1 | tr '[:upper:]' '[:lower:]' )_$2
+endef
 
-inc_postgres_normal:
-	${INC} --project-clone-url ${POSTGRESQL} --mode normal
+$(foreach project,MUSL POSTGRESQL CPYTHON MBEDTLS,\
+	$(foreach mode,normal ccache clang-hash,\
+		$(eval $(call inc_template,$(project),$(mode)))))
 
-inc_postgres_ccache:
-	${INC} --project-clone-url ${POSTGRESQL} --mode ccache
-
-inc_postgres_hash:
-	${INC} --project-clone-url ${POSTGRESQL} --mode clang-hash
-
-inc_musl_normal:
-	${INC} --project-clone-url ${MUSL} --mode normal
-
-inc_musl_ccache:
-	${INC} --project-clone-url ${MUSL} --mode ccache
-
-inc_musl_hash:
-	${INC} --project-clone-url ${MUSL} --mode clang-hash
-
-inc_cpython_normal:
-	${INC} --project-clone-url ${CPYTHON} --mode normal
-
-inc_cpython_ccache:
-	${INC} --project-clone-url ${CPYTHON} --mode ccache
-
-inc_cpython_hash:
-	${INC} --project-clone-url ${CPYTHON} --mode clang-hash
-
-inc_mbedtls_normal:
-	${INC} --project-clone-url ${MBEDTLS} --mode normal
-
-inc_mbedtls_ccache:
-	${INC} --project-clone-url ${MBEDTLS} --mode ccache
-
-inc_mbedtls_hash:
-	${INC} --project-clone-url ${MBEDTLS} --mode clang-hash
