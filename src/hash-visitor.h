@@ -83,6 +83,7 @@ public:
   bool VisitTranslationUnitDecl(const TranslationUnitDecl *Unit);
   bool VisitVarDecl(const VarDecl *D);
   /// Not interesting
+  bool VisitEmptyDecl(const EmptyDecl *) { return true; }
   bool VisitTypedefDecl(const TypedefDecl *) { return true; }
 
   bool VisitRecordDecl(const RecordDecl *D) { return true; }

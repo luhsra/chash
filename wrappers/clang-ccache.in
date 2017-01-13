@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-exec ${CCACHE} ${LLVM_C_COMPILER} "$@"
+exec ${CCACHE} ${LLVM_C_COMPILER} "$@" -Wno-extra-semi

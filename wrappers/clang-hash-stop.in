@@ -5,8 +5,9 @@
 
 if [[ ( " $@" =~ .*" -c".* ) && ( "$@" =~ .*" -o".* ) && ! ( "$@" =~ .*"/dev/null".* ) ]]; then
     ${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so \
-         -Xclang -plugin-arg-clang-hash -Xclang -stop-if-same-hash \
-         "$@"
+                       -Xclang -plugin-arg-clang-hash -Xclang -stop-if-same-hash \
+                       "$@" -Wno-extra-semi
+
 else
-    ${LLVM_C_COMPILER} "$@"
+    ${LLVM_C_COMPILER} "$@" -Wno-extra-semi
 fi
