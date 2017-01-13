@@ -16,7 +16,7 @@ endif()
 configure_file(clang-normal.in ${PROJECT_BINARY_DIR}/wrappers/clang-normal)
 configure_file(clang-ccache.in ${PROJECT_BINARY_DIR}/wrappers/clang-ccache)
 configure_file(clang-hash-stop.in ${PROJECT_BINARY_DIR}/wrappers/clang-hash-stop)
-
+configure_file(clang-ccache-hash-stop.in ${PROJECT_BINARY_DIR}/wrappers/clang-ccache-hash-stop)
 
 # Symlink compiler wrappers
 execute_process(
