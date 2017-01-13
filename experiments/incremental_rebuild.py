@@ -75,7 +75,7 @@ class IncrementalCompilation(Experiment):
             os.utime(path, None)
         else:
             with open(path, "a") as fd:
-                fd.write("\n")
+                fd.write(";\n")
 
     def rebuild(self, path, cause):
         info = {'filename': cause}

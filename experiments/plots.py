@@ -20,7 +20,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 from incremental_rebuild import IncrementalCompilation
-from lib import read_hash_directory
 
 class IncrementalCompilationPlots(Experiment):
     inputs =  {'results': List(IncrementalCompilation(), [])}
@@ -34,20 +33,12 @@ class IncrementalCompilationPlots(Experiment):
         return "%s-%s" %(self.title, self.project_name)
 
     def run(self):
-        names = set([x.project_name() for x in self.results])
-        assert len(names) == 1, "Different projects are mixed"
-        self.project_name = list(names)[0]
-
-        for result in self.results:
-            print(result.stats.path)
+        self.project_name = ""
+        for result in sorted(self.results, key=lambda x: (x.variant_name())):
             records = eval(result.stats.value)
-            print result.name, len(records['builds'])
             build_times_all = []
             build_times_headers = []
             build_times_sources = []
-
-            #hash_info = read_hash_directory(result.hashes.path)
-            #print(hash_info)
 
             for build in records['builds']:
                 t = build['build-time'] / 1e9
@@ -61,10 +52,12 @@ class IncrementalCompilationPlots(Experiment):
                     build_times_headers.append(t)
                 else:
                     build_times_sources.append(t)
-                if "alltypes" in build['filename']:
-                    print(result.variant_name(), t)
+
+                #if "alltypes" in build['filename']:
+                #    print(build['filename'], t, build['compiler-calls'])
 
                 #print(build['id'])
+
 
             self.save([result.variant_name(), 'rebuild', 'avg'],
                       np.average(build_times_all))
