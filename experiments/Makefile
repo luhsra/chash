@@ -22,7 +22,7 @@ inc_$3_$2_append:
 inc_$3_$2_touch:
 	./incremental_rebuild.py -s \
 		-d ../versuchung-data --jobs $(JOBS) \
-		-v --clang_hash-clone-url ${CLANG_HASH} \
+		-vv --clang_hash-clone-url ${CLANG_HASH} \
 		--project-clone-url ${$1} --mode $2 --touch-only true
 
 inc_$3: inc_$3_$2_touch inc_$3_$2_append

@@ -29,9 +29,6 @@ class IncrementalCompilationPlots(Experiment):
         self.tex['/'.join(path)] = value
         logging.info("%s = %s", '/'.join(path), value)
 
-    def symlink_name(self):
-        return "%s-%s" %(self.title, self.project_name)
-
     def run(self):
         self.project_name = ""
         for result in sorted(self.results, key=lambda x: (x.variant_name())):
@@ -44,7 +41,7 @@ class IncrementalCompilationPlots(Experiment):
                 t = build['build-time'] / 1e9
 
                 if build['filename'] == "FRESH_BUILD":
-                    print(result.variant_name(), "FB", t)
+                    self.save([result.variant_name(), "fresh build"], t)
                     continue
                 # Get a float in seconds
                 build_times_all.append(t)
@@ -53,20 +50,16 @@ class IncrementalCompilationPlots(Experiment):
                 else:
                     build_times_sources.append(t)
 
-                #if "alltypes" in build['filename']:
-                #    print(build['filename'], t, build['compiler-calls'])
 
                 #print(build['id'])
+            def seq(key, seq):
+                self.save(key +["count"], len(seq))
+                self.save(key +["avg"],   np.average(seq))
 
+            seq([result.variant_name(), 'rebuild'], build_times_all)
+            seq([result.variant_name(), 'rebuild', "sources"], build_times_sources)
+            seq([result.variant_name(), 'rebuild', "headers"], build_times_headers)
 
-            self.save([result.variant_name(), 'rebuild', 'avg'],
-                      np.average(build_times_all))
-            if build_times_sources:
-                self.save([result.variant_name(), 'rebuild', 'sources', 'avg'],
-                          np.average(build_times_sources))
-            if build_times_headers:
-                self.save([result.variant_name(), 'rebuild', 'headers', 'avg'],
-                          np.average(build_times_headers))
 
 
 if __name__ == "__main__":
