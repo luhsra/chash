@@ -13,15 +13,24 @@ all:
 	@echo "Look at the makefile"
 
 define inc_template
-inc_$(shell echo $1 | tr '[:upper:]' '[:lower:]' )_$2:
+inc_$3_$2_append:
 	./incremental_rebuild.py -s \
 		-d ../versuchung-data --jobs $(JOBS) \
 		-v --clang_hash-clone-url ${CLANG_HASH} \
 		--project-clone-url ${$1} --mode $2
 
-inc_$(shell echo $1 | tr '[:upper:]' '[:lower:]' ): inc_$(shell echo $1 | tr '[:upper:]' '[:lower:]' )_$2
+inc_$3_$2_touch:
+	./incremental_rebuild.py -s \
+		-d ../versuchung-data --jobs $(JOBS) \
+		-v --clang_hash-clone-url ${CLANG_HASH} \
+		--project-clone-url ${$1} --mode $2 --touch-only true
+
+inc_$3: inc_$3_$2_touch inc_$3_$2_append
+inc_$3_touch:  inc_$3_$2_touch
+inc_$3_append: inc_$3_$2_append
+inc: inc_$3
 endef
 
 $(foreach project,MUSL POSTGRESQL CPYTHON MBEDTLS LUA BASH SAMBA,\
 	$(foreach mode,normal ccache clang-hash,\
-		$(eval $(call inc_template,$(project),$(mode)))))
+		$(eval $(call inc_template,$(project),$(mode),$(shell echo $(project) | tr '[:upper:]' '[:lower:]' )))))
