@@ -104,19 +104,35 @@ public:
             }
         }
         *Terminal << "]\n";
-        *Terminal << "skipped: " << (StopCompiling ? "true" : "false") << "\n";
     }
+
 
     if (StopCompiling) {
         struct stat dummy;
         // Object file not existing. Copy it from the backup
-        if (stat(OutputFile.c_str(), &dummy) == -1) {
+        bool copy_exists =
+            (stat(OutputFileCopy.c_str(), &dummy) == 0);
+        bool orig_exists =
+            (stat(OutputFileCopy.c_str(), &dummy) == 0);
+        if (copy_exists) {
+            if (orig_exists) {
+                unlink(OutputFile.c_str());
+            }
             link(OutputFileCopy.c_str(), OutputFile.c_str());
+            if (stat(OutputFile.c_str(), &dummy) == 0) {
+                if (utime(OutputFile.c_str(), nullptr) == 0) {
+                    // touch object file
+                    if (Terminal) {
+                        *Terminal << "skipped: true\n";
+                    }
+                    exit(0);
+                }
+            }
         }
-        utime(OutputFile.c_str(), nullptr); // touch object file
-        exit(0);
     }
-
+    if (Terminal) {
+        *Terminal << "skipped: false\n";
+    }
   }
 
 private:
@@ -179,6 +195,7 @@ protected:
     const std::string PreviousHashString = getHashFromFile(HashFile);
 
     // Write hash database to .o.hash if the compiler produces a object file
+
     if ((CI.getFrontendOpts().ProgramAction == frontend::EmitObj
          || CI.getFrontendOpts().ProgramAction == frontend::EmitBC
          || CI.getFrontendOpts().ProgramAction == frontend::EmitLLVM)
