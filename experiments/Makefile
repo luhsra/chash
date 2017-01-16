@@ -34,3 +34,18 @@ endef
 $(foreach project,MUSL POSTGRESQL CPYTHON MBEDTLS LUA BASH SAMBA,\
 	$(foreach mode,normal ccache clang-hash,\
 		$(eval $(call inc_template,$(project),$(mode),$(shell echo $(project) | tr '[:upper:]' '[:lower:]' )))))
+
+define hist_template
+hist_$3_$2:
+	./historical_build.py -s \
+		-d ../versuchung-data --jobs $(JOBS) \
+		-v --clang_hash-clone-url ${CLANG_HASH} \
+		--project-clone-url ${$1} --mode $2 --commits 10 --dummy
+
+hist_$3: hist_$3_$2
+
+endef
+
+$(foreach project,LUA MBEDTLS SAMBA,\
+	$(foreach mode,normal ccache clang-hash ccache-clang-hash,\
+		$(eval $(call hist_template,$(project),$(mode),$(shell echo $(project) | tr '[:upper:]' '[:lower:]' )))))

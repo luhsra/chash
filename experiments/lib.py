@@ -51,7 +51,7 @@ class ClangHashHelper:
         elif self.project_name() in ("musl", "cpython", "bash", "samba"):
             shell("cd %s; ./configure", path)
         elif self.project_name() in ('mbedtls'):
-            shell("cd %s; cmake . -DCMAKE_C_COMPILER=$CC", path)
+            shell("cd %s; mkdir build; cd build; cmake .. -DCMAKE_C_COMPILER=$CC", path)
         elif self.project_name() in ('lua',):
             # This is an ugly hack to make it possible to override the
             # CC variable from the outsite.
@@ -68,7 +68,10 @@ class ClangHashHelper:
             raise RuntimeError("Not a valid project")
 
     def call_make(self, path):
-        return shell("cd %s; make -j %s", path, str(self.jobs.value))
+        if self.project_name() == "mbedtls":
+            return shell("cd %s/build; make -j %s", path, str(self.jobs.value))
+        else:
+            return shell("cd %s; make -j %s", path, str(self.jobs.value))
 
     def rebuild(self, path, info, fail_ok=False):
         # Recompile!

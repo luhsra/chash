@@ -22,7 +22,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
         "clang_hash": GitArchive("/home/stettberger/w/clang-hash/"),
         "project": GitArchive("/home/stettberger/w/clang-hash/hash-projects/lua"),
         "mode": String("normal"),
-        "commits": Integer(50),
+        "commits": Integer(500),
         "jobs": Integer(4),
     }
     outputs = {
@@ -31,7 +31,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
 
     def run(self):
         # Determine the mode
-        modes = ('normal', 'ccache', 'clang-hash')
+        modes = ('normal', 'ccache', 'clang-hash', 'ccache-clang-hash')
         if not self.mode.value in modes:
             raise RuntimeError("Mode can only be one of: %s"%modes)
 
