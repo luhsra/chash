@@ -21,7 +21,7 @@ import matplotlib.patches as mpatches
 
 from incremental_rebuild import IncrementalCompilation
 
-class IncrementalCompilationPlots(Experiment):
+class AnalyzeResults(Experiment):
     inputs =  {'results': List(IncrementalCompilation(), [])}
     outputs = {'tex': DatarefDict('data.dref')}
 
@@ -63,6 +63,5 @@ class IncrementalCompilationPlots(Experiment):
 
 
 if __name__ == "__main__":
-    experiment = IncrementalCompilationPlots()
+    experiment = AnalyzeResults()
     dirname = experiment(sys.argv + ["-s"])
-    print(dirname)

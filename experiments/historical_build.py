@@ -38,6 +38,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
         logging.info("Build the Clang-Hash Plugin")
         with self.clang_hash as cl_path:
             shell("cd %s; mkdir build; cd build; cmake .. -DCMAKE_BUILD_TYPE=Release; make -j 4", cl_path)
+            shell("strip %s/build/src/*.so", cl_path)
 
         # Project name
         logging.info("Cloning project... %s", self.project_name())
@@ -53,7 +54,6 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
             # First, we redirect all calls to the compiler to our
             # clang hash wrapper
             self.setup_compiler_paths(cl_path)
-
 
             while True:
                 commit = commits.pop(0)
