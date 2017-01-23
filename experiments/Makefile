@@ -40,13 +40,13 @@ hist_$3_$2:
 	./historical_build.py -s \
 		-d ../versuchung-data --jobs $(JOBS) \
 		-v --clang_hash-clone-url ${CLANG_HASH} \
-		--project-clone-url ${$1} --mode $2 --commits 10 --dummy
+		--project-clone-url ${$1} --mode $2 --commits 500
 
 hist_$3: hist_$3_$2
 
 endef
 
-$(foreach project,LUA MBEDTLS SAMBA,\
+$(foreach project,LUA MBEDTLS SAMBA MUSL POSTGRESQL CPYTHON,\
 	$(foreach mode,normal ccache clang-hash ccache-clang-hash,\
 		$(eval $(call hist_template,$(project),$(mode),$(shell echo $(project) | tr '[:upper:]' '[:lower:]' )))))
 
