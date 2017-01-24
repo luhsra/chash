@@ -97,11 +97,14 @@ class IncrementalCompilation(Experiment, ClangHashHelper):
         with open(self.stats.path, "w+") as fd:
             fd.write(repr(self.build_info))
 
-    def variant_name(self):
+    def method_name(self):
         mod = "append"
         if self.metadata['touch-only']:
             mod = "touch"
-        return "%s-%s-%s"%(self.project_name(), mod, self.metadata['mode'])
+        return "%s-%s" %(mod, self.metadata['mode'])
+
+    def variant_name(self):
+        return "%s-%s"%(self.project_name(), self.method_name())
 
     def symlink_name(self):
         return "%s-%s"%(self.title, self.variant_name())

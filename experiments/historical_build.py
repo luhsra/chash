@@ -22,7 +22,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
         "clang_hash": GitArchive("/home/stettberger/w/clang-hash/"),
         "project": GitArchive("/home/stettberger/w/clang-hash/hash-projects/lua"),
         "mode": String("normal"),
-        "commits": Integer(50),
+        "commits": Integer(500),
         "jobs": Integer(4),
     }
     outputs = {
@@ -31,13 +31,14 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
 
     def run(self):
         # Determine the mode
-        modes = ('normal', 'ccache', 'clang-hash')
+        modes = ('normal', 'ccache', 'clang-hash', 'ccache-clang-hash')
         if not self.mode.value in modes:
             raise RuntimeError("Mode can only be one of: %s"%modes)
 
         logging.info("Build the Clang-Hash Plugin")
         with self.clang_hash as cl_path:
-            shell("cd %s; mkdir build; cd build; cmake ..; make -j 4", cl_path)
+            shell("cd %s; mkdir build; cd build; cmake .. -DCMAKE_BUILD_TYPE=Release; make -j 4", cl_path)
+            shell("strip %s/build/src/*.so", cl_path)
 
         # Project name
         logging.info("Cloning project... %s", self.project_name())
@@ -53,7 +54,6 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
             # First, we redirect all calls to the compiler to our
             # clang hash wrapper
             self.setup_compiler_paths(cl_path)
-
 
             while True:
                 commit = commits.pop(0)

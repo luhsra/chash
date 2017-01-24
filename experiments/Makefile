@@ -22,7 +22,7 @@ inc_$3_$2_append:
 inc_$3_$2_touch:
 	./incremental_rebuild.py -s \
 		-d ../versuchung-data --jobs $(JOBS) \
-		-vv --clang_hash-clone-url ${CLANG_HASH} \
+		-v --clang_hash-clone-url ${CLANG_HASH} \
 		--project-clone-url ${$1} --mode $2 --touch-only true
 
 inc_$3: inc_$3_$2_touch inc_$3_$2_append
@@ -34,3 +34,23 @@ endef
 $(foreach project,MUSL POSTGRESQL CPYTHON MBEDTLS LUA BASH SAMBA,\
 	$(foreach mode,normal ccache clang-hash,\
 		$(eval $(call inc_template,$(project),$(mode),$(shell echo $(project) | tr '[:upper:]' '[:lower:]' )))))
+
+define hist_template
+hist_$3_$2:
+	./historical_build.py -s \
+		-d ../versuchung-data --jobs $(JOBS) \
+		-v --clang_hash-clone-url ${CLANG_HASH} \
+		--project-clone-url ${$1} --mode $2 --commits 500
+
+hist_$3: hist_$3_$2
+
+endef
+
+$(foreach project,LUA MBEDTLS SAMBA MUSL POSTGRESQL CPYTHON,\
+	$(foreach mode,normal ccache clang-hash ccache-clang-hash,\
+		$(eval $(call hist_template,$(project),$(mode),$(shell echo $(project) | tr '[:upper:]' '[:lower:]' )))))
+
+
+analyze:
+	./analyze_results.py -v -d ../versuchung-data -s \
+		--result '../versuchung-data/IncrementalCompilation-*'
