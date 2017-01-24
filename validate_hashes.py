@@ -12,7 +12,7 @@ import matplotlib.mlab as mlab
 import csv
 
 
-SKIP_VALIDATING = True  #TODO: make command line arg
+SKIP_VALIDATING = False  #True  #TODO: make command line arg
 
 PATH_TO_RECORDS = '' # gets set from command line parameter
 
@@ -22,14 +22,14 @@ FULL_RECORD_FILENAME = 'fullRecord' + INFO_EXTENSION
 COMMIT_INFO_FILENAME = 'commitInfo_musl' + INFO_EXTENSION
 
 # graph filenames
-PNG_EXTENSION = '.pdf' #TODO: rename to sth. like GRAPH_FILE_EXTENSION
-PARSE_TIME_HISTOGRAM_FILENAME = 'parseTimeHistogram' + PNG_EXTENSION
-HASH_TIME_HISTOGRAM_FILENAME = 'hashTimeHistogram' + PNG_EXTENSION
-COMPILE_TIME_HISTOGRAM_FILENAME = 'compileTimeHistogram' + PNG_EXTENSION
-BUILD_TIME_HISTOGRAM_FILENAME = 'buildTimeHistogram' + PNG_EXTENSION
-CHANGES_GRAPH_FILENAME = 'changes' + PNG_EXTENSION
-BUILD_TIMES_GRAPH_FILENAME = 'buildTimes' + PNG_EXTENSION
-BUILD_TIME_COMPOSITION_FILENAME = 'buildTimeComposition' + PNG_EXTENSION
+GRAPH_EXTENSION = '.pdf' #TODO: rename to sth. like GRAPH_FILE_EXTENSION
+PARSE_TIME_HISTOGRAM_FILENAME = 'parseTimeHistogram' + GRAPH_EXTENSION
+HASH_TIME_HISTOGRAM_FILENAME = 'hashTimeHistogram' + GRAPH_EXTENSION
+COMPILE_TIME_HISTOGRAM_FILENAME = 'compileTimeHistogram' + GRAPH_EXTENSION
+BUILD_TIME_HISTOGRAM_FILENAME = 'buildTimeHistogram' + GRAPH_EXTENSION
+CHANGES_GRAPH_FILENAME = 'changes' + GRAPH_EXTENSION
+BUILD_TIMES_GRAPH_FILENAME = 'buildTimes' + GRAPH_EXTENSION
+BUILD_TIME_COMPOSITION_FILENAME = 'buildTimeComposition' + GRAPH_EXTENSION
 
 # CSV filenames
 #TODO: put in dict for easier check if existing
@@ -54,13 +54,21 @@ def abs_path(filename):
     return PATH_TO_RECORDS + '/../' + filename
 
 
-def getListOfFiles(directory):
+def get_list_of_files(directory):
     for root, dirnames, filenames in os.walk(directory):
         for filename in fnmatch.filter(filenames, '*' + INFO_EXTENSION):
             yield os.path.join(root, filename)
 
 
-def printHashInfo(message, prevRecord, record, isError=True):
+def write_to_csv(data, column_names, filename):
+    with open(filename, "w") as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(column_names)
+        for line in data:
+            writer.writerow(line)
+
+
+def print_hash_info(message, prevRecord, record, isError=True):
     print "%s: file %s, commits %s to %s : %s" % ("ERROR" if isError else "INFO", record['filename'], prevRecord['commit-hash'], record['commit-hash'], message)
 
 
@@ -68,30 +76,72 @@ def printHashInfo(message, prevRecord, record, isError=True):
 errorCount = 0
 astDifferObjSameCount = 0
 missingCount = 0    
+different_source_files = []
+different_source_ast_hashes = 0
+different_sources_dict = {}
+different_hashes_dict_count = {}
 
 
-def validateRecords():
-    for filename in getListOfFiles(PATH_TO_RECORDS):
+def plot_hash_count_histogram(hash_values, filename):
+    dictionary = plt.figure()
+
+    D = hash_values
+
+   # plt.xticks(range(len(D)), D.keys())
+
+    fig, ax = plt.subplots()
+    plt.xlabel('nr of different hashes')
+    plt.ylabel('nr of files')
+    ax.bar(D.keys(), D.values(), align='center')
+    fig.savefig(filename)
+
+
+def validate_records():
+    for filename in get_list_of_files(PATH_TO_RECORDS):
         records = [eval(line) for line in open(filename)]
-        validateHashes(records)
+        validate_hashes(records)
     print "Errors: %d, Infos: %d, Missing: %d" % (errorCount, astDifferObjSameCount, missingCount)
+    print "different source files: %d, different source AST hashes: %d" % (len(different_source_files), different_source_ast_hashes)
+    with open(abs_path('different_hashes.info'), 'w') as f:
+        try:
+            f.write(repr(different_sources_dict))
+        except MemoryError as me:
+            print me
+            raise
+    with open(abs_path('different_hashes_counts.info'), 'w') as f:
+        try:
+            f.write(repr(different_hashes_dict_count))
+        except MemoryError as me:
+            print me
+            raise
+    
+    plot_hash_count_histogram(different_hashes_dict_count, abs_path('hash_count_histogram.pdf'))
+    write_to_csv([ [k,v] for k,v in different_hashes_dict_count.items() ], ['nr of different hashes', 'nr of files'], abs_path('different_hashes_counts.csv'))
 
 
-def validateHashes(recordList):
+def validate_hashes(recordList):
+    global errorCount, astDifferObjSameCount, missingCount
+    global different_source_files, different_source_ast_hashes
+    global different_sources_dict, different_hashes_dict
+
     #TODO: also sort this, perhaps execute on fullRecords or check against sorted commitIDs
     #also TODO: collect data from all files before validating (changing paths src and crt)
     #TODO: validate return-code!
-    global errorCount, astDifferObjSameCount, missingCount
     #TODO: this method assumes that all records are from the same object file
+
     iterRecords = iter(recordList)
     prevRecord = next(iterRecords)
     filename = prevRecord['filename']
-
+    if filename not in different_source_files:
+        different_source_files.append(filename)
+ 
     if 'ast-hash' not in prevRecord.keys():
         #print "MISSING: no ast-hash in records for file " + filename
         missingCount += 1
         return
-    
+
+    different_hash_count = 1
+
     for record in iterRecords:
         if prevRecord['start-time'] > record['start-time']:
             print "Error: wrong order of records" #TODO: fix, then remove this
@@ -101,71 +151,86 @@ def validateHashes(recordList):
 
         if prevRecord['object-hash'] != record['object-hash']:
             if prevRecord['ast-hash'] == record['ast-hash']:
-                printHashInfo("object hashes differ, ast hashes same", prevRecord, record)
+                print_hash_info("object hashes differ, ast hashes same", prevRecord, record)
                 errorCount += 1
         elif prevRecord['ast-hash'] != record['ast-hash']:
-            #printHashInfo("ast hashes differ, object hashes same", prevRecord, record, False)
+            #print_hash_info("ast hashes differ, object hashes same", prevRecord, record, False)
             astDifferObjSameCount += 1
+            different_source_ast_hashes += 1
+            different_hash_count += 1
 
         prevRecord = record
-
+    
+    if filename in different_sources_dict:
+        different_sources_dict[filename] += different_hash_count
+    else:
+        different_sources_dict[filename] = different_hash_count
+    
+    if different_hash_count not in different_hashes_dict_count:
+        different_hashes_dict_count[different_hash_count] = 1
+    else:
+        different_hashes_dict_count[different_hash_count] += 1
 
 ################################################################################
 #
 #
 ################################################################################
 
+def build_key_translation_dict():
+    key_translation_to_nr = {
+        'start-time':       0,
+        'hash-start-time':  1,
+        'object-hash':      2,
+        'return-code':      3,
+        'parse-duration':   4,
+        'object-file-size': 5,
+        'processed-bytes':  6,
+        'hash-duration':    7,
+        'filename':         8,
+        'project':          9,
+        'compile-duration': 10, # time the compiler was running (incl. parse-duration)
+        'ast-hash':         11,
+        'commit-hash':      12,
+        'element-hashes':   13,
+        'commit-time':      14,
+        'build-time':       15, # time the 'make -jx' command took, times x 
+        'files':            16,
+        'files-changed':    17,
+        'insertions':       18,
+        'deletions':        19,
+        'other': 20 #TODO: remove, just 4 testing
+    }
+    key_translation_from_nr = {v: k for k, v in key_translation_to_nr.items()}
 
-keyTranslationToNr = {
-    'start-time':       0,
-    'hash-start-time':  1,
-    'object-hash':      2,
-    'return-code':      3,
-    'parse-duration':   4,
-    'object-file-size': 5,
-    'processed-bytes':  6,
-    'hash-duration':    7,
-    'filename':         8,
-    'project':          9,
-    'compile-duration': 10, # time the compiler was running (incl. parse-duration)
-    'ast-hash':         11,
-    'commit-hash':      12,
-    'element-hashes':   13,
-    'commit-time':      14,
-    'build-time':       15, # time the 'make -jx' command took, times x 
-    'files':            16,
-    'files-changed':    17,
-    'insertions':       18,
-    'deletions':        19,
-    'other': 20 #TODO: remove, just 4 testing
-}
-keyTranslationFromNr = {v: k for k, v in keyTranslationToNr.items()}
+    key_translation_dict = key_translation_to_nr.copy()
+    key_translation_dict.update(key_translation_from_nr)
 
-keyTranslation = keyTranslationToNr.copy()
-keyTranslation.update(keyTranslationFromNr)
+    return key_translation_dict
 
+
+key_translation = build_key_translation_dict()
 
 def tr(key):
     """lookup key translation (both directions)"""
-    return keyTranslation[key]
+    return key_translation[key]
 
 
-def buildFullRecordTo(pathToFullRecordFile):
+def build_full_record_to(pathToFullRecordFile):
     """structure of full record:
     {commitID: {'build-time': time, files: {filename: {record}, filename: {record}}}}
     """
-    fullRecord = {}
+    full_record = {}
     # this leads to being Killed by OS due to tremendous memory consumtion...
     #if os.path.isfile(pathToFullRecordFile):
     #    with open(pathToFullRecordFile, 'r') as fullRecordFile:
     #        print "loading full record from " + pathToFullRecordFile
-    #        fullRecord = eval(fullRecordFile.read())
+    #        full_record = eval(fullRecordFile.read())
     #        print "read full record from " + pathToFullRecordFile
     #else:
-    fullRecord = buildFullRecord()
+    full_record = build_full_record()
 #    f = open(pathToFullRecordFile, 'w')
 #    try:
-#        f.write(repr(fullRecord) + "\n")
+#        f.write(repr(full_record) + "\n")
 #    except MemoryError as me:
 #        print me
 #        raise
@@ -173,33 +238,33 @@ def buildFullRecordTo(pathToFullRecordFile):
 #        print time.ctime()
 #        f.close()
 #    print "built full record, wrote to " + pathToFullRecordFile
-    return fullRecord
+    return full_record
 
 
-def buildFullRecord():
+def build_full_record():
     """Builds a complete record from all the single hash records.
     The records are grouped by the commitIDs
     """
-    fullRecord = {}
+    full_record = {}
     with open(abs_path(COMMIT_INFO_FILENAME), 'r') as commitInfoFile:
         commitInfo = eval(commitInfoFile.read())
         for commitID in commitInfo:
-            fullRecord[commitID] = {}
-            fullRecord[commitID][tr('commit-time')] = commitInfo[commitID]['commit-time']
+            full_record[commitID] = {}
+            full_record[commitID][tr('commit-time')] = commitInfo[commitID]['commit-time']
             print commitID
             if 'build-time' in commitInfo[commitID]:
-                fullRecord[commitID][tr('build-time')] = commitInfo[commitID]['build-time']
+                full_record[commitID][tr('build-time')] = commitInfo[commitID]['build-time']
             else:
-                fullRecord[commitID][tr('build-time')] = 0
-            fullRecord[commitID][tr('files')] = {}
-            fullRecord[commitID][tr('files-changed')] = commitInfo[commitID]['files-changed']
+                full_record[commitID][tr('build-time')] = 0
+            full_record[commitID][tr('files')] = {}
+            full_record[commitID][tr('files-changed')] = commitInfo[commitID]['files-changed']
             
             if 'insertions' in commitInfo[commitID]:
-                fullRecord[commitID][tr('insertions')] = commitInfo[commitID]['insertions']
+                full_record[commitID][tr('insertions')] = commitInfo[commitID]['insertions']
             if 'deletions' in commitInfo[commitID]:
-                fullRecord[commitID][tr('deletions')] = commitInfo[commitID]['deletions']
+                full_record[commitID][tr('deletions')] = commitInfo[commitID]['deletions']
 
-    for recordFilename in getListOfFiles(PATH_TO_RECORDS):
+    for recordFilename in get_list_of_files(PATH_TO_RECORDS):
         for line in open(recordFilename):
             data = eval(line)
             commitID = data['commit-hash']
@@ -217,22 +282,22 @@ def buildFullRecord():
             del data['object-file-size']
             
             dataNewKeys = {tr(k): v for k, v in data.items()} 
-            fullRecord[commitID][tr('files')][objFilename] = dataNewKeys
+            full_record[commitID][tr('files')][objFilename] = dataNewKeys
 
-    return fullRecord
+    return full_record
 
 ################################################################################
 
-def getSortedCommitIDList(fullRecord):
-    return sorted(fullRecord, key=lambda x: (fullRecord[x][tr('commit-time')]))
+def get_sorted_commit_id_list(full_record):
+    return sorted(full_record, key=lambda x: (full_record[x][tr('commit-time')]))
 
 ################################################################################
 
 
 def plot_build_time_graph1(data):
-    plotBuildTimeGraph(data[0], data[1], data[2], data[3])
+    plot_build_time_graph(data[0], data[1], data[2], data[3])
 
-def plotBuildTimeGraph(measuredBuildTimes, realClangHashBuildTimes, optimalClangHashBuildTimes, optimalBuildTimes): # times in s
+def plot_build_time_graph(measuredBuildTimes, realClangHashBuildTimes, optimalClangHashBuildTimes, optimalBuildTimes): # times in s
     fig, ax = plt.subplots()
 
     ax.plot(measuredBuildTimes, label='measured build time')
@@ -248,14 +313,14 @@ def plotBuildTimeGraph(measuredBuildTimes, realClangHashBuildTimes, optimalClang
 
 
 def plot_build_time_composition_graph1(data):
-    plotBuildTimeCompositionGraph(data[0], data[1], data[2], data[3])
+    plot_build_time_composition_graph(data[0], data[1], data[2], data[3])
 
-def printAvg(data, name):
+def print_avg(data, name):
     print 'avg %s: %f' % (name, sum(data)/float(len(data)))
 
 parseColor, hashColor, compileColor, remainColor = ('#FFFF66','#FF0000','#3399FF','#008800') 
 
-def plotBuildTimeCompositionGraph(parseTimes, hashTimes, compileTimes, diffToBuildTime): # times in s
+def plot_build_time_composition_graph(parseTimes, hashTimes, compileTimes, diffToBuildTime): # times in s
     fig, ax = plt.subplots()
 
     ax.stackplot(np.arange(1, len(parseTimes)+1), # x axis
@@ -272,10 +337,10 @@ def plotBuildTimeCompositionGraph(parseTimes, hashTimes, compileTimes, diffToBui
                     ['remaining build time','compile time', 'hash time', 'parse time'],
                     loc='center left', bbox_to_anchor=(1, 0.5))
     fig.savefig(abs_path(BUILD_TIME_COMPOSITION_FILENAME), bbox_extra_artists=(lgd,), bbox_inches='tight')
-    printAvg(parseTimes, 'parse')
-    printAvg(hashTimes, 'hash')
-    printAvg(compileTimes, 'compile')
-    printAvg(diffToBuildTime, 'remainder')
+    print_avg(parseTimes, 'parse')
+    print_avg(hashTimes, 'hash')
+    print_avg(compileTimes, 'compile')
+    print_avg(diffToBuildTime, 'remainder')
 
 
 def plotTimeHistogram(times, filename):
@@ -306,7 +371,7 @@ def plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, filename):
     plt.xlabel('time [ms]')
     plt.yticks([1, 2, 3], ['parsing', 'hashing', 'compiling'])
     #lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
-    fig.savefig(filename[:-4] + '_boxplots' + PNG_EXTENSION)
+    fig.savefig(filename[:-4] + '_boxplots' + GRAPH_EXTENSION)
 
 
 
@@ -342,21 +407,12 @@ def plotChangesGraph(fileCounts, sameHashes, differentAstHashes, differentObjHas
 
 ################################################################################
 
-def write_to_csv(data, columnNames, filename):
-    with open(filename, "w") as csvFile:
-        writer = csv.writer(csvFile)
-        writer.writerow(columnNames)
-        for line in data:
-            writer.writerow(line)
 
-################################################################################
-
-
-def makeGraphs(fullRecord):
-    sortedCommitIDs = getSortedCommitIDList(fullRecord)
+def make_graphs(full_record):
+    sortedCommitIDs = get_sorted_commit_id_list(full_record)
     iterCommits = iter(sortedCommitIDs)
     prevCommitID = next(iterCommits)
-    prevCommit = fullRecord[prevCommitID]
+    prevCommit = full_record[prevCommitID]
 
     # data for build time graphs
     measuredBuildTimes = []
@@ -396,7 +452,7 @@ def makeGraphs(fullRecord):
         compileTimes.append(currentRecord[tr('compile-duration')] / 1e6)
 
     for commitID in iterCommits:
-        currentCommit = fullRecord[commitID]
+        currentCommit = full_record[commitID]
         currentFiles = currentCommit[tr('files')]
         prevFiles = prevCommit[tr('files')]
   
@@ -509,8 +565,8 @@ def makeGraphs(fullRecord):
     print "missingFilesTotal: %d, missingFileErrors: %d" % (missingFilesTotal, missingFileErrors)
     print "totalFilesChanged: %d, sizes: parseTimes(%d), hashTimes(%d), compileTimes(%d)" % (totalFilesChanged, len(parseTimes), len(hashTimes), len(compileTimes))
 
-    plotBuildTimeGraph(measuredBuildTimes, realClangHashBuildTimes, optimalClangHashBuildTimes, optimalBuildTimes)
-    plotBuildTimeCompositionGraph(totalParseTimes, totalHashTimes, totalCompileTimes, diffToBuildTime)
+    plot_build_time_graph(measuredBuildTimes, realClangHashBuildTimes, optimalClangHashBuildTimes, optimalBuildTimes)
+    plot_build_time_composition_graph(totalParseTimes, totalHashTimes, totalCompileTimes, diffToBuildTime)
     plotTimeHistograms(parseTimes, hashTimes, compileTimes)
     plotChangesGraph(fileCounts, sameHashes, differentAstHashes, differentObjHashes)
 
@@ -536,7 +592,7 @@ def csv_files_are_existing():
             and os.path.isfile(abs_path(CHANGES_DATA_FILENAME))
             and os.path.isfile(abs_path(SINGLE_TIMES_DATA_FILENAME)))
 
-def read_from_csv(filename, columnNames):
+def read_from_csv(filename, column_names): #TODO: unused?
     data = []
     with open(filename) as csv_file:
         reader = csv.reader(csv_file)
@@ -588,21 +644,21 @@ if (len(sys.argv) > 1):
 
     if not SKIP_VALIDATING:
         print "validating..."
-        validateRecords()
+        validate_records()
         print "finished validating at %s" % time.ctime()
-
+    '''
     if csv_files_are_existing():
         # skip building record, read csv data from files and work with that
         print "reading from csv files"
         read_csv_data_and_plot_graphs()
         print "finished graphs at %s" % time.ctime()
     else:
-        full_record = buildFullRecordTo(path_to_full_record_file)
+        full_record = build_full_record_to(path_to_full_record_file)
         print "finished building/loading full record at %s" % time.ctime()
 
-        makeGraphs(full_record)
+        make_graphs(full_record)
         print "finished graphs at %s" % time.ctime()
-
+    '''
     print "Finished at %s" % time.ctime()
 else:
     print "Missing path to record files.\nUsage:\n\t%s PATH_TO_RECORDS" % sys.argv[0]
