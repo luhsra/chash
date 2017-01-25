@@ -17,25 +17,71 @@ using namespace llvm;
 
 static std::chrono::high_resolution_clock::time_point StartCompilation;
 
+static enum {
+    ATEXIT_NOP,
+    ATEXIT_FROM_CACHE,
+    ATEXIT_TO_CACHE,
+} atexit_mode = ATEXIT_NOP;
+
+static char *hashfile = NULL;
+
+static char *hash_new = NULL;
+static char *hash_old = NULL;
+
 static char *objectfile = NULL;
 static char *objectfile_copy = NULL;
+
 static void link_object_file() {
-    if (objectfile && objectfile_copy) {
-        link(objectfile, objectfile_copy);
+    if (atexit_mode == ATEXIT_NOP) {
+        return;
+    }
+    assert(objectfile != nullptr);
+    assert(objectfile_copy != nullptr);
+
+    char *src = nullptr, *dst = nullptr;
+
+    if (atexit_mode == ATEXIT_FROM_CACHE) {
+        src = objectfile_copy;
+        dst = objectfile;
+    } else {
+        src = objectfile;
+        dst = objectfile_copy;
+    }
+
+    /* If destination exists, we have to unlink it. */
+    struct stat dummy;
+    if (stat(dst, &dummy) == 0) { // exists
+        if (unlink(dst) != 0) { // unlink failed
+            perror("clang-hash: unlink objectfile/objectfile copy");
+            return;
+        }
+    }
+    if (stat(src, &dummy) != 0) { // src exists
+        perror("clang-hash: source objectfile/objectfile copy does not exist");
+        return;
+    }
+
+    // Copy by hardlink
+    if (link(src, dst) != 0) {
+        perror("clang-hash: objectfile update failed");
+        return;
+    }
+
+    // Write Hash to hashfile
+    if (atexit_mode == ATEXIT_TO_CACHE) {
+        FILE *f = fopen(hashfile, "w+");
+        fwrite(hash_new, strlen(hash_new), 1, f);
+        fclose(f);
     }
 }
 
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
-   HashTranslationUnitConsumer(raw_ostream *HS, raw_ostream *OS,
-                               const std::string &PrevHashString,
-                               const std::string &OutFile,
-                               bool StopIfSameHash)
-      : TopLevelHashStream(HS), Terminal(OS),
-        PreviousHashString(PrevHashString),
-        OutputFile(OutFile), StopIfSameHash(StopIfSameHash) {}
+   HashTranslationUnitConsumer(raw_ostream *OS, bool StopIfSameHash)
+      : Terminal(OS), StopIfSameHash(StopIfSameHash) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
+    /// Step 1: Calculate Hash
     const auto StartHashing = std::chrono::high_resolution_clock::now();
 
     // Traversing the translation unit decl via a RecursiveASTVisitor
@@ -46,28 +92,16 @@ public:
 
     const auto FinishHashing = std::chrono::high_resolution_clock::now();
 
-    // Context.getTranslationUnitDecl()->dump();
     unsigned ProcessedBytes;
     const std::string HashString = Visitor.getHash(&ProcessedBytes);
+    hash_new = strdup(HashString.c_str());
 
-    const bool StopCompiling =
-        StopIfSameHash
-        && (HashString == PreviousHashString)
+    // Step 2: Consequent Handling
+    const bool HashEqual =
+        (hash_old != nullptr) // Cache Valid?
+        && (std::string(hash_old) == HashString)
         && (! Context.getSourceManager().getDiagnostics().hasErrorOccurred());
-
-    if (TopLevelHashStream) {
-//      if (!StopCompiling) //TODO: need to rewrite file everytime, gets cleared on open(): FIX THIS
-          TopLevelHashStream->write(HashString.c_str(), HashString.length());
-      delete TopLevelHashStream;
-    }
-
-    // After this binary finishes, we have to call link_object_file to
-    // copy away our object file.
-    std::string OutputFileCopy = OutputFile + ".hash_copy";
-    objectfile_copy = strdup(OutputFileCopy.c_str());
-    objectfile = strdup(OutputFile.c_str());
-    atexit(link_object_file);
-
+    // Step 2.1: -hash-verbose
     // Sometimes we do terminal output
     if (Terminal) {
         *Terminal << "hash-start-time-ns "
@@ -83,6 +117,7 @@ public:
                      FinishHashing - StartHashing).count() << "\n";
         *Terminal << "element-hashes: [";
         for (const auto &SavedHash : Visitor.DeclSilo) {
+            break;
             const Decl *D = SavedHash.first;
             const Hash::Digest &Dig = SavedHash.second;
             // Only Top-level declarations
@@ -104,34 +139,20 @@ public:
             }
         }
         *Terminal << "]\n";
+        *Terminal << "hash-equal:" << HashEqual << "\n";
+        *Terminal << "skipped:" << (HashEqual && StopIfSameHash) << "\n";
     }
 
-
-    if (StopCompiling) {
-        struct stat dummy;
-        // Object file not existing. Copy it from the backup
-        bool copy_exists =
-            (stat(OutputFileCopy.c_str(), &dummy) == 0);
-        bool orig_exists =
-            (stat(OutputFileCopy.c_str(), &dummy) == 0);
-        if (copy_exists) {
-            if (orig_exists) {
-                unlink(OutputFile.c_str());
-            }
-            link(OutputFileCopy.c_str(), OutputFile.c_str());
-            if (stat(OutputFile.c_str(), &dummy) == 0) {
-                if (utime(OutputFile.c_str(), nullptr) == 0) {
-                    // touch object file
-                    if (Terminal) {
-                        *Terminal << "skipped: true\n";
-                    }
-                    exit(0);
-                }
-            }
+    if (StopIfSameHash && objectfile != nullptr) {
+        // We are in caching mode and there should be an objectfile
+        atexit(link_object_file);
+        if (HashEqual) {
+            atexit_mode = ATEXIT_FROM_CACHE;
+            exit(0);
+        } else {
+            atexit_mode = ATEXIT_TO_CACHE;
+            // Continue with compilation
         }
-    }
-    if (Terminal) {
-        *Terminal << "skipped: false\n";
     }
   }
 
@@ -172,15 +193,9 @@ private:
     }
   }
 
-  raw_ostream *const TopLevelHashStream;
   raw_ostream *const Terminal;
-
-  const std::string PreviousHashString;
-  const std::string OutputFile;
   TranslationUnitHashVisitor Visitor;
-
   bool StopIfSameHash;
-
 };
 
 class HashTranslationUnitAction : public PluginASTAction {
@@ -191,11 +206,27 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef) override {
     const std::string &OutputFile = CI.getFrontendOpts().OutputFile;
-    const std::string HashFile = OutputFile + ".hash";
-    const std::string PreviousHashString = getHashFromFile(HashFile);
+    if (OutputFile != "" && OutputFile != "/dev/null") {
+        std::string tmp;
+        objectfile = strdup(OutputFile.c_str());
+
+        tmp = OutputFile + ".hash";
+        hashfile = strdup(tmp.c_str());
+
+        tmp = OutputFile + ".hash.copy";
+        objectfile_copy = strdup(tmp.c_str());
+    }
+
+    // Retrieve Hash and check if copy is intact
+    const std::string PreviousHashString = getHashFromFile(hashfile ? hashfile : "");
+    if (PreviousHashString != "") {
+        struct stat dummy;
+        if (stat(objectfile_copy, &dummy) == 0) {
+            hash_old = strdup(PreviousHashString.c_str());
+        }
+    }
 
     // Write hash database to .o.hash if the compiler produces a object file
-
     if ((CI.getFrontendOpts().ProgramAction == frontend::EmitObj
          || CI.getFrontendOpts().ProgramAction == frontend::EmitBC
          || CI.getFrontendOpts().ProgramAction == frontend::EmitLLVM)
@@ -207,20 +238,10 @@ protected:
         return make_unique<ASTConsumer>();
     }
 
-    raw_ostream *Out = nullptr;
-    if (OutputFile != "" && OutputFile != "/dev/null") {
-      std::error_code Error;
-      Out = new raw_fd_ostream(HashFile, Error, sys::fs::F_Text); //TODO: this overrides/clears .hash file. currently rewriting file after check. FIX THIS!
-      if (Error) {
-        errs() << "Could not open ast-hash file: " << OutputFile << "\n";
-      }
-    }
     raw_ostream *Terminal = nullptr;
     if (Verbose) Terminal = &errs();
-    return make_unique<HashTranslationUnitConsumer>(Out, Terminal,
-                                                    PreviousHashString,
-                                                    OutputFile,
-                                                    StopIfSameHash);
+
+    return make_unique<HashTranslationUnitConsumer>(Terminal, StopIfSameHash);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
