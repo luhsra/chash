@@ -59,9 +59,8 @@ class ClangHashHelper:
             # CC variable from the outsite.
             with open("%s/makefile" % path) as fd:
                 content = fd.readlines()
-            for i in range(0, len(content)):
-                if content[i].startswith("CC"):
-                    content[i] = "\n"
+            content += "\nCC=%s\n" % (os.environ["CC"])
+
             with open("%s/makefile" % path, "w") as fd:
                 fd.write("".join(content))
 
