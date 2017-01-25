@@ -94,7 +94,11 @@ class AnalyzeResults(Experiment):
                 records = eval(result.stats.value)
 
                 build_times = []
+                failed = 0
                 for build in records['builds']:
+                    if build.get('failed'):
+                        failed += 1
+                        continue
                     t = build['build-time']/1e9
                     build_times.append(t)
                     times[build['commit']][result.metadata['mode']] = t
@@ -105,7 +109,9 @@ class AnalyzeResults(Experiment):
                     self.save(key +["count"], len(seq))
                     self.save(key +["avg"],   np.average(seq))
 
-                seq([result.variant_name(), 'historical'], build_times)
+                key = [result.variant_name(), 'historical']
+                self.save(key + ["failed"], failed)
+                seq(key, build_times)
 
             try:
                 x = sorted(times, key=lambda x: times[x]['clang-hash']/times[x]['normal'])
