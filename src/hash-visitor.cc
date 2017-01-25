@@ -60,9 +60,8 @@ void HashVisitor::hashDecl(const Decl *D) {
         }
 
         if (const auto FD = dyn_cast<FunctionDecl>(Child)) {
-          if (FD->getStorageClass() == StorageClass::SC_Extern ||
-              FD->getStorageClass() == StorageClass::SC_PrivateExtern ||
-              !FD->isThisDeclarationADefinition()) {
+           // We try to avoid hashing of declarations that have no definition
+           if (! FD->isThisDeclarationADefinition()) {
             bool doHashing = false;
             // look for alias attribute. if alias, hash, else ignore
             if (FD->hasAttrs()) {

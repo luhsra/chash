@@ -245,7 +245,7 @@ def run_testcase_helper(test_case_opts, future):
 
     results = {}
 
-    for variant in variants:
+    for variant in sorted(variants):
         source_file = "{basename}.{variant}.var{ext}".format(
             basename=basename,
             variant=variant,
