@@ -72,7 +72,7 @@ static void link_object_file() {
         FILE *f = fopen(hashfile, "w+");
         fwrite(hash_new, strlen(hash_new), 1, f);
         fclose(f);
-    } elif (atexit_mode == ATEXIT_FROM_CACHE) {
+    } else if (atexit_mode == ATEXIT_FROM_CACHE) {
         // Update Timestamp
         utime(dst, NULL);
     }
