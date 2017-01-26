@@ -262,6 +262,14 @@ bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T) {
   return true;
 }
 
+bool HashVisitor::VisitVectorType(const VectorType *T) {
+    topHash() << AstElementVectorType;
+    hashType(T->getElementType());
+    topHash() << T->getNumElements() << T->getVectorKind();
+    return true;
+}
+
+
 bool HashVisitor::VisitVariableArrayType(const VariableArrayType *T) {
   topHash() << AstElementVariableArrayType;
   hashType(T->getElementType());
@@ -534,6 +542,22 @@ bool HashVisitor::VisitInitListExpr(const InitListExpr *Node) {
   }
   return true;
 }
+
+bool HashVisitor::VisitShuffleVectorExpr(const ShuffleVectorExpr *Node) {
+    topHash() << AstElementShuffleVectorExpr;
+    for (unsigned I = 0, E = Node->getNumSubExprs(); I < E; ++I) {
+        hashStmt(Node->getExpr(I));
+    }
+    return true;
+}
+
+bool HashVisitor::VisitConvertVectorExpr(const ConvertVectorExpr *Node) {
+    topHash() << AstElementConvertVectorExpr;
+    hashStmt(Node->getSrcExpr());
+    hashType(Node->getTypeSourceInfo()->getType());
+    return true;
+}
+
 
 bool HashVisitor::VisitUnaryOperator(const UnaryOperator *Node) {
   topHash() << AstElementUnaryOperator;
@@ -997,7 +1021,7 @@ void HashVisitor::hashStmt(const Stmt *Node) {
   const bool Handled = mt_stmtvisitor::Visit(Node);
   if (!Handled) {
     errs() << "---- START unhandled statement ----\n";
-    //    Node->dump();
+    Node->dump();
     errs() << "----- END unhandled statement -----\n";
   }
 }

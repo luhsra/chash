@@ -95,6 +95,7 @@ public:
   bool VisitArrayType(const ArrayType *T);
   bool VisitConstantArrayType(const ConstantArrayType *T);
   bool VisitVariableArrayType(const VariableArrayType *T);
+  bool VisitVectorType(const VectorType *);
   bool VisitRecordType(const RecordType *);
   bool VisitTypedefType(const TypedefType *T);
   bool VisitComplexType(const ComplexType *T);
@@ -145,6 +146,9 @@ public:
   bool VisitDesignatedInitExpr(const DesignatedInitExpr *Node);
   bool VisitStmtExpr(const StmtExpr *Node);
   bool VisitVAArgExpr(const VAArgExpr *Node);
+  bool VisitShuffleVectorExpr(const ShuffleVectorExpr *Node);
+  bool VisitConvertVectorExpr(const ConvertVectorExpr *Node);
+
 
   // TODO: evtl. ImplicitValueInitExpr, GenericSelectionExpr, ArraySubscriptExpr
   // TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach
@@ -308,10 +312,10 @@ protected:
     AstElementOffsetOfNode = 0x17f2d532,
     AstElementFieldDecl = 0xac0c83d4,
 
-    AstElementRecordDecl = 0x27892cea
-    // AstElement = 0x4ed393c3
-    // AstElement = 0x2e2321ad
-    // AstElement = 0xfe447195
+    AstElementRecordDecl = 0x27892cea,
+    AstElementVectorType = 0x4ed393c3,
+    AstElementShuffleVectorExpr = 0x2e2321ad,
+    AstElementConvertVectorExpr = 0xfe447195,
     // AstElement = 0xe9bda7ae
     // AstElement = 0x366466fc
     // AstElement = 0xd6b02f4e
