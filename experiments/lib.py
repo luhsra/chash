@@ -68,6 +68,12 @@ class ClangHashHelper:
         else:
             raise RuntimeError("Not a valid project")
 
+    def call_reconfigure(self, path):
+        if self.project_name() in ('lua',):
+            self.call_configure(path)
+        if self.project_name() in ('cpython',):
+            shell("cd %s/build; make config.status", path)
+
     def call_make(self, path):
         if self.project_name() in ("mbedtls", "cpython"):
             return shell("cd %s/build; make -j %s", path, str(self.jobs.value))

@@ -73,8 +73,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
             for commit in commits:
                 shell("cd %s; git reset --hard %s", src_path, commit[0])
                 info = {"commit": commit[0], "summary": commit[1]}
-                if self.project_name() == "lua":
-                    self.call_configure(src_path)
+                self.call_reconfigure(src_path)
                 self.rebuild(src_path, info, fail_ok=True)
                 self.build_info["builds"].append(info)
                 if not info.get("failed"):
