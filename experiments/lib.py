@@ -53,7 +53,7 @@ class ClangHashHelper:
         elif self.project_name() in ("cpython",):
             shell("cd %s; mkdir build; cd build; ../configure", path)
         elif self.project_name() in ('mbedtls'):
-            shell("cd %s; mkdir build; cd build; cmake .. -DCMAKE_C_COMPILER=$CC", path)
+            shell("cd %s; mkdir build; cd build; cmake .. -DCMAKE_C_COMPILER=$CC -DENABLE_PROGRAMS=OFF", path)
         elif self.project_name() in ('lua',):
             # This is an ugly hack to make it possible to override the
             # CC variable from the outsite.
