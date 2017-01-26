@@ -47,7 +47,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
                            'builds': []}
 
         with self.project as src_path:
-            (commits, _) = shell("cd %s; git log --oneline", src_path)
+            (commits, _) = shell("cd %s; git log --oneline --topo-order", src_path)
             commits = [x.split(" ", 1) for x in reversed(commits)]
             commits = commits[-self.commits.value:]
 
