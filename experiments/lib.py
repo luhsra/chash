@@ -51,7 +51,10 @@ class ClangHashHelper:
         elif self.project_name() in ("musl", "bash", "samba"):
             shell("cd %s; ./configure", path)
         elif self.project_name() in ("cpython",):
-            shell("cd %s; mkdir build; cd build; ../configure", path)
+            shell("cd %s; mkdir -p build build/Modules;", path)
+            shell("cd %s; cp -u Modules/Setup.dist build/Modules/Setup", path)
+            shell("cd %s; cd build; ../configure", path)
+
         elif self.project_name() in ('mbedtls'):
             shell("cd %s; mkdir build; cd build; cmake .. -DCMAKE_C_COMPILER=$CC -DENABLE_PROGRAMS=OFF", path)
         elif self.project_name() in ('lua',):
@@ -72,7 +75,8 @@ class ClangHashHelper:
         if self.project_name() in ('lua',):
             self.call_configure(path)
         if self.project_name() in ('cpython',):
-            shell("cd %s/build; make config.status", path)
+            shell("cd %s; mkdir -p build/Modules; cp -u Modules/Setup.dist build/Modules/Setup", path)
+
 
     def call_make(self, path):
         if self.project_name() in ("mbedtls", "cpython"):

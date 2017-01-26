@@ -29,6 +29,48 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
         "stats": File("summary.dict"),
     }
 
+    def build_parent(self, commit, from_scratch = False):
+        def eq_hash(a, b):
+            if len(a) == 0 or len(b) == 0:
+                return
+            if len(a) > len(b):
+                return a.startswith(b)
+            else:
+                return b.startswith(a)
+
+        src_path = self.project.path
+
+        if from_scratch:
+            shell("cd %s; git clean -dfx", src_path)
+            logging.info("Parent [%s^]: clean build", commit)
+            shell("cd %s; git reset --hard %s^", src_path, commit)
+            info = {"commit": commit + "^"}
+            self.call_configure(src_path)
+            self.rebuild(src_path, info, True)
+            # Did initial commit fail? Try again
+            if info.get("failed"):
+                logging.info("Parent[%s^]: failed" commit)
+                return False
+            return True
+        else:
+            (lines, _) = shell("cd %s; git rev-parse %s^",
+                               src_path, commit)
+            parent_revision = lines[0].strip()
+            if self.current_revision and eq_hash(self.current_revision, parent_revision):
+                logging.info("Parent[%s^]: resuse good parent", commit)
+                return True
+            else:
+                logging.info("Parent[%s^]: resuse similar build directory", commit)
+                shell("cd %s; git reset --hard %s^", src_path, commit)
+                info = {"commit": commit +"^"}
+                self.call_reconfigure(src_path)
+                self.rebuild(src_path, info, True)
+                # Did initial commit fail? Try again
+                if info.get("failed"):
+                    return self.build_parent(commit, from_scratch=True)
+                return True
+
+
     def run(self):
         # Determine the mode
         modes = ('normal', 'ccache', 'clang-hash', 'ccache-clang-hash')
@@ -47,37 +89,51 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
                            'builds': []}
 
         with self.project as src_path:
-            (commits, _) = shell("cd %s; git log --oneline --topo-order", src_path)
-            commits = [x.split(" ", 1) for x in reversed(commits)]
+            (commits, _) = shell("cd %s; git log --no-merges --oneline --topo-order --format='%%H %%P %%s'", src_path)
+            # [0] is hash. [1] is parent, [2] rest
+            commits = [x.split(" ", 2) for x in reversed(commits)]
             commits = commits[-self.commits.value:]
+
+            self.current_revision = None
 
             # First, we redirect all calls to the compiler to our
             # clang hash wrapper
             self.setup_compiler_paths(cl_path)
 
-            while True:
-                commit = commits.pop(0)
-                logging.info("Build: %s", commit)
-                shell("cd %s; git clean -dfx; git reset --hard %s", src_path, commit[0])
-                info = {"commit": "FRESH_BUILD"}
-                            # Initial build of the given project
-                self.call_configure(src_path)
-                self.rebuild(src_path, info, True)
-                # Did initial commit fail? Try again
-                if "failed" in info:
-                    continue
-                self.build_info["builds"].append(info)
-                break
-
             time = 0
-            for commit in commits:
+            while commits:
+                # Search for a child of the current revision
+                commit = None
+                if self.current_revision:
+                    for idx in range(0, len(commits)):
+                        if commits[idx][1] == self.current_revision:
+                            commit = commits[idx]
+                            del commits[idx]
+                            break
+                # No Child found -> Take the first one.
+                if not commit:
+                    commit = commits.pop(0)
+
+                info = {"commit": commit[0], "summary": commit[2]}
+
+                # First, we build the parent. In a total linear
+                # history, this is a NOP. Otherwise, we try to reset
+                # to the actual parent, and rebuild the project. This
+                # may fail, since the current commit might fix this.
+                self.build_parent(commit[0])
+
                 shell("cd %s; git reset --hard %s", src_path, commit[0])
-                info = {"commit": commit[0], "summary": commit[1]}
                 self.call_reconfigure(src_path)
                 self.rebuild(src_path, info, fail_ok=True)
+
                 self.build_info["builds"].append(info)
                 if not info.get("failed"):
                     time += info['build-time'] / 1e9
+                    # Build was good. Remember that.
+                    self.current_revision = commit[0]
+                else:
+                    self.current_revision = None
+
             logging.info("Rebuild for %d commits takes %f minutes",
                          self.commits.value, time/60.)
 
