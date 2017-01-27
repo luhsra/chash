@@ -1,7 +1,7 @@
 import os
 import fnmatch
 import time
-from versuchung.execute import shell, CommandFailed
+from versuchung.execute import shell, CommandFailed, shell_failok
 import logging
 
 def read_hash_directory(hash_dir, remove_keys = []):
@@ -49,7 +49,7 @@ class ClangHashHelper:
         if self.project_name() == "postgresql":
             shell("cd %s; ./configure --enable-depend", path)
         elif self.project_name() in ("musl", "bash", "samba"):
-            shell("cd %s; ./configure", path)
+            shell_failok("cd %s; ./configure", path)
         elif self.project_name() in ("cpython",):
             shell("cd %s; mkdir -p build build/Modules;", path)
             shell("cd %s; cp -u Modules/Setup.dist build/Modules/Setup", path)

@@ -46,11 +46,11 @@ hist_$3: hist_$3_$2
 
 endef
 
-$(foreach project,LUA MBEDTLS SAMBA MUSL POSTGRESQL CPYTHON,\
+$(foreach project,LUA MBEDTLS SAMBA MUSL POSTGRESQL CPYTHON BASH,\
 	$(foreach mode,normal ccache clang-hash ccache-clang-hash,\
 		$(eval $(call hist_template,$(project),$(mode),$(shell echo $(project) | tr '[:upper:]' '[:lower:]' )))))
 
 
 analyze:
-	./analyze_results.py -v -d ../versuchung-data -s \
-		--result '../versuchung-data/IncrementalCompilation-*'
+	./analyze_results.py -d ../versuchung-data -s \
+		--incremental '../versuchung-data/IncrementalCompilation-*' --dummy
