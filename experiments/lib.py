@@ -76,6 +76,8 @@ class ClangHashHelper:
             self.call_configure(path)
         if self.project_name() in ('cpython',):
             shell("cd %s; mkdir -p build/Modules; cp -u Modules/Setup.dist build/Modules/Setup", path)
+            shell_failok("cd %s/build; make config.status;", path)
+
 
 
     def call_make(self, path):
