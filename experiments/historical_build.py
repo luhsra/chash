@@ -49,7 +49,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
             self.rebuild(src_path, info, True)
             # Did initial commit fail? Try again
             if info.get("failed"):
-                logging.info("Parent[%s^]: failed" commit)
+                logging.info("Parent[%s^]: failed", commit)
                 return False
             return True
         else:
@@ -113,6 +113,10 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
                 # No Child found -> Take the first one.
                 if not commit:
                     commit = commits.pop(0)
+
+                # Bash initial commit
+                if commit[0] == "726f63884db0132f01745f1fb4465e6621088ccf":
+                    continue
 
                 info = {"commit": commit[0], "summary": commit[2]}
 
