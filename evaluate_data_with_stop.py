@@ -150,7 +150,7 @@ def write_to_csv(data, column_names, filename):
 
 
 def print_avg(data, name):
-    print 'avg %s: %f' % (name, sum(data)/float(len(data)))
+    print 'avg %s: %d' % (name, int(sum(data)/float(len(data))))
 
 ################################################################################
 
@@ -160,18 +160,18 @@ def plot_build_time_graph1(data):
     plot_build_time_composition_graph(data[0], data[1], data[2], data[3])
 
 
-def plot_build_time_composition_graph(parse_times, hash_times, compile_times, diff_to_build_time): # times in ms
+def plot_build_time_composition_graph(parse_times, hash_times, compile_times, diff_to_build_time): # times in ns
     fig, ax = plt.subplots()
-
+#[i/1e6 for i in parse_times],
     ax.stackplot(np.arange(1, len(parse_times)+1), # x axis
-                 [parse_times, hash_times, compile_times,
+                 [[i/1e6 for i in parse_times], [i/1e6 for i in hash_times],[i/1e6 for i in compile_times], # ns to ms
                 #diff_to_build_time
                 ], colors=[parse_color,hash_color,compile_color,
                  #   remain_color
                 ], edgecolor='none')
     plt.xlim(1,len(parse_times))
     plt.xlabel('commits')
-    plt.ylabel('time [s]')
+    plt.ylabel('time [ms]')
     ax.set_yscale('log')
     lgd = ax.legend([#mpatches.Patch(color=remain_color),
                      mpatches.Patch(color=compile_color),
@@ -181,16 +181,6 @@ def plot_build_time_composition_graph(parse_times, hash_times, compile_times, di
                     'compile time', 'hash time', 'parse time'],
                     loc='center left', bbox_to_anchor=(1, 0.5))
     fig.savefig(abs_path(BUILD_TIME_FILENAME), bbox_extra_artists=(lgd,), bbox_inches='tight')
-
-    print "\n-----------------"
-    print "average total times per build:"
-    print_avg(parse_times, 'parse')
-    print_avg(hash_times, 'hash')
-    print_avg(compile_times, 'compile')
-    print_avg(diff_to_build_time, 'remainder')
-    print ""
-    print "average times if header/source file touched"
-    print "-----------------\n"
 
 
 
@@ -205,7 +195,12 @@ def make_graphs(full_record):
     diff_to_build_times = []
 
     parse_times_header_touched = []
+    hash_times_header_touched = []
+    compile_times_header_touched = []
+
     parse_times_source_touched = []
+    hash_times_source_touched = []
+    compile_times_source_touched = []
 
 
 #    freshBuildRecord = full_record[0]
@@ -231,26 +226,59 @@ def make_graphs(full_record):
             total_hash_duration += current_file_record[tr('hash-duration')]
             total_compile_duration += current_file_record[tr('compile-duration')]
      
+            if current_record[tr('filename')].endswith('.h'):
+                parse_times_header_touched.append(total_parse_duration)
+                hash_times_header_touched.append(total_hash_duration)
+                compile_times_header_touched.append(total_compile_duration)
+            elif current_record[tr('filename')].endswith('.c'):
+                parse_times_source_touched.append(total_parse_duration)
+                hash_times_source_touched.append(total_hash_duration)
+                compile_times_source_touched.append(total_compile_duration)
+            else:
+                print "unknown file extension: " + filename
+
 #        if total_parse_duration == 0:# or (total_compile_duration/1e6) > 500000:
 #            continue
   
-        total_parse_times.append(total_parse_duration / 1e6) # nano to milli
-        total_hash_times.append(total_hash_duration / 1e6)
-        total_compile_times.append(total_compile_duration / 1e6)
+        total_parse_times.append(total_parse_duration)
+        total_hash_times.append(total_hash_duration)
+        total_compile_times.append(total_compile_duration)
         build_time = current_record[tr('build-time')]
-        total_build_times.append(build_time / 1e6)
-        diff_to_build_times.append((build_time - total_parse_duration - total_hash_duration - total_compile_duration) / 1e6)
+        total_build_times.append(build_time)
+        diff_to_build_times.append((build_time - total_parse_duration - total_hash_duration - total_compile_duration))
 
  
         print 'run_id %d, #files_changed: %d' % (run_id, files_changed)
 
+
+    print "\n---- Results ----"
+    print "avg total build times [ns]"
     print_avg(total_build_times, 'total')
+    print "-----------------"
+    print "average times if header file touched [ns]"
+    print_avg(parse_times_header_touched, 'parse')
+    print_avg(hash_times_header_touched, 'hash')
+    print_avg(compile_times_header_touched, 'compile')
+    print "-----------------"
+    print "average times if header source touched [ns]"
+    print_avg(parse_times_source_touched, 'parse')
+    print_avg(hash_times_source_touched, 'hash')
+    print_avg(compile_times_source_touched, 'compile')
+    print "-----------------"
+    print "average total times per build [ns]:"
+    print_avg(total_parse_times, 'parse')
+    print_avg(total_hash_times, 'hash')
+    print_avg(total_compile_times, 'compile')
+    print_avg(diff_to_build_times, 'remainder')
+    print "-----------------\n"
 
     # save data to csv files
     build_time_data = np.column_stack((total_parse_times, total_hash_times, total_compile_times, diff_to_build_times, total_build_times))
     write_to_csv(build_time_data, BUILD_TIME_DATA_HEADER, abs_path(BUILD_TIME_DATA_FILENAME))
 
     plot_build_time_composition_graph(total_parse_times, total_hash_times, total_compile_times, diff_to_build_times)
+
+
     
 ################################################################################
 """functions for reading data from the csv files to skip full record building"""

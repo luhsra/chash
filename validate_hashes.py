@@ -119,7 +119,7 @@ def validate_records():
     print ""
     print "avg times:"
     for k,v in sum_of_times.items():
-        print "%s: %d" % (k, v/nr_of_records)
+        print "%s: %d ns" % (k, v/nr_of_records)
     print "-----------------\n"
 
     write_to_csv([ [k,len(v)] for k,v in ast_hashes_dict.items() ], ['filename', 'nr of different hashes'], abs_path('different_ast_hashes_per_file.csv'))
@@ -332,15 +332,15 @@ def plot_build_time_graph1(data):
 def plot_build_time_graph(measuredBuildTimes, realClangHashBuildTimes, optimalClangHashBuildTimes, optimalBuildTimes): # times in s
     fig, ax = plt.subplots()
 
-    ax.plot(measuredBuildTimes, label='measured build time')
-    ax.plot(realClangHashBuildTimes, label='real clang-hash build time')
-    ax.plot(optimalClangHashBuildTimes, label='optimal clang-hash build time')
-    ax.plot(optimalBuildTimes, label='optimal build time')
+    ax.plot([i/60 for i in measuredBuildTimes], label='measured build time')
+    ax.plot([i/60 for i in realClangHashBuildTimes], label='real clang-hash build time')
+    ax.plot([i/60 for i in optimalClangHashBuildTimes], label='optimal clang-hash build time')
+    ax.plot([i/60 for i in optimalBuildTimes], label='optimal build time')
 
     lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
-
+    ax.set_ylim([0,5])
     plt.xlabel('commits')
-    plt.ylabel('time [ms]')
+    plt.ylabel('time [min]')
     fig.savefig(abs_path(BUILD_TIMES_GRAPH_FILENAME), bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
@@ -375,19 +375,19 @@ def plot_build_time_composition_graph(parseTimes, hashTimes, compileTimes, diffT
     print_avg(diffToBuildTime, 'remainder')
 
 
-def plotTimeHistogram(times, filename):
+def plotTimeHistogram(times, filename): # times in ms
     #TODO: understand params and vars
-    hist, bins = np.histogram(times, bins=50)
+    hist, bins = np.histogram([i/1000 for i in times], bins=50) # times to s
     width = 0.7 * (bins[1] - bins[0])
     center = (bins[:-1] + bins[1:]) / 2
     fig, ax = plt.subplots()
-    plt.xlabel('time [ms]')
+    plt.xlabel('time [s]')
     plt.ylabel('#files')
     ax.bar(center, hist, align='center', width=width)
     fig.savefig(filename)
 
 
-def plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, filename):
+def plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, filename): # times in ms
     bins = np.linspace(0, 5000, 50)
     data = np.vstack([parseTimes, hashTimes, compileTimes]).T
     fig, ax = plt.subplots()
@@ -398,9 +398,9 @@ def plotTimeMultiHistogram(parseTimes, hashTimes, compileTimes, filename):
     fig.savefig(filename)
 
     fig, ax = plt.subplots()
-    data = [parseTimes, hashTimes, compileTimes]
-    plt.boxplot(data, 0, 'rs', 0, [5, 95])
-    plt.xlabel('time [ms]')
+    boxplot_data = [[i/1000 for i in parseTimes], [i/1000 for i in hashTimes], [i/1000 for i in compileTimes]] # times to s
+    plt.boxplot(boxplot_data, 0, 'rs', 0, [5, 95])
+    plt.xlabel('time [s]')
     plt.yticks([1, 2, 3], ['parsing', 'hashing', 'compiling'])
     #lgd = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5)) # legend on the right
     fig.savefig(filename[:-4] + '_boxplots' + GRAPH_EXTENSION)
@@ -570,22 +570,24 @@ def make_graphs(full_record):
         optimalAstHashBuildTime = buildTime - totalOptimalRedundantCompileTime
 
 
-        measuredBuildTimes.append(buildTime / 1e9) # nano to seconds
-        optimalBuildTimes.append(optimalBuildTime / 1e9)
-        optimalClangHashBuildTimes.append(optimalAstHashBuildTime / 1e9)
-        realClangHashBuildTimes.append(realAstHashBuildTime / 1e9)
+        #TODO: remove broken commits; ok?
+        if buildTime > 3e12 and totalParseDuration/1e9 > 300:
+            measuredBuildTimes.append(buildTime / 16e9) # nano to seconds; also /16 to account for make -j16
+            optimalBuildTimes.append(optimalBuildTime / 16e9)
+            optimalClangHashBuildTimes.append(optimalAstHashBuildTime / 16e9)
+            realClangHashBuildTimes.append(realAstHashBuildTime / 16e9)
 
-        totalParseTimes.append(totalParseDuration / 1e9) # nano to seconds
-        totalHashTimes.append(totalHashDuration / 1e9)
-        totalCompileTimes.append(totalCompileDuration / 1e9)
-        diffToBuildTime.append((buildTime - totalParseDuration - totalHashDuration - totalCompileDuration) / 1e9)
+            totalParseTimes.append(totalParseDuration / 16e9) # nano to seconds
+            totalHashTimes.append(totalHashDuration / 16e9)
+            totalCompileTimes.append(totalCompileDuration / 16e9)
+            diffToBuildTime.append((buildTime - totalParseDuration - totalHashDuration - totalCompileDuration) / 16e9)
 
 
-        # changes graph
-        differentAstHashes.append(differentAstHash)
-        differentObjHashes.append(differentObjHash)
-        sameHashes.append(same)
-        fileCounts.append(fileCount)
+            # changes graph
+            differentAstHashes.append(differentAstHash)
+            differentObjHashes.append(differentObjHash)
+            sameHashes.append(same)
+            fileCounts.append(fileCount)
 
         prevCommit = currentCommit
         prevCommitID = commitID
