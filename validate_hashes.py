@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+import matplotlib
+matplotlib.use('Agg')
+
 import fnmatch
 import os
 import sys
@@ -10,9 +13,6 @@ import matplotlib.patches as mpatches
 import numpy as np
 import matplotlib.mlab as mlab
 import csv
-
-
-SKIP_VALIDATING = False  #True  #TODO: make command line arg
 
 PATH_TO_RECORDS = '' # gets set from command line parameter
 
@@ -46,11 +46,8 @@ CHANGES_DATA_HEADER = ['fileCount','sameHashes', 'differentAstHashes', 'differen
 SINGLE_TIMES_DATA_HEADER = ['parsing', 'hashing', 'compiling']
 
 
-
-
 def abs_path(filename):
-    """Prepends the absolute path to the filename.
-    """
+    """Prepends the absolute path to the filename."""
     return PATH_TO_RECORDS + '/../' + filename
 
 
@@ -59,7 +56,6 @@ def get_list_of_files(directory):
         for filename in fnmatch.filter(filenames, '*' + INFO_EXTENSION):
             yield os.path.join(root, filename)
 
-
 def write_to_csv(data, column_names, filename):
     with open(filename, "w") as csv_file:
         writer = csv.writer(csv_file)
@@ -67,113 +63,149 @@ def write_to_csv(data, column_names, filename):
         for line in data:
             writer.writerow(line)
 
-
-def print_hash_info(message, prevRecord, record, isError=True):
-    print "%s: file %s, commits %s to %s : %s" % ("ERROR" if isError else "INFO", record['filename'], prevRecord['commit-hash'], record['commit-hash'], message)
-
-
-
-errorCount = 0
-astDifferObjSameCount = 0
-missingCount = 0    
-different_source_files = []
-different_source_ast_hashes = 0
-different_sources_dict = {}
-different_hashes_dict_count = {}
+def write_to_file(data, filename):
+    with open(abs_path(filename), 'w') as f:
+        try:
+            f.write(repr(data))
+        except MemoryError as me:
+            print me
+            raise
 
 
 def plot_hash_count_histogram(hash_values, filename):
     dictionary = plt.figure()
-
-    D = hash_values
-
-   # plt.xticks(range(len(D)), D.keys())
-
     fig, ax = plt.subplots()
     plt.xlabel('nr of different hashes')
     plt.ylabel('nr of files')
-    ax.bar(D.keys(), D.values(), align='center')
+    ax.bar(hash_values.keys(), hash_values.values(), align='center')
     fig.savefig(filename)
+
+
+false_negatives = 0
+false_positives = 0
+ast_hash_missing = 0
+
+source_files = set() # all filenames of the hashed files
+ast_hashes_dict = {} # maps filename -> set(ast hashes)
+obj_hashes_dict = {} # maps filename -> set(obj hashes)
+
+nr_of_records = 0 # for calculating avg
+sum_of_times = {'parsing': 0,
+             'hashing': 0,
+             'compiling': 0}
 
 
 def validate_records():
     for filename in get_list_of_files(PATH_TO_RECORDS):
         records = [eval(line) for line in open(filename)]
         validate_hashes(records)
-    print "Errors: %d, Infos: %d, Missing: %d" % (errorCount, astDifferObjSameCount, missingCount)
-    print "different source files: %d, different source AST hashes: %d" % (len(different_source_files), different_source_ast_hashes)
-    with open(abs_path('different_hashes.info'), 'w') as f:
-        try:
-            f.write(repr(different_sources_dict))
-        except MemoryError as me:
-            print me
-            raise
-    with open(abs_path('different_hashes_counts.info'), 'w') as f:
-        try:
-            f.write(repr(different_hashes_dict_count))
-        except MemoryError as me:
-            print me
-            raise
-    
-    plot_hash_count_histogram(different_hashes_dict_count, abs_path('hash_count_histogram.pdf'))
-    write_to_csv([ [k,v] for k,v in different_hashes_dict_count.items() ], ['nr of different hashes', 'nr of files'], abs_path('different_hashes_counts.csv'))
+
+    different_ast_hashes = 0  # number of different ast hashes (in total)
+    for v in ast_hashes_dict.values():
+        different_ast_hashes += len(v)
+
+    different_obj_hashes = 0 # number of different obj hashes (in total)
+    for v in obj_hashes_dict.values():
+        different_obj_hashes += len(v)
+
+    print "\n---- Results ----"
+    print "false negatives (errors): %d" % false_negatives
+    print "false positives: %d" % false_positives
+    print "missing ast hashes: %d" % ast_hash_missing
+    print ""
+    print "source files: %d" % len(source_files)
+    print "different AST hashes: %d" % different_ast_hashes
+    print "different obj hashes: %d" % different_obj_hashes
+    print ""
+    print "avg times:"
+    for k,v in sum_of_times.items():
+        print "%s: %d" % (k, v/nr_of_records)
+    print "-----------------\n"
+
+    write_to_csv([ [k,len(v)] for k,v in ast_hashes_dict.items() ], ['filename', 'nr of different hashes'], abs_path('different_ast_hashes_per_file.csv'))
+    write_to_csv([ [k,len(v)] for k,v in obj_hashes_dict.items() ], ['filename', 'nr of different hashes'], abs_path('different_obj_hashes_per_file.csv'))
 
 
-def validate_hashes(recordList):
-    global errorCount, astDifferObjSameCount, missingCount
-    global different_source_files, different_source_ast_hashes
-    global different_sources_dict, different_hashes_dict
+def print_hash_info(message, prev_record, record, is_error=True):
+    print "%s: file %s, commits %s to %s : %s" % ("ERROR" if is_error else "INFO", record['filename'], prev_record['commit-hash'], record['commit-hash'], message)
 
-    #TODO: also sort this, perhaps execute on fullRecords or check against sorted commitIDs
-    #also TODO: collect data from all files before validating (changing paths src and crt)
-    #TODO: validate return-code!
-    #TODO: this method assumes that all records are from the same object file
 
-    iterRecords = iter(recordList)
-    prevRecord = next(iterRecords)
-    filename = prevRecord['filename']
-    if filename not in different_source_files:
-        different_source_files.append(filename)
+def validate_hashes(record_list):
+    ''' All records in the list must be from the same object file'''
+    #TODO: collect data from all files before validating (changing paths src and crt) and sort
+
+    global false_negatives, false_positives, ast_hash_missing
+    global source_files
+    global ast_hashes_dict, obj_hashes_dict
+    global sum_of_times, nr_of_records
+
+    iter_records = iter(record_list)
+    prev_record = next(iter_records)
+    filename = prev_record['filename']
+    source_files.add(filename)
  
-    if 'ast-hash' not in prevRecord.keys():
+    if 'ast-hash' not in prev_record.keys():
         #print "MISSING: no ast-hash in records for file " + filename
-        missingCount += 1
+        ast_hash_missing += 1
         return
 
-    different_hash_count = 1
+    # the different hashes of the current file
+    ast_hashes = set()
+    obj_hashes = set()
 
-    for record in iterRecords:
-        if prevRecord['start-time'] > record['start-time']:
+    ast_hashes.add(prev_record['ast-hash'])
+    obj_hashes.add(prev_record['object-hash'])
+
+    nr_of_records += 1
+    sum_of_times['parsing'] += prev_record['parse-duration']
+    sum_of_times['hashing'] += prev_record['hash-duration']
+    sum_of_times['compiling'] += prev_record['compile-duration'] - (prev_record['parse-duration'] + prev_record['hash-duration'])
+
+
+    for record in iter_records:
+        
+        if prev_record['start-time'] > record['start-time']:
             print "Error: wrong order of records" #TODO: fix, then remove this
         if 'ast-hash' not in record.keys() or 'object-hash' not in record.keys():
             print "ERROR: stopping validating for file %s; no ast-hash available for commit %s" % (filename, record['commit-hash'])
             break
 
-        if prevRecord['object-hash'] != record['object-hash']:
-            if prevRecord['ast-hash'] == record['ast-hash']:
-                print_hash_info("object hashes differ, ast hashes same", prevRecord, record)
-                errorCount += 1
-        elif prevRecord['ast-hash'] != record['ast-hash']:
-            #print_hash_info("ast hashes differ, object hashes same", prevRecord, record, False)
-            astDifferObjSameCount += 1
-            different_source_ast_hashes += 1
-            different_hash_count += 1
+        if prev_record['object-hash'] != record['object-hash']:
+            if prev_record['ast-hash'] == record['ast-hash']:
+                print_hash_info("object hashes differ, ast hashes same", prev_record, record)
+                false_negatives += 1
+        elif prev_record['ast-hash'] != record['ast-hash']:
+            #print_hash_info("ast hashes differ, object hashes same", prev_record, record, False) #TODO: include this and look at the changes
+            false_positives += 1
+        
+        if prev_record['ast-hash'] != record['ast-hash']:
+            ast_hashes.add(record['ast-hash'])
+        if prev_record['object-hash'] != record['object-hash']:
+            obj_hashes.add(record['object-hash'])
 
-        prevRecord = record
-    
-    if filename in different_sources_dict:
-        different_sources_dict[filename] += different_hash_count
-    else:
-        different_sources_dict[filename] = different_hash_count
-    
-    if different_hash_count not in different_hashes_dict_count:
-        different_hashes_dict_count[different_hash_count] = 1
-    else:
-        different_hashes_dict_count[different_hash_count] += 1
+        nr_of_records += 1
+        sum_of_times['parsing'] += record['parse-duration']
+        sum_of_times['hashing'] += record['hash-duration']
+        sum_of_times['compiling'] += record['compile-duration'] - (record['parse-duration'] + record['hash-duration'])
 
-################################################################################
-#
-#
+        prev_record = record
+
+
+    if filename in ast_hashes_dict:
+        ast_hashes_dict[filename] |=ast_hashes # merge sets
+    else:
+        ast_hashes_dict[filename] = ast_hashes
+
+    if filename in obj_hashes_dict:
+        obj_hashes_dict[filename] |= obj_hashes # merge sets
+    else:
+        obj_hashes_dict[filename] = obj_hashes
+
+
+    different_ast_hash_count = len(ast_hashes)
+    different_obj_hash_count = len(obj_hashes)
+
+
 ################################################################################
 
 def build_key_translation_dict():
@@ -188,7 +220,7 @@ def build_key_translation_dict():
         'hash-duration':    7,
         'filename':         8,
         'project':          9,
-        'compile-duration': 10, # time the compiler was running (incl. parse-duration)
+        'compile-duration': 10, # time the compiler was running (incl. parse-duration) #TODO: AND hash-duration?
         'ast-hash':         11,
         'commit-hash':      12,
         'element-hashes':   13,
@@ -480,13 +512,11 @@ def make_graphs(full_record):
             prevFilename = filename
             if filename not in prevFiles:
                 if 'src/' + filename in prevFiles:
-                    print "file %s changed place to src/" % filename
+                    print "file %s changed place to src/" % filename  #TODO: is this actually necessary?
                     prevFilename = 'src/' + filename
-                    prevRecord = prevFiles[prevFilename]
                 elif 'crt/' + filename in prevFiles:
                     print "file %s changed place to crt/" % filename
                     prevFilename = 'crt/' + filename
-                    prevRecord = prevFiles[prevFilename]
                 else:
                     print "MISSING: %s not in prev (%s), current is (%s)" % (filename, prevCommitID, commitID)
                     missingFilesTotal += 1
@@ -495,7 +525,7 @@ def make_graphs(full_record):
 
 
             currentRecord = currentFiles[filename]
-            prevRecord = prevFiles[prevFilename]
+            prev_record = prevFiles[prevFilename]
 
             parseDuration = currentRecord[tr('parse-duration')] # ns
             hashDuration = currentRecord[tr('hash-duration')] # ns
@@ -506,10 +536,10 @@ def make_graphs(full_record):
             totalCompileDuration += compileDuration
  
 
-            if prevRecord[tr('ast-hash')] == currentRecord[tr('ast-hash')]:
+            if prev_record[tr('ast-hash')] == currentRecord[tr('ast-hash')]:
                 totalASTHashRedundantCompileTime += compileDuration # ns
 
-            if prevRecord[tr('object-hash')] == currentRecord[tr('object-hash')]:
+            if prev_record[tr('object-hash')] == currentRecord[tr('object-hash')]:
                 totalOptimalRedundantTime += compileDuration + hashDuration + parseDuration #ns
                 totalOptimalRedundantCompileTime += compileDuration
             else:
@@ -520,10 +550,10 @@ def make_graphs(full_record):
 
 
             # for changes graph
-            if prevRecord[tr('object-hash')] != currentRecord[tr('object-hash')]:
+            if prev_record[tr('object-hash')] != currentRecord[tr('object-hash')]:
                 differentObjHash += 1
                 differentAstHash += 1
-            elif prevRecord[tr('ast-hash')] != currentRecord[tr('ast-hash')]:
+            elif prev_record[tr('ast-hash')] != currentRecord[tr('ast-hash')]:
                 differentAstHash += 1
             else:
                 same += 1
@@ -592,7 +622,7 @@ def csv_files_are_existing():
             and os.path.isfile(abs_path(CHANGES_DATA_FILENAME))
             and os.path.isfile(abs_path(SINGLE_TIMES_DATA_FILENAME)))
 
-def read_from_csv(filename, column_names): #TODO: unused?
+def read_from_csv(filename, column_names):
     data = []
     with open(filename) as csv_file:
         reader = csv.reader(csv_file)
@@ -618,23 +648,17 @@ def read_csv_data_and_plot_graphs():
     build_time_data = read_from_csv(abs_path(BUILD_TIME_DATA_FILENAME), BUILD_TIME_DATA_HEADER)
     plot_build_time_graph1(build_time_data)
 
-
     build_time_composition_data = read_from_csv(abs_path(BUILD_TIME_COMPOSITION_DATA_FILENAME), BUILD_TIME_COMPOSITION_DATA_HEADER)
     plot_build_time_composition_graph1(build_time_composition_data)
 
-
     changes_data = read_from_csv(abs_path(CHANGES_DATA_FILENAME), CHANGES_DATA_HEADER)
     plot_changes_graph1(changes_data)
-
 
     single_times_data = read_from_csv(abs_path(SINGLE_TIMES_DATA_FILENAME), SINGLE_TIMES_DATA_HEADER)
     plot_time_histograms1(single_times_data)
 
 
-
-
 ################################################################################
-
 
 # main:
 if (len(sys.argv) > 1):
@@ -642,11 +666,13 @@ if (len(sys.argv) > 1):
     path_to_full_record_file = abs_path(FULL_RECORD_FILENAME)
     print "Starting at %s" % time.ctime()
 
-    if not SKIP_VALIDATING:
+
+    if '--skip-validating' not in sys.argv:
         print "validating..."
         validate_records()
         print "finished validating at %s" % time.ctime()
-    '''
+
+
     if csv_files_are_existing():
         # skip building record, read csv data from files and work with that
         print "reading from csv files"
@@ -658,7 +684,7 @@ if (len(sys.argv) > 1):
 
         make_graphs(full_record)
         print "finished graphs at %s" % time.ctime()
-    '''
+
     print "Finished at %s" % time.ctime()
 else:
     print "Missing path to record files.\nUsage:\n\t%s PATH_TO_RECORDS" % sys.argv[0]
