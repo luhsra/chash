@@ -189,8 +189,13 @@ private:
         }
         if (Arg.size() > 2 && Arg.compare(Arg.size() - 2, 2, ".c") == 0)
           continue; // don't hash source filename
+        if (Arg.size() > 2 && Arg.compare(Arg.size() - 2, 2, ".i") == 0)
+            continue; // don't hash source filename (ccache preprocessed)
 
         if (Arg.find("-stop-if-same-hash") != std::string::npos) {
+            continue; // also don't hash this (plugin argument)
+        }
+        if (Arg.find("-hash-verbose") != std::string::npos) {
             continue; // also don't hash this (plugin argument)
         }
         if (Arg.find("-hash-verbose") != std::string::npos) {
