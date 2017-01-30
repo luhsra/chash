@@ -91,8 +91,43 @@ class AnalyzeResults(Experiment):
         for (project, results) in groupby(x, key=lambda x:x.project_name()):
             times = defaultdict(lambda: dict())
 
+
             for result in sorted(results, key=lambda x:x.variant_name()):
+                key = [result.variant_name(), 'historical']
                 records = eval(result.stats.value)
+
+                # How Many Hits were produced by clang-hash/ccache
+                hits = 0
+                misses = 0
+                hash_hits = 0
+                if os.path.exists(result.clang_hash_stats.path):
+                    hash_hits = result.clang_hash_stats.value.count("H")
+                    hash_misses = result.clang_hash_stats.value.count("M")
+                    self.save(key + ["hits", "clang-hash"], hash_hits)
+                    self.save(key + ["miss", "clang-hash"], hash_misses)
+                    hits += hash_hits
+                    misses += hash_misses
+
+
+                if os.path.exists(result.ccache_stats.path):
+                    ccache_hits = 0
+                    ccache_misses = 0
+                    for line in result.ccache_stats.value.split("\n"):
+                        if "cache hit" in line:
+                            ccache_hits += int(line[line.index(")")+1:].strip())
+                        if "cache miss" in line:
+                            ccache_misses += int(line[line.index("miss")+4:].strip())
+
+                    self.save(key + ["hits", "ccache"], ccache_hits)
+                    self.save(key + ["misses", "ccache"], ccache_misses)
+                    hits += ccache_hits
+                    misses += (ccache_misses - hash_hits)
+
+                self.save(key + ["hits"], hits)
+                self.save(key + ["misses"], misses)
+
+                if os.path.exists(result.ccache_stats.path):
+                    text = result.ccache_stats.value
 
                 build_times = []
                 failed = 0
@@ -111,7 +146,6 @@ class AnalyzeResults(Experiment):
                     self.save(key +["count"], len(seq))
                     self.save(key +["avg"],   np.average(seq))
 
-                key = [result.variant_name(), 'historical']
                 self.save(key + ["failed"], failed)
                 seq(key, build_times)
 
