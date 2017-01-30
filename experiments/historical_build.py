@@ -155,7 +155,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
             shell("ccache -s > %s", self.ccache_stats.path)
 
         # Copy Log to the result directory
-        with open(self.hash_log.path) as fd:
+        with open(hash_log.path) as fd:
             self.clang_hash_stats.value = fd.read()
 
     def variant_name(self):
