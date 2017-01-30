@@ -30,6 +30,8 @@ class ClangHashHelper:
             cache_dir = os.path.join(self.tmp_directory.path, "ccache")
             os.mkdir(cache_dir)
             os.environ["CCACHE_DIR"] = cache_dir
+            os.environ["CCACHE_LOGFILE"] = "/tmp/lua.ccache.log"
+
 
         if self.mode.value == "normal":
             CC = os.path.join(clang_path, "build/wrappers/clang-normal")

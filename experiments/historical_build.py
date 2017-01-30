@@ -27,6 +27,8 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
     }
     outputs = {
         "stats": File("summary.dict"),
+        "ccache_stats": File("ccache.stats"),
+        "clang_hash_stats": File("clang-hash.stats"),
     }
 
     def build_parent(self, commit, from_scratch = False):
@@ -88,6 +90,9 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
                            "commit-hash": self.metadata["project-hash"],
                            'builds': []}
 
+        if self.mode.value == "ccache-clang-hash":
+            os.environ["CLANG_HASH_LOGFILE"] = self.clang_hash_stats.path
+
         with self.project as src_path:
             (commits, _) = shell("cd %s; git log --no-merges --oneline --topo-order --format='%%H %%P %%s'", src_path)
             # [0] is hash. [1] is parent, [2] rest
@@ -144,6 +149,9 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
         # Output the summary of this build into the statistics file.
         with open(self.stats.path, "w+") as fd:
             fd.write(repr(self.build_info))
+
+        if "ccache" in self.mode.value:
+            shell("ccache -s > %s", self.ccache_stats.path)
 
     def variant_name(self):
         return "%s-%s"%(self.project_name(), self.metadata['mode'])
