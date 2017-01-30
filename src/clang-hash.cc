@@ -10,6 +10,8 @@
 #include <utime.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <fcntl.h>
+
 
 
 using namespace clang;
@@ -46,6 +48,15 @@ static void link_object_file() {
     } else {
         src = objectfile;
         dst = objectfile_copy;
+    }
+
+    // Record Events
+    if (getenv("CLANG_HASH_LOGFILE")) {
+        int fd = open(getenv("CLANG_HASH_LOGFILE"),
+                      O_APPEND | O_WRONLY | O_CREAT,
+                      0644);
+        write(fd, atexit_mode == ATEXIT_FROM_CACHE ? "H" : "M", 1);
+        close(fd);
     }
 
     /* If destination exists, we have to unlink it. */
