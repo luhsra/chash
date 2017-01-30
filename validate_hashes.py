@@ -82,7 +82,6 @@ def plot_hash_count_histogram(hash_values, filename):
 
 
 false_negatives = 0
-false_positives = 0
 ast_hash_missing = 0
 
 source_files = set() # all filenames of the hashed files
@@ -94,10 +93,15 @@ sum_of_times = {'parsing': 0,
              'hashing': 0,
              'compiling': 0}
 
+false_positive_records = {} # maps commitID -> set of source filenames of false positive records
+defect_commits = 0
+commit_ids = set()
 
 def validate_records():
+    total_number_of_records = 0
     for filename in get_list_of_files(PATH_TO_RECORDS):
         records = [eval(line) for line in open(filename)]
+        total_number_of_records += len(records)
         validate_hashes(records)
 
     different_ast_hashes = 0  # number of different ast hashes (in total)
@@ -108,7 +112,14 @@ def validate_records():
     for v in obj_hashes_dict.values():
         different_obj_hashes += len(v)
 
+    #TODO: remove old calculation of false positives
+    false_positives = 0
+    for k in false_positive_records:
+        false_positives += len(false_positive_records[k])
+    
     print "\n---- Results ----"
+    print "nr of commits: %d" % len(commit_ids)
+    print "nr of single records (compiler calls): %d" % total_number_of_records
     print "false negatives (errors): %d" % false_negatives
     print "false positives: %d" % false_positives
     print "missing ast hashes: %d" % ast_hash_missing
@@ -120,6 +131,10 @@ def validate_records():
     print "avg times:"
     for k,v in sum_of_times.items():
         print "%s: %d ns" % (k, v/nr_of_records)
+    print "-----------------"
+    print "false positive commits: %d" % len(false_positive_records)
+    for k in sorted(false_positive_records, key=lambda k: len(false_positive_records[k]), reverse=True):
+        print "%s: %d" % (k, len(false_positive_records[k]))
     print "-----------------\n"
 
     write_to_csv([ [k,len(v)] for k,v in ast_hashes_dict.items() ], ['filename', 'nr of different hashes'], abs_path('different_ast_hashes_per_file.csv'))
@@ -134,7 +149,7 @@ def validate_hashes(record_list):
     ''' All records in the list must be from the same object file'''
     #TODO: collect data from all files before validating (changing paths src and crt) and sort
 
-    global false_negatives, false_positives, ast_hash_missing
+    global false_negatives, ast_hash_missing
     global source_files
     global ast_hashes_dict, obj_hashes_dict
     global sum_of_times, nr_of_records
@@ -143,7 +158,7 @@ def validate_hashes(record_list):
     prev_record = next(iter_records)
     filename = prev_record['filename']
     source_files.add(filename)
- 
+
     if 'ast-hash' not in prev_record.keys():
         #print "MISSING: no ast-hash in records for file " + filename
         ast_hash_missing += 1
@@ -155,6 +170,8 @@ def validate_hashes(record_list):
 
     ast_hashes.add(prev_record['ast-hash'])
     obj_hashes.add(prev_record['object-hash'])
+
+    commit_ids.add(prev_record['commit-hash'])
 
     nr_of_records += 1
     sum_of_times['parsing'] += prev_record['parse-duration']
@@ -176,8 +193,11 @@ def validate_hashes(record_list):
                 false_negatives += 1
         elif prev_record['ast-hash'] != record['ast-hash']:
             #print_hash_info("ast hashes differ, object hashes same", prev_record, record, False) #TODO: include this and look at the changes
-            false_positives += 1
-        
+            commit_hash = record['commit-hash']
+            if commit_hash not in false_positive_records:
+                false_positive_records[commit_hash] = set()
+            false_positive_records[commit_hash].add(record['filename'])
+
         if prev_record['ast-hash'] != record['ast-hash']:
             ast_hashes.add(record['ast-hash'])
         if prev_record['object-hash'] != record['object-hash']:
@@ -188,6 +208,8 @@ def validate_hashes(record_list):
         sum_of_times['hashing'] += record['hash-duration']
         sum_of_times['compiling'] += record['compile-duration'] - (record['parse-duration'] + record['hash-duration'])
 
+        commit_ids.add(record['commit-hash'])
+        
         prev_record = record
 
 
@@ -283,7 +305,7 @@ def build_full_record():
         for commitID in commitInfo:
             full_record[commitID] = {}
             full_record[commitID][tr('commit-time')] = commitInfo[commitID]['commit-time']
-            print commitID
+            #print commitID
             if 'build-time' in commitInfo[commitID]:
                 full_record[commitID][tr('build-time')] = commitInfo[commitID]['build-time']
             else:
@@ -439,8 +461,14 @@ def plotChangesGraph(fileCounts, sameHashes, differentAstHashes, differentObjHas
 
 ################################################################################
 
+broken_commits = set()
+broken_commit_count = 0
+working_commit_count = 0
 
 def make_graphs(full_record):
+
+    global broken_commit_count, working_commit_count
+
     sortedCommitIDs = get_sorted_commit_id_list(full_record)
     iterCommits = iter(sortedCommitIDs)
     prevCommitID = next(iterCommits)
@@ -518,7 +546,7 @@ def make_graphs(full_record):
                     print "file %s changed place to crt/" % filename
                     prevFilename = 'crt/' + filename
                 else:
-                    print "MISSING: %s not in prev (%s), current is (%s)" % (filename, prevCommitID, commitID)
+                    #print "MISSING: %s not in prev (%s), current is (%s)" % (filename, prevCommitID, commitID)
                     missingFilesTotal += 1
                     missingFiles += 1
                     continue
@@ -560,9 +588,9 @@ def make_graphs(full_record):
 
 
         if missingFiles > currentCommit[tr('files-changed')]:
-            print "!!!!FAIL!!!!"
+            #print "!!!!FAIL!!!!"
             missingFileErrors += 1
-            print "%s: missingFiles: %d, filesChanged: %d" % (commitID, missingFiles, currentCommit[tr('files-changed')])
+            #print "%s: missingFiles: %d, filesChanged: %d" % (commitID, missingFiles, currentCommit[tr('files-changed')])
 
         buildTime = currentCommit[tr('build-time')] # ns
         optimalBuildTime = buildTime - totalOptimalRedundantTime # = buildTime - sum((clangTime(file) + hashTime) if objhash(file) unchanged)
@@ -588,6 +616,10 @@ def make_graphs(full_record):
             differentObjHashes.append(differentObjHash)
             sameHashes.append(same)
             fileCounts.append(fileCount)
+            working_commit_count += 1
+        else:
+            broken_commit_count += 1
+            broken_commits.add(commitID)
 
         prevCommit = currentCommit
         prevCommitID = commitID
@@ -686,6 +718,10 @@ if (len(sys.argv) > 1):
 
         make_graphs(full_record)
         print "finished graphs at %s" % time.ctime()
+
+    print "broken commits: %d, %d" % (broken_commit_count, len(broken_commits))
+    print broken_commits
+#    print "working commits: %d" % working_commit_count #TODO: not actually correct. shoult be totalNr - brokenCount
 
     print "Finished at %s" % time.ctime()
 else:
