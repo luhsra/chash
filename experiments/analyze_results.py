@@ -87,6 +87,7 @@ class AnalyzeResults(Experiment):
         # Historical Build Times
         ################################################################
         x = sorted(self.historical, key=lambda x:x.project_name())
+        hist = defaultdict(lambda: 0)
         for (project, results) in groupby(x, key=lambda x:x.project_name()):
             times = defaultdict(lambda: dict())
 
@@ -102,6 +103,7 @@ class AnalyzeResults(Experiment):
                     t = build['build-time']/1e9
                     build_times.append(t)
                     times[build['commit']][result.metadata['mode']] = t
+                    hist[int(t)] += 1
 
 
                 def seq(key, seq):
@@ -116,10 +118,15 @@ class AnalyzeResults(Experiment):
             try:
                 x = sorted(times, key=lambda x: times[x]['clang-hash']/times[x]['normal'])
                 print(project, x[0], times[x[0]]['clang-hash']/times[x[0]]['normal'], times[x[0]])
+                # Worst Commit: print(project, x[-1], times[x[-1]]['clang-hash']/times[x[-1]]['normal'], times[x[-1]])
+
+
+                self.save([project, "best commit", "hash"], x[0][0:10])
+                for k in ("normal", "ccache", "clang-hash", "ccache-clang-hash"):
+                    self.save([project, "best commit", k], times[x[0]][k])
+                self.save([project, "best commit", "ratio"], times[x[0]]['clang-hash']/times[x[0]]['normal'])
             except:
                 pass
-
-
 
 
 if __name__ == "__main__":
