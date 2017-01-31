@@ -88,11 +88,17 @@ class AnalyzeResults(Experiment):
         ################################################################
         x = sorted(self.historical, key=lambda x:x.project_name())
         hist = defaultdict(lambda: 0)
+        method_stats = defaultdict(lambda: defaultdict(lambda: 0))
+
         for (project, results) in groupby(x, key=lambda x:x.project_name()):
             times = defaultdict(lambda: dict())
 
             for result in sorted(results, key=lambda x:x.variant_name()):
+                key = [result.variant_name(), 'historical']
                 records = eval(result.stats.value)
+
+                # How Many Hits were produced by clang-hash/ccache
+                stats = defaultdict(lambda : 0)
 
                 build_times = []
                 failed = 0
@@ -105,15 +111,29 @@ class AnalyzeResults(Experiment):
                     times[build['commit']][result.metadata['mode']] = t
                     hist[int(t)] += 1
 
+                    stats['misses/clang-hash'] += build.get('clang-hash-misses',0)
+                    stats['hits/clang-hash'] += build.get('clang-hash-hits',0)
+                    stats['misses/ccache'] += build.get('ccache-misses',0)
+                    stats['hits/ccache'] += build.get('ccache-hits',0)
+                    stats['hits'] += build.get('ccache-hits',0) \
+                                     + build.get('clang-hash-hits',0)
+                    stats['misses'] += build.get('ccache-misses',0) \
+                                       + build.get('clang-hash-misses',0)
+                    if result.mode.value == "ccache-clang-hash":
+                        stats["misses"] -= build.get('clang-hash-hits',0)
 
+                # Over all builds of an experiment
                 def seq(key, seq):
                     self.save(key +["sum"], sum(seq))
                     self.save(key +["count"], len(seq))
                     self.save(key +["avg"],   np.average(seq))
 
-                key = [result.variant_name(), 'historical']
                 self.save(key + ["failed"], failed)
                 seq(key, build_times)
+                for k in stats:
+                    self.save(key + [k], stats[k])
+                    # Aggregate hits and misses per method
+                    method_stats[result.metadata["mode"]][k] += stats[k]
 
             try:
                 x = sorted(times, key=lambda x: times[x]['clang-hash']/times[x]['normal'])
@@ -128,6 +148,10 @@ class AnalyzeResults(Experiment):
             except:
                 pass
 
+        # Output method statistics
+        for method in method_stats:
+            for k in method_stats[method]:
+                self.save([method, "historical", k], method_stats[method][k])
 
 if __name__ == "__main__":
     experiment = AnalyzeResults()
