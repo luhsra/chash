@@ -88,46 +88,17 @@ class AnalyzeResults(Experiment):
         ################################################################
         x = sorted(self.historical, key=lambda x:x.project_name())
         hist = defaultdict(lambda: 0)
+        method_stats = defaultdict(lambda: defaultdict(lambda: 0))
+
         for (project, results) in groupby(x, key=lambda x:x.project_name()):
             times = defaultdict(lambda: dict())
-
 
             for result in sorted(results, key=lambda x:x.variant_name()):
                 key = [result.variant_name(), 'historical']
                 records = eval(result.stats.value)
 
                 # How Many Hits were produced by clang-hash/ccache
-                hits = 0
-                misses = 0
-                hash_hits = 0
-                if os.path.exists(result.clang_hash_stats.path):
-                    hash_hits = result.clang_hash_stats.value.count("H")
-                    hash_misses = result.clang_hash_stats.value.count("M")
-                    self.save(key + ["hits", "clang-hash"], hash_hits)
-                    self.save(key + ["miss", "clang-hash"], hash_misses)
-                    hits += hash_hits
-                    misses += hash_misses
-
-
-                if os.path.exists(result.ccache_stats.path):
-                    ccache_hits = 0
-                    ccache_misses = 0
-                    for line in result.ccache_stats.value.split("\n"):
-                        if "cache hit" in line:
-                            ccache_hits += int(line[line.index(")")+1:].strip())
-                        if "cache miss" in line:
-                            ccache_misses += int(line[line.index("miss")+4:].strip())
-
-                    self.save(key + ["hits", "ccache"], ccache_hits)
-                    self.save(key + ["misses", "ccache"], ccache_misses)
-                    hits += ccache_hits
-                    misses += (ccache_misses - hash_hits)
-
-                self.save(key + ["hits"], hits)
-                self.save(key + ["misses"], misses)
-
-                if os.path.exists(result.ccache_stats.path):
-                    text = result.ccache_stats.value
+                stats = defaultdict(lambda : 0)
 
                 build_times = []
                 failed = 0
@@ -140,7 +111,18 @@ class AnalyzeResults(Experiment):
                     times[build['commit']][result.metadata['mode']] = t
                     hist[int(t)] += 1
 
+                    stats['misses/clang-hash'] += build.get('clang-hash-misses',0)
+                    stats['hits/clang-hash'] += build.get('clang-hash-hits',0)
+                    stats['misses/ccache'] += build.get('ccache-misses',0)
+                    stats['hits/ccache'] += build.get('ccache-hits',0)
+                    stats['hits'] += build.get('ccache-hits',0) \
+                                     + build.get('clang-hash-hits',0)
+                    stats['misses'] += build.get('ccache-misses',0) \
+                                       + build.get('clang-hash-misses',0)
+                    if result.mode.value == "ccache-clang-hash":
+                        stats["misses"] -= build.get('clang-hash-hits',0)
 
+                # Over all builds of an experiment
                 def seq(key, seq):
                     self.save(key +["sum"], sum(seq))
                     self.save(key +["count"], len(seq))
@@ -148,6 +130,10 @@ class AnalyzeResults(Experiment):
 
                 self.save(key + ["failed"], failed)
                 seq(key, build_times)
+                for k in stats:
+                    self.save(key + [k], stats[k])
+                    # Aggregate hits and misses per method
+                    method_stats[result.metadata["mode"]][k] += stats[k]
 
             try:
                 x = sorted(times, key=lambda x: times[x]['clang-hash']/times[x]['normal'])
@@ -162,6 +148,10 @@ class AnalyzeResults(Experiment):
             except:
                 pass
 
+        # Output method statistics
+        for method in method_stats:
+            for k in method_stats[method]:
+                self.save([method, "historical", k], method_stats[method][k])
 
 if __name__ == "__main__":
     experiment = AnalyzeResults()
