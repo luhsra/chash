@@ -52,6 +52,8 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
             # Did initial commit fail? Try again
             if info.get("failed"):
                 logging.info("Parent[%s^]: failed", commit)
+                shell("cd %s; git clean -dfx", src_path)
+                self.call_configure(src_path)
                 return False
             return True
         else:
@@ -103,6 +105,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
             self.setup_compiler_paths(cl_path)
 
             time = 0
+            last_failed = True
             while commits:
                 # Search for a child of the current revision
                 commit = None
@@ -126,7 +129,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
                 # history, this is a NOP. Otherwise, we try to reset
                 # to the actual parent, and rebuild the project. This
                 # may fail, since the current commit might fix this.
-                self.build_parent(commit[0])
+                self.build_parent(commit[0], from_scratch = last_failed)
 
                 shell("cd %s; git reset --hard %s", src_path, commit[0])
                 self.call_reconfigure(src_path)
@@ -137,8 +140,10 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
                     time += info['build-time'] / 1e9
                     # Build was good. Remember that.
                     self.current_revision = commit[0]
+                    last_failed = False
                 else:
                     self.current_revision = None
+                    last_failed = True
 
             logging.info("Rebuild for %d commits takes %f minutes",
                          self.commits.value, time/60.)
