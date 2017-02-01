@@ -89,6 +89,7 @@ class AnalyzeResults(Experiment):
         x = sorted(self.historical, key=lambda x:x.project_name())
         hist = defaultdict(lambda: 0)
         method_stats = defaultdict(lambda: defaultdict(lambda: 0))
+        HITS = defaultdict(lambda : defaultdict(lambda: 0))
 
         for (project, results) in groupby(x, key=lambda x:x.project_name()):
             times = defaultdict(lambda: dict())
@@ -119,8 +120,14 @@ class AnalyzeResults(Experiment):
                                      + build.get('clang-hash-hits',0)
                     stats['misses'] += build.get('ccache-misses',0) \
                                        + build.get('clang-hash-misses',0)
-                    if result.mode.value == "ccache-clang-hash":
-                        stats["misses"] -= build.get('clang-hash-hits',0)
+                    if result.metadata['mode'] == "ccache-clang-hash":
+                        stats["misses"] -= (build.get('clang-hash-hits',0) \
+                                            + build.get('clang-hash-misses',0))
+
+                    a = build.get('ccache-hits',0)
+                    b = build.get('clang-hash-hits',0)
+                    HITS[build['commit']][result.metadata['mode']] \
+                        =  (a + b, a, b)
 
                 # Over all builds of an experiment
                 def seq(key, seq):
@@ -152,6 +159,10 @@ class AnalyzeResults(Experiment):
         for method in method_stats:
             for k in method_stats[method]:
                 self.save([method, "historical", k], method_stats[method][k])
+
+        for Hash in HITS:
+            if HITS[Hash]['clang-hash'][0] != HITS[Hash]['ccache-clang-hash'][0]:
+                print Hash, HITS[Hash]['clang-hash'][0] - HITS[Hash]['ccache-clang-hash'][0], HITS[Hash]
 
 if __name__ == "__main__":
     experiment = AnalyzeResults()
