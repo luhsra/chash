@@ -43,6 +43,7 @@ hist_$3_$2:
 		--project-clone-url ${$1} --mode $2 --commits 500
 
 hist_$3: hist_$3_$2
+hist_$2: hist_$3_$2
 
 endef
 

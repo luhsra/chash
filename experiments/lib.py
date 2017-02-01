@@ -86,9 +86,9 @@ class ClangHashHelper:
 
     def call_make(self, path):
         if self.project_name() in ("mbedtls", "cpython"):
-            return shell("cd %s/build; make -j %s", path, str(self.jobs.value))
+            return shell("cd %s/build; make -k -j %s", path, str(self.jobs.value))
         else:
-            return shell("cd %s; make -j %s", path, str(self.jobs.value))
+            return shell("cd %s; make -k -j %s", path, str(self.jobs.value))
 
     def ccache_hits(self):
         (lines, _) = shell("ccache -s")

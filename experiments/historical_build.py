@@ -52,8 +52,6 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
             # Did initial commit fail? Try again
             if info.get("failed"):
                 logging.info("Parent[%s^]: failed", commit)
-                shell("cd %s; git clean -dfx", src_path)
-                self.call_configure(src_path)
                 return False
             return True
         else:
