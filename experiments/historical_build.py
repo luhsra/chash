@@ -28,7 +28,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
     outputs = {
         "stats": File("summary.dict"),
         "ccache_stats": File("ccache.stats"),
-        "clang_hash_stats": File("clang-hash.stats"),
+        "clang_hash_log": File("clang-hash.log"),
     }
 
     def build_parent(self, commit, from_scratch = False):
@@ -43,7 +43,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
         src_path = self.project.path
 
         if from_scratch:
-            shell("cd %s; git clean -dfx", src_path)
+            shell("cd %s; git clean -dfx -e '*.hash' -e '*.hash.copy'", src_path)
             logging.info("Parent [%s^]: clean build", commit)
             shell("cd %s; git reset --hard %s^", src_path, commit)
             info = {"commit": commit + "^"}
@@ -104,6 +104,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
 
             time = 0
             last_failed = True
+
             while commits:
                 # Search for a child of the current revision
                 commit = None
@@ -131,7 +132,16 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
 
                 shell("cd %s; git reset --hard %s", src_path, commit[0])
                 self.call_reconfigure(src_path)
+                if os.path.exists("/tmp/clang-hash.log"):
+                    os.unlink("/tmp/clang-hash.log")
+
+                # Rebuild and Measure
                 self.rebuild(src_path, info, fail_ok=True)
+
+
+                if os.path.exists("/tmp/clang-hash.log") and not info.get("failed"):
+                    with open("/tmp/clang-hash.log") as fd:
+                        self.clang_hash_log.value += fd.read()
 
                 self.build_info["builds"].append(info)
                 if not info.get("failed"):

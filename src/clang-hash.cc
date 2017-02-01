@@ -55,7 +55,8 @@ static void link_object_file() {
         int fd = open(getenv("CLANG_HASH_LOGFILE"),
                       O_APPEND | O_WRONLY | O_CREAT,
                       0644);
-        write(fd, atexit_mode == ATEXIT_FROM_CACHE ? "H" : "M", 1);
+	const char* fail = (atexit_mode == ATEXIT_FROM_CACHE ? "H" : "M");
+        write(fd, fail, 1);
         close(fd);
     }
 
@@ -188,9 +189,9 @@ private:
           continue;
         }
         if (Arg.size() > 2 && Arg.compare(Arg.size() - 2, 2, ".c") == 0)
-          continue; // don't hash source filename
+	  continue;
         if (Arg.size() > 2 && Arg.compare(Arg.size() - 2, 2, ".i") == 0)
-            continue; // don't hash source filename (ccache preprocessed)
+	  continue;
 
         if (Arg.find("-stop-if-same-hash") != std::string::npos) {
             continue; // also don't hash this (plugin argument)
@@ -244,7 +245,7 @@ protected:
             hash_old = strdup(PreviousHashString.c_str());
         }
     }
-
+    
     // Write hash database to .o.hash if the compiler produces a object file
     if ((CI.getFrontendOpts().ProgramAction == frontend::EmitObj
          || CI.getFrontendOpts().ProgramAction == frontend::EmitBC
