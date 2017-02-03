@@ -51,8 +51,11 @@ class ClangHashHelper:
     def call_configure(self, path):
         if self.project_name() == "postgresql":
             shell("cd %s; ./configure --enable-depend", path)
-        elif self.project_name() in ("musl", "bash", "samba"):
+        elif self.project_name() in ("musl", "bash"):
             shell_failok("cd %s; ./configure", path)
+        elif self.project_name() in ("samba"):
+            # Samba does not do optimizations if the argv[0] of the compiler is unknown. The default is -O2 for gcc. Therefore, we also use that.
+            shell_failok("cd %s; ADDITIONAL_CFLAGS=-O2 ./configure", path)
         elif self.project_name() in ("cpython",):
             shell("cd %s; mkdir -p build build/Modules;", path)
             shell("cd %s; cp -u Modules/Setup.dist build/Modules/Setup", path)

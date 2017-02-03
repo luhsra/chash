@@ -89,7 +89,7 @@ class AnalyzeResults(Experiment):
         x = sorted(self.historical, key=lambda x:x.project_name())
         hist = defaultdict(lambda: 0)
         method_stats = defaultdict(lambda: defaultdict(lambda: 0))
-        HITS = defaultdict(lambda : defaultdict(lambda: 0))
+        HITS = defaultdict(lambda : {})
 
         for (project, results) in groupby(x, key=lambda x:x.project_name()):
             times = defaultdict(lambda: dict())
@@ -116,18 +116,22 @@ class AnalyzeResults(Experiment):
                     stats['hits/clang-hash'] += build.get('clang-hash-hits',0)
                     stats['misses/ccache'] += build.get('ccache-misses',0)
                     stats['hits/ccache'] += build.get('ccache-hits',0)
-                    stats['hits'] += build.get('ccache-hits',0) \
-                                     + build.get('clang-hash-hits',0)
-                    stats['misses'] += build.get('ccache-misses',0) \
-                                       + build.get('clang-hash-misses',0)
+                    hits = build.get('ccache-hits',0) + build.get('clang-hash-hits',0)
+                    stats['hits'] += hits
+                    misses = build.get('ccache-misses',0) + build.get('clang-hash-misses',0)
                     if result.metadata['mode'] == "ccache-clang-hash":
-                        stats["misses"] -= (build.get('clang-hash-hits',0) \
-                                            + build.get('clang-hash-misses',0))
+                        misses -= (build.get('clang-hash-hits',0) \
+                                   + build.get('clang-hash-misses',0))
+                    stats['misses'] += misses
 
-                    a = build.get('ccache-hits',0)
-                    b = build.get('clang-hash-hits',0)
+
+                    stats['compiler calls'] = stats['hits'] + stats['misses']
+
+                    build['hits'] = hits
+                    build['misses'] = misses
+                    build['compiler calls'] = hits + misses
                     HITS[build['commit']][result.metadata['mode']] \
-                        =  (a + b, a, b)
+                        =  build
 
                 # Over all builds of an experiment
                 def seq(key, seq):
@@ -143,10 +147,10 @@ class AnalyzeResults(Experiment):
                     method_stats[result.metadata["mode"]][k] += stats[k]
 
             try:
-                x = sorted(times, key=lambda x: times[x]['clang-hash']/times[x]['normal'])
-                print(project, x[0], times[x[0]]['clang-hash']/times[x[0]]['normal'], times[x[0]])
-                # Worst Commit: print(project, x[-1], times[x[-1]]['clang-hash']/times[x[-1]]['normal'], times[x[-1]])
-
+                x = sorted(times, key=lambda x: times[x]['normal'])
+                #print(project, x[0], times[x[0]]['normal'], HITS[x[0]])
+                #print(project, x[-1], times[x[-1]]['normal'], HITS[x[-1]])
+                #print "------"
 
                 self.save([project, "best commit", "hash"], x[0][0:10])
                 for k in ("normal", "ccache", "clang-hash", "ccache-clang-hash"):
@@ -161,8 +165,21 @@ class AnalyzeResults(Experiment):
                 self.save([method, "historical", k], method_stats[method][k])
 
         for Hash in HITS:
-            if HITS[Hash]['clang-hash'][0] != HITS[Hash]['ccache-clang-hash'][0]:
-                print Hash, HITS[Hash]['clang-hash'][0] - HITS[Hash]['ccache-clang-hash'][0], HITS[Hash]
+            #if Hash != "fe0a0b5993dfe24e4b3bcf52fa64ff41a444b8f1":
+            #    continue
+            #print HITS[Hash]
+            continue
+            if 'clang-hash' not in HITS[Hash]:
+                continue
+            if HITS[Hash]['clang-hash']['hits'] \
+               > HITS[Hash]['ccache-clang-hash']['hits']:
+                print Hash, \
+                    (HITS[Hash]['clang-hash']['hits'],
+                     HITS[Hash]['ccache-clang-hash']['hits'])
+                for i in ("clang-hash", "ccache-clang-hash"):
+                    print i, HITS[Hash][i]
+
+                print "-----"
 
 if __name__ == "__main__":
     experiment = AnalyzeResults()
