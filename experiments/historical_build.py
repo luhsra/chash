@@ -104,6 +104,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
 
             time = 0
             last_failed = True
+
             while commits:
                 # Search for a child of the current revision
                 commit = None
@@ -121,14 +122,20 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
                 if commit[0] == "726f63884db0132f01745f1fb4465e6621088ccf":
                     continue
 
-                info = {"commit": commit[0], "summary": commit[2]}
+
+                info = {"commit": commit[0],
+                        "parent": commit[1],
+                        "summary": commit[2]}
 
                 # First, we build the parent. In a total linear
                 # history, this is a NOP. Otherwise, we try to reset
                 # to the actual parent, and rebuild the project. This
                 # may fail, since the current commit might fix this.
-                self.build_parent(commit[0], from_scratch = last_failed)
+                ret = self.build_parent(commit[0], from_scratch = last_failed)
+                info['parent-failed'] = ret
 
+                # Change to the ACTUAL commit. Call reconfigure, and
+                # then go on building the commit.
                 shell("cd %s; git reset --hard %s", src_path, commit[0])
                 self.call_reconfigure(src_path)
                 self.rebuild(src_path, info, fail_ok=True)
