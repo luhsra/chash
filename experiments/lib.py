@@ -50,7 +50,7 @@ class ClangHashHelper:
 
     def call_configure(self, path):
         if self.project_name() == "postgresql":
-            shell("cd %s; ./configure --enable-depend", path)
+            shell("cd %s; mkdir -p build; cd build; ../configure --enable-depend", path)
         elif self.project_name() in ("musl", "bash"):
             shell_failok("cd %s; ./configure", path)
         elif self.project_name() in ("samba"):
@@ -73,7 +73,6 @@ class ClangHashHelper:
             with open("%s/makefile" % path, "w") as fd:
                 fd.write("".join(content))
 
-
         else:
             raise RuntimeError("Not a valid project")
 
@@ -83,12 +82,14 @@ class ClangHashHelper:
         if self.project_name() in ('cpython',):
             shell("cd %s; mkdir -p build/Modules; cp -u Modules/Setup.dist build/Modules/Setup", path)
             shell_failok("cd %s/build; make config.status;", path)
-        if self.project_name() in ('postgresql', 'bash'):
+        if self.project_name() == "postgresql":
+            shell_failok("cd %s/build; make config.status", path)
+        if self.project_name() == "bash":
             shell_failok("cd %s; make config.status", path)
 
 
     def call_make(self, path):
-        if self.project_name() in ("mbedtls", "cpython"):
+        if self.project_name() in ("mbedtls", "cpython", "postgresql"):
             return shell("cd %s/build; make -k -j %s", path, str(self.jobs.value))
         else:
             return shell("cd %s; make -k -j %s", path, str(self.jobs.value))
@@ -126,6 +127,7 @@ class ClangHashHelper:
 
         build_time = int((end_time - start_time) * 1e9)
         info['build-time'] = build_time
+        info['build-log'] = ret[0]
 
         # Record Cache misses and hits
         if "ccache" in self.mode.value:

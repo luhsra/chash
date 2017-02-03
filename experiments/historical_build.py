@@ -132,7 +132,7 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
                 # to the actual parent, and rebuild the project. This
                 # may fail, since the current commit might fix this.
                 ret = self.build_parent(commit[0], from_scratch = last_failed)
-                info['parent-failed'] = ret
+                info['parent-ok'] = ret
 
                 # Change to the ACTUAL commit. Call reconfigure, and
                 # then go on building the commit.
