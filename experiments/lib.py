@@ -32,7 +32,7 @@ class ClangHashHelper:
             os.mkdir(cache_dir)
             os.environ["CCACHE_DIR"] = cache_dir
         if "clang-hash" in self.mode.value:
-            cache_dir = os.path.join(self.tmp_directory.path, "clang-hash")
+            cache_dir = os.path.join(self.tmp_directory.path, "clang-hash-cache")
             os.mkdir(cache_dir)
             os.environ["CLANG_HASH_CACHE"] = cache_dir
 

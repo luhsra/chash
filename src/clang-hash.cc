@@ -280,6 +280,14 @@ private:
         if (Arg.find("-stop-if-same-hash") != std::string::npos) {
             continue; // also don't hash this (plugin argument)
         }
+        if (Arg == "-I") {
+            // throw away next parameter (include path)
+            getline(CommandLine, Arg, '\0');
+            continue;
+        }
+        if (Arg.substr(0,2) == "-I") {
+            continue; // also don't hash include paths
+        }
         if (Arg.find("-hash-verbose") != std::string::npos) {
             continue; // also don't hash this (plugin argument)
         }
