@@ -57,7 +57,7 @@ class ClangHashHelper:
             shell_failok("cd %s; ./configure", path)
         elif self.project_name() in ("samba"):
             # Samba does not do optimizations if the argv[0] of the compiler is unknown. The default is -O2 for gcc. Therefore, we also use that.
-            shell_failok("cd %s; ADDITIONAL_CFLAGS=-O2 ./configure", path)
+            shell_failok("cd %s; ADDITIONAL_CFLAGS=-O2 ./buildtools/bin/waf configure", path)
         elif self.project_name() in ("cpython",):
             shell("cd %s; mkdir -p build build/Modules;", path)
             shell("cd %s; cp -u Modules/Setup.dist build/Modules/Setup", path)
@@ -88,6 +88,8 @@ class ClangHashHelper:
             shell_failok("cd %s/build; make config.status", path)
         if self.project_name() == "bash":
             shell_failok("cd %s; make config.status", path)
+        if self.project_name() == "samba":
+            shell_failok("cd %s; ADDITIONAL_CFLAGS=-O2 ./buildtools/bin/waf reconfigure", path)
 
 
     def call_make(self, path):
@@ -129,7 +131,7 @@ class ClangHashHelper:
 
         build_time = int((end_time - start_time) * 1e9)
         info['build-time'] = build_time
-        info['build-log'] = ret[0]
+        #info['build-log'] = ret[0]
 
         # Record Cache misses and hits
         if "ccache" in self.mode.value:
@@ -139,7 +141,7 @@ class ClangHashHelper:
 
         if "clang-hash" in self.mode.value:
             log = hash_log.read()
-            #info['clang-hash-log'] = log
+            info['clang-hash-log'] = log
             info['clang-hash-hits'] = log.count("H")
             info['clang-hash-misses'] = log.count("M")
             hash_log.close()
