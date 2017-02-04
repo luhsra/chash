@@ -139,7 +139,7 @@ class ClangHashHelper:
 
         if "clang-hash" in self.mode.value:
             log = hash_log.read()
-            info['clang-hash-log'] = log
+            #info['clang-hash-log'] = log
             info['clang-hash-hits'] = log.count("H")
             info['clang-hash-misses'] = log.count("M")
             hash_log.close()
