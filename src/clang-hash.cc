@@ -287,6 +287,9 @@ private:
         if (Arg.substr(0,2) == "-I") {
             continue; // also don't hash include paths
         }
+        if (Arg.substr(0,2) == "-D") {
+            continue; // also don't hash macro defines
+        }
         if (Arg.find("-hash-verbose") != std::string::npos) {
             continue; // also don't hash this (plugin argument)
         }
