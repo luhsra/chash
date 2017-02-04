@@ -107,11 +107,11 @@ class ClangHashHelper:
                 ccache_hits += int(line[line.index(")")+1:].strip())
             if "cache miss" in line:
                 ccache_misses += int(line[line.index("miss")+4:].strip())
-        return ccache_hits, ccache_misses
+        return ccache_hits, ccache_misses, "\n".join(lines)
 
     def rebuild(self, path, info, fail_ok=False):
         if "ccache" in self.mode.value:
-            old_ccache_hits, old_ccache_misses = self.ccache_hits()
+            shell("ccache --zero-stats")
 
         if "clang-hash" in self.mode.value:
             hash_log = tempfile.NamedTemporaryFile()
@@ -135,9 +135,10 @@ class ClangHashHelper:
 
         # Record Cache misses and hits
         if "ccache" in self.mode.value:
-            ccache_hits, ccache_misses = self.ccache_hits()
-            info['ccache-hits'] = ccache_hits - old_ccache_hits
-            info['ccache-misses'] = ccache_misses - old_ccache_misses
+            ccache_hits, ccache_misses, log = self.ccache_hits()
+            info['ccache-log'] = log
+            info['ccache-hits'] = ccache_hits
+            info['ccache-misses'] = ccache_misses
 
         if "clang-hash" in self.mode.value:
             log = hash_log.read()
@@ -145,6 +146,7 @@ class ClangHashHelper:
             info['clang-hash-hits'] = log.count("H")
             info['clang-hash-misses'] = log.count("M")
             hash_log.close()
+
 
         logging.info("Rebuild done[%s]: %s s; failed=%s",
                      info.get("filename") or info.get("commit"),
