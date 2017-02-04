@@ -127,6 +127,11 @@ class HistoricalCompilation(Experiment, ClangHashHelper):
                         "parent": commit[1],
                         "summary": commit[2]}
 
+                # Somehow this commit in musl is weird. It behaves
+                # totally different, if build with a fresh parent and
+                # a non-fresh parent. With this we are one the save side
+                if commit[0] == "416d1c7a711807384cc21a18163475cf757bbcb5":
+                    last_failed = True
                 # First, we build the parent. In a total linear
                 # history, this is a NOP. Otherwise, we try to reset
                 # to the actual parent, and rebuild the project. This
