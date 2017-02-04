@@ -26,9 +26,7 @@ static enum {
 } atexit_mode = ATEXIT_NOP;
 
 static char *hashfile = NULL;
-
 static char *hash_new = NULL;
-static char *hash_old = NULL;
 
 static char *objectfile = NULL;
 static char *objectfile_copy = NULL;
@@ -81,14 +79,85 @@ static void link_object_file() {
 
     // Write Hash to hashfile
     if (atexit_mode == ATEXIT_TO_CACHE) {
-        FILE *f = fopen(hashfile, "w+");
-        fwrite(hash_new, strlen(hash_new), 1, f);
-        fclose(f);
+        if (hashfile != NULL) {
+            FILE *f = fopen(hashfile, "w+");
+            fwrite(hash_new, strlen(hash_new), 1, f);
+            fclose(f);
+        }
     } else if (atexit_mode == ATEXIT_FROM_CACHE) {
         // Update Timestamp
         utime(dst, NULL);
     }
 }
+
+struct ObjectCache {
+    std::string m_cachedir;
+    raw_ostream *m_terminal;
+
+    ObjectCache(std::string cachedir, raw_ostream *Terminal)
+        : m_cachedir(cachedir),
+          m_terminal (Terminal) { }
+
+    char * hash_filename(std::string objectfile) {
+        if (m_cachedir == "") {
+            std::string path(objectfile + ".hash");
+            return strdup(path.c_str());
+        }
+        return NULL;
+    }
+
+    char * objectcopy_filename(std::string objectfile, std::string hash) {
+        if (m_cachedir == "") {
+            std::string path(objectfile + ".hash.copy");
+            return strdup(path.c_str());
+        }
+        std::string dir(m_cachedir + "/" + hash.substr(0, 2));
+        mkdir(dir.c_str(), 0755);
+        std::string path(dir + "/" + hash.substr(2) + ".o");
+        return strdup(path.c_str());
+    }
+
+    std::string find_object_from_hash(std::string objectfile, std::string hash) {
+        if (m_cachedir != "") {
+            std::string ObjectPath(m_cachedir + "/"
+                                   + hash.substr(0,2)
+                                   + "/" + hash.substr(2) + ".o");
+            struct stat dummy;
+            if (stat(ObjectPath.c_str(), &dummy) == 0) {
+                // Found!
+                return ObjectPath;
+            }
+            return "";
+        } else {
+            std::string OldHash;
+            std::string HashPath(objectfile + ".hash");
+            std::string ObjectPath(objectfile + ".hash.copy");
+            std::ifstream FileStream(HashPath);
+            if (FileStream.good()) {
+                getline(FileStream, OldHash);
+                if (m_terminal) {
+                    (*m_terminal) << HashPath << ": old hash string: " << OldHash << "\n";
+                }
+            } else {
+                if (m_terminal) {
+                    (*m_terminal) << "Warning: could not open file \"" << HashPath
+                           << "\", cannot read previous hash.\n";
+                }
+                return "";
+            }
+
+            // Hashes are equal, try to find the objectfile
+            if (hash == OldHash) {
+                struct stat dummy;
+                if (stat(ObjectPath.c_str(), &dummy) == 0) {
+                    // Found!
+                    return ObjectPath;
+                }
+            }
+            return "";
+        }
+    }
+};
 
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
@@ -111,11 +180,23 @@ public:
     const std::string HashString = Visitor.getHash(&ProcessedBytes);
     hash_new = strdup(HashString.c_str());
 
+    char *cachedir = getenv("CLANG_HASH_CACHE");
+    ObjectCache cache(cachedir ? cachedir : "", Terminal);
+
     // Step 2: Consequent Handling
-    const bool HashEqual =
-        (hash_old != nullptr) // Cache Valid?
-        && (std::string(hash_old) == HashString)
-        && (! Context.getSourceManager().getDiagnostics().hasErrorOccurred());
+    bool HashEqual;
+    if (Context.getSourceManager().getDiagnostics().hasErrorOccurred()) {
+        HashEqual = false;
+    } else {
+        std::string copy = cache.find_object_from_hash(objectfile, HashString);
+        if (copy != "") {
+            HashEqual = true;
+            objectfile_copy = strdup(copy.c_str());
+        } else {
+            HashEqual = false;
+        }
+    }
+
     // Step 2.1: -hash-verbose
     // Sometimes we do terminal output
     if (Terminal) {
@@ -163,8 +244,11 @@ public:
         atexit(link_object_file);
         if (HashEqual) {
             atexit_mode = ATEXIT_FROM_CACHE;
+            printf(":: %s\n", objectfile_copy);
             exit(0);
         } else {
+            hashfile = cache.hash_filename(objectfile);
+            objectfile_copy = cache.objectcopy_filename(objectfile, HashString);
             atexit_mode = ATEXIT_TO_CACHE;
             // Continue with compilation
         }
@@ -199,9 +283,6 @@ private:
         if (Arg.find("-hash-verbose") != std::string::npos) {
             continue; // also don't hash this (plugin argument)
         }
-        if (Arg.find("-hash-verbose") != std::string::npos) {
-            continue; // also don't hash this (plugin argument)
-        }
 
         CommandLineArgs.push_back(Arg);
       } while (Arg.size());
@@ -229,23 +310,8 @@ protected:
     if (OutputFile != "" && OutputFile != "/dev/null") {
         std::string tmp;
         objectfile = strdup(OutputFile.c_str());
-
-        tmp = OutputFile + ".hash";
-        hashfile = strdup(tmp.c_str());
-
-        tmp = OutputFile + ".hash.copy";
-        objectfile_copy = strdup(tmp.c_str());
     }
 
-    // Retrieve Hash and check if copy is intact
-    const std::string PreviousHashString = getHashFromFile(hashfile ? hashfile : "");
-    if (PreviousHashString != "") {
-        struct stat dummy;
-        if (stat(objectfile_copy, &dummy) == 0) {
-            hash_old = strdup(PreviousHashString.c_str());
-        }
-    }
-    
     // Write hash database to .o.hash if the compiler produces a object file
     if ((CI.getFrontendOpts().ProgramAction == frontend::EmitObj
          || CI.getFrontendOpts().ProgramAction == frontend::EmitBC
@@ -290,24 +356,6 @@ protected:
 
   void PrintHelp(raw_ostream &Out) {
     Out << "Help for PrintFunctionNames plugin goes here\n";
-  }
-
-private:
-  const std::string getHashFromFile(const std::string &FilePath) {
-    std::string HashString;
-    std::ifstream FileStream(FilePath);
-    if (FileStream.good()) {
-      getline(FileStream, HashString);
-      if (Verbose) {
-          errs() << FilePath << ": old hash string: " << HashString << "\n";
-      }
-    } else {
-      if (Verbose) {
-          errs() << "Warning: could not open file \"" << FilePath
-                 << "\", cannot read previous hash.\n";
-      }
-    }
-    return HashString;
   }
 
 };
