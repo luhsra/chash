@@ -244,7 +244,6 @@ public:
         atexit(link_object_file);
         if (HashEqual) {
             atexit_mode = ATEXIT_FROM_CACHE;
-            printf(":: %s\n", objectfile_copy);
             exit(0);
         } else {
             hashfile = cache.hash_filename(objectfile);
