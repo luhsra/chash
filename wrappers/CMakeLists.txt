@@ -33,3 +33,8 @@ execute_process(
   COMMAND "${CMAKE_COMMAND}" "-E" "create_symlink"
     "${CMAKE_CURRENT_SOURCE_DIR}/hash-objectfile" "${CMAKE_CURRENT_BINARY_DIR}/hash-objectfile"
 )
+
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" "-E" "create_symlink"
+    "${CMAKE_CURRENT_SOURCE_DIR}/gcc-time" "${CMAKE_CURRENT_BINARY_DIR}/gcc-time"
+)

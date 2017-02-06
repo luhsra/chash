@@ -13,6 +13,12 @@ all:
 	@echo "Look at the makefile"
 
 define inc_template
+int_$3:
+	./timing-internal.py -s \
+	-d ../versuchung-data --jobs $(JOBS) \
+	-v --clang_hash-clone-url ${CLANG_HASH} \
+	--project-clone-url ${$1} --cflags "-O0"
+
 inc_$3_$2_append:
 	./incremental_rebuild.py -s \
 		-d ../versuchung-data --jobs $(JOBS) \
@@ -38,9 +44,9 @@ $(foreach project,MUSL POSTGRESQL CPYTHON MBEDTLS LUA BASH SAMBA,\
 define hist_template
 hist_$3_$2:
 	./historical_build.py -s \
-		-d ../versuchung-data --jobs $(JOBS) \
+		-d tmp --jobs $(JOBS) \
 		-v --clang_hash-clone-url ${CLANG_HASH} \
-		--project-clone-url ${$1} --mode $2 --commits 500
+		--project-clone-url ${$1} --mode $2 --commits 500 -v
 
 hist_$3: hist_$3_$2
 hist_$2: hist_$3_$2
