@@ -95,8 +95,8 @@ obj_hashes_set = set()
 
 nr_of_records = 0 # for calculating avg
 sum_of_times = {'parsing': 0,
-             'hashing': 0,
-             'compiling': 0}
+                'hashing': 0,
+                'compiling': 0}
 
 false_positive_records = {} # maps commitID -> set of source filenames of false positive records
 all_ast_hashes = {} # maps commitID -> set(ast hashes)
@@ -105,6 +105,7 @@ all_files_hash_contained = {} # maps commitID -> set(filename), to prevent multi
 defect_commits = 0
 commit_ids = set()
 
+commits_fp_counts = {} # maps commitID -> nr of false positives
 
 
 def validate_records():
@@ -114,57 +115,54 @@ def validate_records():
             records = list(reversed([eval(line) for line in f]))
             total_number_of_records += len(records)
             validate_hashes(records)
+ 
+    different_ast_hashes = len(ast_hashes_set)
+    different_obj_hashes = len(obj_hashes_set)
+ 
+    false_positive_commits_counts = {}
+    for commit_id in false_positive_records:
+        ast_hash_count = len(all_ast_hashes[commit_id])
+        obj_hash_count = len(all_obj_hashes[commit_id])
+        fp_count = ast_hash_count - obj_hash_count
 
-    different_ast_hashes = 0 # number of different ast hashes (in total)
-    for v in ast_hashes_dict.values():
-        different_ast_hashes += len(v)
-
-    different_obj_hashes = 0 # number of different obj hashes (in total)
-    for v in obj_hashes_dict.values():
-        different_obj_hashes += len(v)
-
-    #TODO: remove old calculation of false positives
-    false_positives = 0
-    for k in false_positive_records:
-        false_positives += len(false_positive_records[k])
+        if fp_count not in false_positive_commits_counts:
+            false_positive_commits_counts[fp_count] = 1
+        else:
+            false_positive_commits_counts[fp_count] += 1
     
     print "\n---- Results ----"
     print "nr of commits: %d" % len(commit_ids)
     print "nr of single records (compiler calls): %d" % total_number_of_records
     print "false negatives (errors): %d" % false_negatives
-    print "false positives: %d" % false_positives
+    print "unchanged_counter: %d" % unchanged_counter
     print "missing ast hashes: %d" % ast_hash_missing
     print ""
     print "source files: %d" % len(source_files)
     print "different AST hashes: %d" % different_ast_hashes
     print "different obj hashes: %d" % different_obj_hashes
-    print "size of ast_hashes_dict: %d, obj_hashes_dict: %d" % (len(ast_hashes_dict), len(obj_hashes_dict))
-    print "len(ast_hashes_set): %d, len(obj_hashes_set): %d" % (len(ast_hashes_set), len(obj_hashes_set))
-    print "unchanged_counter: %d" % unchanged_counter
+    print "false positives: %d" % (different_ast_hashes - different_obj_hashes)
     print ""
-    print "avg times:"
-    for k,v in sum_of_times.items():
-        print "%s: %d ns" % (k, v/nr_of_records)
+    #print "avg times:"
+    #for k,v in sum_of_times.items():
+    #    print "%s: %d ns" % (k, v/nr_of_records)
     print "-----------------"
-    print "false positive commits: %d" % len(false_positive_records)
-    for k in sorted(false_positive_records, key=lambda k: len(false_positive_records[k]), reverse=True):
-        print "\t%s: %d" % (k, len(false_positive_records[k]))
+    print "false positive commits: %d" % len(commits_fp_counts)#false_positive_records)
+    nr_of_fp = 0
+    for k in sorted(commits_fp_counts, key=lambda k: commits_fp_counts[k], reverse=True):
+        print "\t%s: %d" % (k, commits_fp_counts[k])
+        nr_of_fp += commits_fp_counts[k]
+    print "sum of fp_counts: %d" % nr_of_fp
+    print "-----------------"
+
+    print "false positive commits counts: %d" % len(false_positive_commits_counts)
+    nr_of_fp = 0
+    for k in sorted(false_positive_commits_counts.keys(), reverse=True):
+        print "%d: %d" % (k, false_positive_commits_counts[k])
+        nr_of_fp += false_positive_commits_counts[k] * k
+    print "sum of fp_counts: %d" % nr_of_fp
+    
     print "-----------------\n"
 
-
-    diff_ast_hashes = 0
-    for v in all_ast_hashes.values():
-        diff_ast_hashes += len(v)
-    
-    diff_obj_hashes = 0
-    for v in all_obj_hashes.values():
-        diff_obj_hashes += len(v)
-
-    print ">>> corrected >>>"
-    print "different AST hashes: %d" % diff_ast_hashes
-    print "different obj hashes: %d" % diff_obj_hashes
-    print "<<<<<<<<<<<<<<<<<"
-    
     write_to_csv([ [k,len(v)] for k,v in ast_hashes_dict.items() ], ['filename', 'nr of different hashes'], abs_path('different_ast_hashes_per_file.csv'))
     write_to_csv([ [k,len(v)] for k,v in obj_hashes_dict.items() ], ['filename', 'nr of different hashes'], abs_path('different_obj_hashes_per_file.csv'))
 
@@ -185,18 +183,21 @@ def validate_hashes(record_list):
     global unchanged_counter
 
     global all_ast_hashes, all_obj_hashes, all_files_hash_contained
+    global commits_fp_counts
 
     iter_records = iter(record_list)
     prev_record = next(iter_records)
     filename = prev_record['filename']
     source_files.add(filename)
 
+
+    if 'ast-hash' in prev_record.keys() and 'object-hash' not in prev_record.keys():
+        print "missing obj-hash: %s" % prev_record['filename']
+
     if 'ast-hash' not in prev_record.keys():
         #print "MISSING: no ast-hash in records for file " + filename
         ast_hash_missing += 1
         return
-
-
 
     # the different hashes of the current file
     ast_hashes = set()
@@ -215,10 +216,11 @@ def validate_hashes(record_list):
         all_obj_hashes[commit_hash] = set() 
     if commit_hash not in all_files_hash_contained:
         all_files_hash_contained[commit_hash] = set()
-
+    
+ 
+    all_ast_hashes[commit_hash].add(prev_record['ast-hash'])
+    all_obj_hashes[commit_hash].add(prev_record['object-hash']) 
     if filename not in all_files_hash_contained[commit_hash]:
-        all_ast_hashes[commit_hash].add(prev_record['ast-hash'])
-        all_obj_hashes[commit_hash].add(prev_record['object-hash']) 
         all_files_hash_contained[commit_hash].add(filename)
 
 
@@ -248,6 +250,9 @@ def validate_hashes(record_list):
             if commit_hash not in false_positive_records:
                 false_positive_records[commit_hash] = set()
             false_positive_records[commit_hash].add(record['filename'])
+            if commit_hash not in commits_fp_counts:
+                commits_fp_counts[commit_hash] = 0
+            commits_fp_counts[commit_hash] += 1
         else:
             unchanged_counter += 1
 
@@ -257,7 +262,7 @@ def validate_hashes(record_list):
         ast_hashes_set.add(record['ast-hash'])
         obj_hashes_set.add(record['object-hash'])
 
-        # now the correct approach:
+        ## now the correct approach:
         if commit_hash not in all_ast_hashes:
             all_ast_hashes[commit_hash] = set()
         if commit_hash not in all_obj_hashes:
@@ -265,15 +270,17 @@ def validate_hashes(record_list):
         if commit_hash not in all_files_hash_contained:
             all_files_hash_contained[commit_hash] = set()
         
+
+        if prev_record['ast-hash'] != record['ast-hash']:
+            all_ast_hashes[commit_hash].add(record['ast-hash'])
+        if prev_record['object-hash'] != record['object-hash']:
+            all_obj_hashes[commit_hash].add(record['object-hash'])    
+
         if filename not in all_files_hash_contained[commit_hash]:
             if prev_record['ast-hash'] != record['ast-hash']:
-                all_ast_hashes[commit_hash].add(record['ast-hash'])
                 all_files_hash_contained[commit_hash].add(filename)
             if prev_record['object-hash'] != record['object-hash']:
-                all_obj_hashes[commit_hash].add(record['object-hash'])    
                 all_files_hash_contained[commit_hash].add(filename)
-
-
 
         nr_of_records += 1
         sum_of_times['parsing'] += record['parse-duration']
@@ -284,7 +291,6 @@ def validate_hashes(record_list):
         
         prev_record = record
 
-
     if filename in ast_hashes_dict:
         ast_hashes_dict[filename] |=ast_hashes # merge sets
     else:
@@ -294,7 +300,6 @@ def validate_hashes(record_list):
         obj_hashes_dict[filename] |= obj_hashes # merge sets
     else:
         obj_hashes_dict[filename] = obj_hashes
-
 
     different_ast_hash_count = len(ast_hashes)
     different_obj_hash_count = len(obj_hashes)
@@ -768,12 +773,10 @@ if (len(sys.argv) > 1):
     path_to_full_record_file = abs_path(FULL_RECORD_FILENAME)
     print "Starting at %s" % time.ctime()
 
-
     if '--skip-validating' not in sys.argv:
         print "validating..."
         validate_records()
         print "finished validating at %s" % time.ctime()
-
 
     if csv_files_are_existing():
         # skip building record, read csv data from files and work with that
