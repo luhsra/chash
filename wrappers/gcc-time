@@ -1,0 +1,33 @@
+#!/usr/bin/python
+
+import os
+import re
+import sys
+from subprocess import *
+
+cmd = ["/usr/bin/gcc", "-ftime-report"]
+cmd += [x for x in sys.argv[1:] if not (x.startswith("-O") and len(x) == 3)]
+cmd += os.environ.get("CHASH_EXTRA_FLAGS", "").split()
+x = Popen(cmd,
+          stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
+(stdout, stderr) = x.communicate()
+retcode = x.wait()
+sys.stdout.write(stdout)
+ret = {}
+ret["name"] = ""
+for x in sys.argv[1:]:
+    if x.endswith(".c") or x.endswith(".i"):
+        ret["name"] = x
+for line in stderr.split("\n"):
+    if ":" not in line:
+        continue
+    name, data = line.split(":", 1)
+    name = name.strip()
+    m = re.match(".*\s([0-9.]+) \([ 0-9.]*%\) wall.*", data)
+    if m:
+        ret[name] = float(m.group(1))
+
+with open(os.environ.get("TIMING_REPORT", "/tmp/timing-report.dict"), "a+") as fd:
+    fd.write(str(ret)+"\n")
+
+sys.exit(retcode)
