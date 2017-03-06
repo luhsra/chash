@@ -28,7 +28,7 @@ static enum {
 static char *hashfile = NULL;
 static char *hash_new = NULL;
 
-static char *objectfile = NULL;
+static char const *objectfile = NULL;
 static char *objectfile_copy = NULL;
 
 static void link_object_file() {
@@ -38,7 +38,7 @@ static void link_object_file() {
     assert(objectfile != nullptr);
     assert(objectfile_copy != nullptr);
 
-    char *src = nullptr, *dst = nullptr;
+    char const *src = nullptr, *dst = nullptr;
 
     if (atexit_mode == ATEXIT_FROM_CACHE) {
         src = objectfile_copy;
@@ -188,6 +188,11 @@ public:
     if (Context.getSourceManager().getDiagnostics().hasErrorOccurred()) {
         HashEqual = false;
     } else {
+        if (objectfile == nullptr) {
+            objectfile = "";
+        }
+        assert(objectfile != nullptr); // the next line (string ctor) throws
+                                       // exception if objectfile is nullptr
         std::string copy = cache.find_object_from_hash(objectfile, HashString);
         if (copy != "") {
             HashEqual = true;
