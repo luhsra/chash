@@ -149,7 +149,6 @@ public:
   bool VisitShuffleVectorExpr(const ShuffleVectorExpr *Node);
   bool VisitConvertVectorExpr(const ConvertVectorExpr *Node);
 
-
   // TODO: evtl. ImplicitValueInitExpr, GenericSelectionExpr, ArraySubscriptExpr
   // TODO: evtl. OpaqueValueExpr, ExtVectorElementExpr (Beschreibung klingt nach
   // C++)

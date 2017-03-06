@@ -60,8 +60,8 @@ void HashVisitor::hashDecl(const Decl *D) {
         }
 
         if (const auto FD = dyn_cast<FunctionDecl>(Child)) {
-           // We try to avoid hashing of declarations that have no definition
-           if (! FD->isThisDeclarationADefinition()) {
+          // We try to avoid hashing of declarations that have no definition
+          if (!FD->isThisDeclarationADefinition()) {
             bool doHashing = false;
             // look for alias attribute. if alias, hash, else ignore
             if (FD->hasAttrs()) {
@@ -263,12 +263,11 @@ bool HashVisitor::VisitConstantArrayType(const ConstantArrayType *T) {
 }
 
 bool HashVisitor::VisitVectorType(const VectorType *T) {
-    topHash() << AstElementVectorType;
-    hashType(T->getElementType());
-    topHash() << T->getNumElements() << T->getVectorKind();
-    return true;
+  topHash() << AstElementVectorType;
+  hashType(T->getElementType());
+  topHash() << T->getNumElements() << T->getVectorKind();
+  return true;
 }
-
 
 bool HashVisitor::VisitVariableArrayType(const VariableArrayType *T) {
   topHash() << AstElementVariableArrayType;
@@ -544,20 +543,19 @@ bool HashVisitor::VisitInitListExpr(const InitListExpr *Node) {
 }
 
 bool HashVisitor::VisitShuffleVectorExpr(const ShuffleVectorExpr *Node) {
-    topHash() << AstElementShuffleVectorExpr;
-    for (unsigned I = 0, E = Node->getNumSubExprs(); I < E; ++I) {
-        hashStmt(Node->getExpr(I));
-    }
-    return true;
+  topHash() << AstElementShuffleVectorExpr;
+  for (unsigned I = 0, E = Node->getNumSubExprs(); I < E; ++I) {
+    hashStmt(Node->getExpr(I));
+  }
+  return true;
 }
 
 bool HashVisitor::VisitConvertVectorExpr(const ConvertVectorExpr *Node) {
-    topHash() << AstElementConvertVectorExpr;
-    hashStmt(Node->getSrcExpr());
-    hashType(Node->getTypeSourceInfo()->getType());
-    return true;
+  topHash() << AstElementConvertVectorExpr;
+  hashStmt(Node->getSrcExpr());
+  hashType(Node->getTypeSourceInfo()->getType());
+  return true;
 }
-
 
 bool HashVisitor::VisitUnaryOperator(const UnaryOperator *Node) {
   topHash() << AstElementUnaryOperator;
