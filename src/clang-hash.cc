@@ -222,9 +222,9 @@ public:
           if (isa<FunctionDecl>(D))
             *Terminal << "(\"function:";
           else if (isa<VarDecl>(D))
-            *Terminal << "(\"variable "; // TODO: add :
+            *Terminal << "(\"variable:";
           else if (isa<RecordDecl>(D))
-            *Terminal << "(\"record "; // TODO: add :
+            *Terminal << "(\"record:";
           else
             continue;
 
