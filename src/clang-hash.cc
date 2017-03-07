@@ -213,7 +213,6 @@ public:
                        FinishHashing - StartHashing).count() << "\n";
       *Terminal << "element-hashes: [";
       for (const auto &SavedHash : Visitor.DeclSilo) {
-        break;
         const Decl *D = SavedHash.first;
         const Hash::Digest &Dig = SavedHash.second;
         // Only Top-level declarations
@@ -223,16 +222,33 @@ public:
           if (isa<FunctionDecl>(D))
             *Terminal << "(\"function:";
           else if (isa<VarDecl>(D))
-            *Terminal << "(\"variable ";
+            *Terminal << "(\"variable "; // TODO: add :
           else if (isa<RecordDecl>(D))
-            *Terminal << "(\"record ";
+            *Terminal << "(\"record "; // TODO: add :
           else
             continue;
 
           *Terminal << cast<NamedDecl>(D)->getName();
           *Terminal << "\", \"";
           *Terminal << Dig.asString();
-          *Terminal << "\"), ";
+          *Terminal << "\"";
+
+          if (isa<FunctionDecl>(D)) {
+            *Terminal << ", [";
+            for (const auto &SavedCallee :
+                 Visitor.DefUseSilo[cast<FunctionDecl>(D)]) {
+              if (isa<FunctionDecl>(SavedCallee)) {
+                *Terminal << "\"function:";
+              } else {
+                *Terminal << "\"variable:";
+              }
+              *Terminal << cast<NamedDecl>(SavedCallee)->getName();
+              *Terminal << "\", ";
+            }
+            *Terminal << "]";
+          }
+
+          *Terminal << "), ";
         }
       }
       *Terminal << "]\n";

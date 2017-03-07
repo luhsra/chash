@@ -67,6 +67,11 @@ public:
   std::map<const Type *, Hash::Digest> TypeSilo;
   std::map<const Decl *, Hash::Digest> DeclSilo;
 
+  // For tracking usage of functions/globals
+  // Maps each function to all functions called and global variables read
+  // by that function
+  std::map<const FunctionDecl *, std::set<const Decl *>> DefUseSilo;
+
   // Utilities
   bool hasNodes(const DeclContext *DC);
 
@@ -440,6 +445,14 @@ protected:
   }
 
   Hash &topHash() { return HashStack.back(); }
+
+  // Def-Use Silo
+  FunctionDecl const *CallerFunc = nullptr;
+
+  void storeDefinitionUsage(const Decl *const Used) {
+    if (CallerFunc)
+      DefUseSilo[CallerFunc].insert(Used);
+  }
 };
 
 #endif

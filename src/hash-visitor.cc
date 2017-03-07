@@ -448,9 +448,17 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
   // DeclRefExpr = usage of variables ("expressions which refer to variable
   // declarations")
   topHash() << AstElementDeclRefExpr;
+
   hashName(Node->getFoundDecl());
 
   const ValueDecl *const ValDecl = Node->getDecl();
+
+  if (isa<VarDecl>(ValDecl)) {
+    const VarDecl *const VD = static_cast<const VarDecl *>(ValDecl);
+    if (VD->hasGlobalStorage())
+      storeDefinitionUsage(VD);
+  }
+
   if (const Hash::Digest *const D = getHash(ValDecl)) {
     // Hash is already finished
     topHash() << *D;
@@ -656,6 +664,7 @@ bool HashVisitor::VisitCallExpr(const CallExpr *Node) {
   hashType(Node->getType());
   if (const FunctionDecl *const FD = Node->getDirectCallee()) {
     hashDecl(FD);
+    storeDefinitionUsage(FD);
   } else {
     hashStmt(Node->getCallee());
   }
@@ -784,6 +793,7 @@ bool HashVisitor::VisitBlockDecl(const BlockDecl *D) {
 }
 
 bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
+  CallerFunc = D;
   SeenTypes.insert(D); // Mark this variable declaration as visited, for
                        // recursive declarations
   topHash() << AstElementFunctionDecl;
@@ -848,6 +858,7 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
 
   topHash() << D->getMemoryFunctionKind(); // maybe needed
 
+  CallerFunc = nullptr;
   return true;
 }
 
