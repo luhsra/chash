@@ -57,9 +57,16 @@ def read_info_files(directory):
  
         for elem in record['element-hashes']:
             symbol = elem[0]
-            assert symbol not in local_hashes # every symbol must be unique
-                
+            #assert symbol not in local_hashes # every symbol must be unique
+
             local_hash = elem[1]
+
+            if symbol in local_hashes: # TODO: ok?
+                new_hash = hashlib.md5()
+                new_hash.update(local_hashes[symbol])
+                new_hash.update(local_hash)
+                local_hash = new_hash.hexdigest()
+
             local_hashes[symbol] = local_hash
 
             if symbol.startswith(FUNCTION_PREFIX):
@@ -67,14 +74,22 @@ def read_info_files(directory):
                 used_definitions[symbol] = def_use_list
 
 
+# all symbols that are already being processed; to prevent recursion
+currently_processed = set()
+
 def get_global_hash(symbol):
     """Calculates the global hash of the symbol recursively over all used definitions
     """
-    global global_hashes
+    global global_hashes, currently_processed 
 
     if symbol in global_hashes:
         return global_hashes[symbol]
- 
+
+    if symbol in currently_processed: # TODO: ok? prevents recursion
+        return local_hashes[symbol]
+
+    currently_processed.add(symbol)
+
     global_hash = hashlib.md5()
     global_hash.update(local_hashes[symbol])
 
@@ -84,13 +99,16 @@ def get_global_hash(symbol):
             used_def_global_hash = get_global_hash(used_def)
             global_hash.update(used_def_global_hash)
     
+    currently_processed.remove(symbol)
+
     global_hashes[symbol] = global_hash.hexdigest()
     return global_hashes[symbol]
 
 
-def print_global_hashes():
+def print_checked_symbol_hashes(symbols_to_check):
     for k, v in global_hashes.items():
-        print "{:25} {}".format(k, v)
+        if k in symbols_to_check:
+            print "{:35} {}".format(k, v)
 
 
 def get_symbols_to_check(filename):
@@ -134,7 +152,7 @@ if __name__ == "__main__":
         for function in symbols_to_check:
             get_global_hash(function)
 
-        print_global_hashes()        
+        print_checked_symbol_hashes(symbols_to_check)
    
     elif argc == 2 and 'help' in args:
         print_help()
