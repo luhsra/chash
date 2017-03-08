@@ -1,0 +1,141 @@
+#!/usr/bin/env python
+
+import fnmatch
+import hashlib
+import os
+import sys
+
+DEFINITION_FLAG = '--definition'
+OBJECT_FILE_FLAG = '--object-file'
+
+FUNCTION_PREFIX = 'function:'
+INFO_EXTENSION = '.info'
+
+def print_help():
+    # TODO: add detailed description
+    print """Usage:
+    ./clang-hash-global --definition <symbol> [directory]
+    ./clang-hash-global --object-file <file> [directory]
+    """
+
+
+def get_param_of(flag):
+    index = sys.argv.index(flag) + 1
+    if index < len(sys.argv):
+        return sys.argv[index]
+
+
+def get_list_of_info_files(directory):
+    for root, dirnames, filenames in os.walk(directory):
+        for filename in fnmatch.filter(filenames, '*' + INFO_EXTENSION):
+            yield os.path.join(root, filename)
+
+
+def get_record_from(info_filename):
+    """ .info files can contain more than a single record, since new ones are appended by the wrapper script: only read most recent one
+    """
+    record = None
+    with open(info_filename, 'r') as info_file:
+        lines = info_file.read().splitlines()
+        record = eval(lines[-1])
+    return record
+ 
+
+# map function -> local hash
+local_hashes = {}
+# map function -> list of used defs
+used_definitions = {}
+# map function -> global hash
+global_hashes = {}
+
+
+def read_info_files(directory):
+    global local_hashes, used_definitions
+
+    for info_file in get_list_of_info_files(directory):
+        record = get_record_from(info_file)
+ 
+        for elem in record['element-hashes']:
+            symbol = elem[0]
+            assert symbol not in local_hashes # every symbol must be unique
+                
+            local_hash = elem[1]
+            local_hashes[symbol] = local_hash
+
+            if symbol.startswith(FUNCTION_PREFIX):
+                def_use_list = elem[2]
+                used_definitions[symbol] = def_use_list
+
+
+def get_global_hash(symbol):
+    """Calculates the global hash of the symbol recursively over all used definitions
+    """
+    global global_hashes
+
+    if symbol in global_hashes:
+        return global_hashes[symbol]
+ 
+    global_hash = hashlib.md5()
+    global_hash.update(local_hashes[symbol])
+
+    if symbol.startswith(FUNCTION_PREFIX): # recurse only if function
+        used_defs = used_definitions[symbol]
+        for used_def in used_defs:
+            used_def_global_hash = get_global_hash(used_def)
+            global_hash.update(used_def_global_hash)
+    
+    global_hashes[symbol] = global_hash.hexdigest()
+    return global_hashes[symbol]
+
+
+def print_global_hashes():
+    for k, v in global_hashes.items():
+        print "{:25} {}".format(k, v)
+
+
+def get_symbols_to_check(filename):
+    record = get_record_from(info_filename)
+    symbols_to_check = []
+    for elem in record['element-hashes']:
+        symbol = elem[0]
+        if symbol.startswith(FUNCTION_PREFIX): # TODO: check global variables, too?
+            symbols_to_check.append(symbol)
+    return symbols_to_check
+
+
+################################################################################
+
+
+if __name__ == "__main__":
+    args = sys.argv
+    argc = len(args)
+    if argc > 2:
+        if argc > 3: # 3rd param is path
+            working_directory = args[3]
+            os.chdir(working_directory)
+        working_directory = os.getcwd() 
+        
+        # fill local_hashes
+        read_info_files(working_directory)
+        
+        symbols_to_check = []
+ 
+        if DEFINITION_FLAG in args:
+            """Recursive starting from a single function or global variable definition"""
+            symbol = get_param_of(DEFINITION_FLAG)
+            symbols_to_check.append(FUNCTION_PREFIX + symbol)
+            
+        elif OBJECT_FILE_FLAG in args:
+            """Recursive, starting from all definitions within an object file"""
+            object_filename = get_param_of(OBJECT_FILE_FLAG)
+            info_filename = object_filename + INFO_EXTENSION
+            symbols_to_check = get_symbols_to_check(info_filename) 
+        
+        for function in symbols_to_check:
+            get_global_hash(function)
+
+        print_global_hashes()        
+   
+    elif argc == 2 and 'help' in args:
+        print_help()
+
