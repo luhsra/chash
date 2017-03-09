@@ -793,7 +793,7 @@ bool HashVisitor::VisitBlockDecl(const BlockDecl *D) {
 }
 
 bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
-  CallerFunc = D;
+  CallerFuncs.push(D);
   SeenTypes.insert(D); // Mark this variable declaration as visited, for
                        // recursive declarations
   topHash() << AstElementFunctionDecl;
@@ -858,7 +858,7 @@ bool HashVisitor::VisitFunctionDecl(const FunctionDecl *D) {
 
   topHash() << D->getMemoryFunctionKind(); // maybe needed
 
-  CallerFunc = nullptr;
+  CallerFuncs.pop();
   return true;
 }
 

@@ -447,11 +447,11 @@ protected:
   Hash &topHash() { return HashStack.back(); }
 
   // Def-Use Silo
-  FunctionDecl const *CallerFunc = nullptr;
+  std::stack<const FunctionDecl *> CallerFuncs;
 
   void storeDefinitionUsage(const Decl *const Used) {
-    if (CallerFunc)
-      DefUseSilo[CallerFunc].insert(Used);
+    if (!CallerFuncs.empty())
+      DefUseSilo[CallerFuncs.top()].insert(Used);
   }
 };
 
