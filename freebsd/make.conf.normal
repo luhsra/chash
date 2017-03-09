@@ -1,4 +1,0 @@
-NO_KERNELCLEAN=yes
-#NO_KERNELCONF=yes
-NO_KERNELOBJ=yes
-CFLAGS=-Wno-expansion-to-defined
