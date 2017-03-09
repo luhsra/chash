@@ -57,21 +57,12 @@ def read_info_files(directory):
  
         for elem in record['element-hashes']:
             symbol = elem[0]
-            #assert symbol not in local_hashes # every symbol must be unique
+            assert symbol not in local_hashes # every symbol must be unique
 
-            local_hash = elem[1]
+            local_hashes[symbol] = elem[1]
 
-            if symbol in local_hashes: # TODO: ok?
-                new_hash = hashlib.md5()
-                new_hash.update(local_hashes[symbol])
-                new_hash.update(local_hash)
-                local_hash = new_hash.hexdigest()
-
-            local_hashes[symbol] = local_hash
-
-            if symbol.startswith(FUNCTION_PREFIX):
-                def_use_list = elem[2]
-                used_definitions[symbol] = def_use_list
+            if len(elem) > 2 and symbol.startswith(FUNCTION_PREFIX):
+                used_definitions[symbol] = elem[2]
 
 
 # all symbols that are already being processed; to prevent recursion
