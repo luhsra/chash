@@ -238,10 +238,9 @@ public:
           *Terminal << Dig.asString();
           *Terminal << "\"";
 
-          if (IsFunctionDefinition) {
+          if (IsFunctionDefinition || IsNonExternVariableDeclaration) {
             *Terminal << ", [";
-            for (const auto &SavedCallee :
-                 Visitor.DefUseSilo[cast<FunctionDecl>(D)]) {
+            for (const auto &SavedCallee : Visitor.DefUseSilo[cast<Decl>(D)]) {
               if (isa<FunctionDecl>(SavedCallee)) {
                 *Terminal << "\"function:";
               } else {

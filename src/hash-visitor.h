@@ -70,7 +70,7 @@ public:
   // For tracking usage of functions/globals
   // Maps each function to all functions called and global variables read
   // by that function
-  std::map<const FunctionDecl *, std::set<const Decl *>> DefUseSilo;
+  std::map<const Decl *, std::set<const Decl *>> DefUseSilo;
 
   // Utilities
   bool hasNodes(const DeclContext *DC);
@@ -447,11 +447,16 @@ protected:
   Hash &topHash() { return HashStack.back(); }
 
   // Def-Use Silo
-  std::stack<const FunctionDecl *> CallerFuncs;
+  std::stack<const FunctionDecl *>
+      CallerFuncs;                        // To keep track of current caller(s)
+  std::stack<const VarDecl *> GlobalVars; // To keep track of currently
+                                          // initialized global variables
 
   void storeDefinitionUsage(const Decl *const Used) {
     if (!CallerFuncs.empty())
       DefUseSilo[CallerFuncs.top()].insert(Used);
+    else if (!GlobalVars.empty())
+      DefUseSilo[GlobalVars.top()].insert(Used);
   }
 };
 

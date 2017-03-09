@@ -123,6 +123,10 @@ bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
 }
 
 bool HashVisitor::VisitVarDecl(const VarDecl *D) {
+  if (D->hasGlobalStorage()) {
+    GlobalVars.push(D);
+  }
+
   SeenTypes.insert(D); // Mark this variable declaration as visited, for
                        // recursive declarations
 
@@ -141,6 +145,11 @@ bool HashVisitor::VisitVarDecl(const VarDecl *D) {
     const Expr *const E = D->getInit();
     hashStmt(E); // TODO: perhaps hashStmt(D->getInit()) instead
   }
+
+  if (D->hasGlobalStorage()) {
+    GlobalVars.pop();
+  }
+
   return true;
 }
 
