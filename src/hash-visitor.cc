@@ -466,6 +466,8 @@ bool HashVisitor::VisitDeclRefExpr(const DeclRefExpr *Node) {
     const VarDecl *const VD = static_cast<const VarDecl *>(ValDecl);
     if (VD->hasGlobalStorage())
       storeDefinitionUsage(VD);
+  } else if (isa<FunctionDecl>(ValDecl)) {
+    storeDefinitionUsage(static_cast<const FunctionDecl *>(ValDecl));
   }
 
   if (const Hash::Digest *const D = getHash(ValDecl)) {
