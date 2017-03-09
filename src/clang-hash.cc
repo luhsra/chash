@@ -219,9 +219,14 @@ public:
         if (D->getDeclContext() &&
             isa<TranslationUnitDecl>(D->getDeclContext()) &&
             isa<NamedDecl>(D)) {
-          if (isa<FunctionDecl>(D))
+          const bool IsFunctionDefinition =
+              isa<FunctionDecl>(D) && cast<FunctionDecl>(D)->hasBody();
+          const bool IsNonExternVariableDeclaration =
+              isa<VarDecl>(D) && !cast<VarDecl>(D)->hasExternalStorage();
+
+          if (IsFunctionDefinition) // Ignore declarations without definition
             *Terminal << "(\"function:";
-          else if (isa<VarDecl>(D))
+          else if (IsNonExternVariableDeclaration) // Ignore extern variables
             *Terminal << "(\"variable:";
           else if (isa<RecordDecl>(D))
             *Terminal << "(\"record:";
@@ -233,7 +238,7 @@ public:
           *Terminal << Dig.asString();
           *Terminal << "\"";
 
-          if (isa<FunctionDecl>(D)) {
+          if (IsFunctionDefinition) {
             *Terminal << ", [";
             for (const auto &SavedCallee :
                  Visitor.DefUseSilo[cast<FunctionDecl>(D)]) {
