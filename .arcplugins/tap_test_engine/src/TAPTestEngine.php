@@ -28,12 +28,27 @@ final class TAPTestEngine extends ArcanistUnitTestEngine {
     $results = array();
     $lines = explode(PHP_EOL, $output);
 
+    $result = null;
+    $userData = "";
+    
     foreach($lines as $index => $line) {
       preg_match('/^(not ok|ok)\s+\d+\s+-?(.*)/', $line, $matches);
-      if (count($matches) < 3) continue;
+      if (count($matches) < 3) {
+         preg_match('/^#\s*duration\s([0-9.]+)/', $line, $matches);
+         if ($result != null && count($matches) == 2) {
+            $result->setDuration((float)$matches[1]);
+         }
+         preg_match('/^#(.*)/', $line, $matches);
+         if ($result != null && count($matches) == 2) {
+            $userData .= $matches[1] . "\n";
+            $result->setUserData($userData);
+         }
+         continue;
+      } 
 
       $result = new ArcanistUnitTestResult();
       $result->setName(trim($matches[2]));
+      $userData = "";
 
       switch (trim($matches[1])) {
         case 'ok':
@@ -43,7 +58,6 @@ final class TAPTestEngine extends ArcanistUnitTestEngine {
         case 'not ok':
           $exception_message = trim($lines[$index + 1]);
           $result->setResult(ArcanistUnitTestResult::RESULT_FAIL);
-          $result->setUserData($exception_message);
           break;
 
         default:

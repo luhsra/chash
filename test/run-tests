@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import time
 import glob
 import threading
 from subprocess import Popen, PIPE, check_output
@@ -224,10 +225,12 @@ def run_testcase_helper(testcase_opts, future):
                  (COLOR.format(test_case, "cyan"), COLOR.format(check_name, "yellow"),
                   cruft)
 
+    start = time.time()
     if testcase_opts["test_case"].endswith(".c"):
         output += run_testcase_objecthash(testcase_opts)
     elif testcase_opts["test_case"].endswith(".sh"):
         output += run_testcase_shell(testcase_opts)
+    duration = time.time() - start
 
     if TAP is False:
         to_console(output)
@@ -239,9 +242,12 @@ def run_testcase_helper(testcase_opts, future):
         if not testcase_opts["passed"] and not known_to_fail:
             tap_status = "not ok"
 
-        to_console("%s %d - %s\n%s" % (
+        output = output.split("\n") + ["duration %f" % duration]
+        output = ["# " + x for x in output]
+        output = "\n".join(output)
+        to_console("%s %d - %s\n%s\n" % (
             tap_status, testcase_opts['test_id'],
-            testcase_opts["check-name"],
+            testcase_opts["test_case"],
             output))
 
     future.set(testcase_opts)
