@@ -19,6 +19,7 @@ default_hash_command = "clang-hash"
 default_objhash_command = "hash-objectfile"
 
 
+TAP = False
 LOGLEVEL = 1
 LOGLEVEL_DEBUG = 2
 LOGLEVEL_NORMAL = 1
@@ -217,20 +218,35 @@ def run_testcase_helper(testcase_opts, future):
 
     cruft = run_testcase_cleaner(basename)
 
-    output = COLOR.format("TEST", "blue", True) + " %s: %s (%d leftovers removed)\n" % \
-             (COLOR.format(test_case, "cyan"), COLOR.format(check_name, "yellow"),
-              cruft)
+    output = ""
+    if TAP is False:
+        output += COLOR.format("TEST", "blue", True) + " %s: %s (%d leftovers removed)\n" % \
+                 (COLOR.format(test_case, "cyan"), COLOR.format(check_name, "yellow"),
+                  cruft)
 
     if testcase_opts["test_case"].endswith(".c"):
-        output += run_testcase_objecthash(testcase_opts, future)
+        output += run_testcase_objecthash(testcase_opts)
     elif testcase_opts["test_case"].endswith(".sh"):
-        output += run_testcase_shell(testcase_opts, future)
+        output += run_testcase_shell(testcase_opts)
 
-    to_console(output)
+    if TAP is False:
+        to_console(output)
+    else:
+        known_to_fail = testcase_opts['check-known-to-fail']
+        tap_status = "ok"
+        if testcase_opts["passed"] and known_to_fail:
+            tap_status = "not ok"
+        if not testcase_opts["passed"] and not known_to_fail:
+            tap_status = "not ok"
 
+        to_console("%s %d - %s\n%s" % (
+            tap_status, testcase_opts['test_id'],
+            testcase_opts["check-name"],
+            output))
 
+    future.set(testcase_opts)
 
-def run_testcase_shell(testcase_opts, future):
+def run_testcase_shell(testcase_opts):
     known_to_fail = testcase_opts['check-known-to-fail']
     def fail_msg(fmt, *args):
         if known_to_fail:
@@ -252,12 +268,12 @@ def run_testcase_shell(testcase_opts, future):
                            cmd, ret)
 
     testcase_opts['passed'] = (ret == 0)
-    future.set(testcase_opts)
+
 
     return output
 
 
-def run_testcase_objecthash(test_case_opts, future):
+def run_testcase_objecthash(test_case_opts):
     output = "" # Return value
     test_case = test_case_opts['test_case']
     basename, ext = os.path.splitext(test_case)
@@ -372,8 +388,6 @@ def run_testcase_objecthash(test_case_opts, future):
             if object_files_might_not_differ and obj == other_obj:
                 continue
 
-            print object_files_might_not_differ, (obj, other_obj), (ast, other_ast)
-
             output += fail_msg("!!! Failure: Different hashes")
             output += " {var_1} obj:{obj} ast:{ast}\n".format(**locals())
             output += " {var_2} obj:{other_obj} ast:{other_ast}\n".format(**locals())
@@ -396,7 +410,6 @@ def run_testcase_objecthash(test_case_opts, future):
         output += fail_msg("!!! Failed")
 
     test_case_opts['passed'] = not failed
-    future.set(test_case_opts)
 
     return output
 
@@ -418,17 +431,23 @@ def run_test_suite(tests):
 
     running_tests = []
 
+    idx = 1
     for test_case in tests:
         check_name = get_tag(test_case, "check-name")
         if not check_name:
             to_console(COLOR.format("WARN", 'yellow', True) + " test '%s' unhandled\n" % test_case)
             continue
         data = {
+            'test_id': idx,
             'test_case': test_case,
             'check-name': check_name,
             'check-known-to-fail': get_tag(test_case, "check-known-to-fail"),
         }
+        idx += 1
         running_tests.append(run_testcase(data))
+
+    if TAP is True:
+        to_console("%d..%d\n" %(1, len(running_tests)))
 
     for future in running_tests:
         test_case = future.get()
@@ -468,9 +487,7 @@ def get_testcases(paths = ["."]):
     return sorted(ret)
 
 if __name__ == '__main__':
-    args = [x for x in sys.argv[1:] if x[0] == "-"]
-    opts = [x for x in sys.argv[1:] if x[0] != "-"]
-    opts, args = getopt.getopt(args + opts, "ht:qcv")
+    opts, args = getopt.getopt(sys.argv[1:], "ht:qcvT")
     if len(args) == 0:
         args = ["."]
 
@@ -494,6 +511,8 @@ if __name__ == '__main__':
             LOGLEVEL = 0
         elif opt in ('-v', '--verbose'):
             LOGLEVEL = 2
+        elif opt in ('-T'):
+            TAP = True
         else:
             print "unkown option"
             assert False

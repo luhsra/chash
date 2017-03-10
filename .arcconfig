@@ -1,4 +1,15 @@
 {
-  "phabricator.uri": "https://scm.sra.uni-hannover.de"
+  "phabricator.uri": "https://scm.sra.uni-hannover.de",
+  "load": [
+      ".arcplugins/multi_test_engine/",
+      ".arcplugins/tap_test_engine"
+  ],
+  "unit.engine": "MultiTestEngine",
+  "unit.engine.multi-test.engines": [
+    {
+      "engine": "TAPTestEngine",
+      "unit.engine.tap.command": "cd test; ./run-tests -T -t 4"
+    }
+  ]
 }
 
