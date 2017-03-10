@@ -1,2 +1,2 @@
-Clang-Hash Plugin
-=================
+cHash Project
+=============
