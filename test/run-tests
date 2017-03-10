@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-
-import fnmatch
 import glob
 import threading
 from subprocess import Popen, PIPE, check_output
@@ -10,12 +8,15 @@ import re
 import getopt
 
 threads = 1
-testcase_pattern = "*.c"
+testcase_pattern = "\\.c$|(^|/)test.*\\.sh$"
 default_path = ".."
 default_compile_command = "clang"
 default_compile_flags = "-Wall"
-default_hash_command = os.path.join(os.path.dirname(__file__), "../build/wrappers/clang-hash")
-default_objhash_command = os.path.join(os.path.dirname(__file__), "../build/wrappers/hash-objectfile")
+
+clang_hash_path = os.path.join(os.path.dirname(__file__), "../build/wrappers/")
+os.environ["PATH"] = clang_hash_path + ":" + os.environ["PATH"]
+default_hash_command = "clang-hash"
+default_objhash_command = "hash-objectfile"
 
 
 LOGLEVEL = 1
@@ -209,30 +210,69 @@ def run_command(cmd, stdin=None):
     p.wait()
     return p.returncode, output, stdout, stderr
 
-def run_testcase_helper(test_case_opts, future):
-    test_case = test_case_opts['test_case']
-    check_name = test_case_opts['check-name']
-    known_to_fail = test_case_opts['check-known-to-fail']
-
-
-    compile_command = get_tag(test_case, "compile-command", default_compile_command)
-    hash_command = get_tag(test_case, "hash-command", default_hash_command)
-
-    object_files_might_not_differ = get_tag(test_case, "obj-not-diff")
-
-    compile_flags = get_tag(test_case, "compile-flags", default_compile_flags)
-    variants = get_variants(test_case)
-
+def run_testcase_helper(testcase_opts, future):
+    test_case = testcase_opts['test_case']
+    check_name = testcase_opts['check-name']
     basename, ext = os.path.splitext(test_case)
-
-    # Add the testcase directory
-    dirname = os.path.dirname(os.path.join(".", test_case))
-    compile_flags += " -I %s" % (dirname)
 
     cruft = run_testcase_cleaner(basename)
 
     output = COLOR.format("TEST", "blue", True) + " %s: %s (%d leftovers removed)\n" % \
-             (COLOR.format(test_case, "cyan"), COLOR.format(check_name, "yellow"), cruft)
+             (COLOR.format(test_case, "cyan"), COLOR.format(check_name, "yellow"),
+              cruft)
+
+    if testcase_opts["test_case"].endswith(".c"):
+        output += run_testcase_objecthash(testcase_opts, future)
+    elif testcase_opts["test_case"].endswith(".sh"):
+        output += run_testcase_shell(testcase_opts, future)
+
+    to_console(output)
+
+
+
+def run_testcase_shell(testcase_opts, future):
+    known_to_fail = testcase_opts['check-known-to-fail']
+    def fail_msg(fmt, *args):
+        if known_to_fail:
+            color, bold = "green", False
+        else:
+            color, bold = "red", True
+        return COLOR.format(fmt % args, color, bold=bold) + "\n"
+
+    output = ""
+    cmd = "/bin/bash %s" % testcase_opts["test_case"]
+    (ret, x, _, stderr) = run_command(cmd)
+
+    if (LOGLEVEL >= LOGLEVEL_NORMAL and ret != 0 and not known_to_fail) \
+       or LOGLEVEL >= LOGLEVEL_DEBUG:
+        output += x
+
+    if ret != 0:
+        output += fail_msg("!!! Failure: %s failed with %d",
+                           cmd, ret)
+
+    testcase_opts['passed'] = (ret == 0)
+    future.set(testcase_opts)
+
+    return output
+
+
+def run_testcase_objecthash(test_case_opts, future):
+    output = "" # Return value
+    test_case = test_case_opts['test_case']
+    basename, ext = os.path.splitext(test_case)
+
+    # Gather information from test-case file
+    known_to_fail = test_case_opts['check-known-to-fail']
+    compile_command = get_tag(test_case, "compile-command", default_compile_command)
+    hash_command = get_tag(test_case, "hash-command", default_hash_command)
+    object_files_might_not_differ = get_tag(test_case, "obj-not-diff")
+    compile_flags = get_tag(test_case, "compile-flags", default_compile_flags)
+    variants = get_variants(test_case)
+
+    # Add the testcase directory
+    dirname = os.path.dirname(os.path.join(".", test_case))
+    compile_flags += " -I %s" % (dirname)
 
     def fail_msg(fmt, *args):
         if known_to_fail:
@@ -355,11 +395,10 @@ def run_testcase_helper(test_case_opts, future):
     if failed:
         output += fail_msg("!!! Failed")
 
-    test_case_opts['output'] = output
     test_case_opts['passed'] = not failed
-    to_console(output)
-
     future.set(test_case_opts)
+
+    return output
 
 
 def run_testcase(test_case):
@@ -423,13 +462,15 @@ def get_testcases(paths = ["."]):
                     all_files.append(path)
     ret = []
     for fn in all_files:
-        if fnmatch.fnmatch(fn, testcase_pattern) and not "var.c" in fn:
+        if re.search(testcase_pattern, fn) and not "var.c" in fn:
             ret.append(fn)
 
     return sorted(ret)
 
 if __name__ == '__main__':
-    opts, args = getopt.getopt(sys.argv[1:], "ht:qcv")
+    args = [x for x in sys.argv[1:] if x[0] == "-"]
+    opts = [x for x in sys.argv[1:] if x[0] != "-"]
+    opts, args = getopt.getopt(args + opts, "ht:qcv")
     if len(args) == 0:
         args = ["."]
 
