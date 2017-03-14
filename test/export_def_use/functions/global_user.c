@@ -12,7 +12,5 @@ int global_user() {
 
 /*
  * check-name: function using global variables
- * references: global_user -> global array
- * no-references: global arr
- * no-entry: local i
+ * references: global_user -> global arr other_foo
  */

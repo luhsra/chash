@@ -7,6 +7,4 @@ void foo() { int i = fp(); }
 /*
  * check-name: call of function pointer
  * references: fp -> func, foo -> fp
- * no-references: func
- * no_entries: i
  */

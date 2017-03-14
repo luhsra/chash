@@ -8,13 +8,12 @@ int baz() {
 }
 
 int calc() {
-  int i = foo() + bar() / baz() + 42;
+  bar();
+  int i = foo() / baz() + 42;
   return i;
 }
 
 /*
  * check-name: some function calls
  * references: bar -> foo, baz -> bar foo, calc -> foo bar baz
- * no-references: foo
- * no-entry: i
  */
