@@ -18,7 +18,7 @@ clang_hash_path = os.path.join(os.path.dirname(__file__), "../build/wrappers/")
 os.environ["PATH"] = clang_hash_path + ":" + os.environ["PATH"]
 default_hash_command = "clang-hash"
 default_objhash_command = "hash-objectfile"
-
+export_def_use_dir = "export_def_use"
 
 TAP = False
 LOGLEVEL = 1
@@ -227,7 +227,10 @@ def run_testcase_helper(testcase_opts, future):
 
     start = time.time()
     if testcase_opts["test_case"].endswith(".c"):
-        output += run_testcase_objecthash(testcase_opts)
+        if export_def_use_dir in testcase_opts["test_case"]:
+            output += run_testcase_def_use_export(testcase_opts)
+        else:
+            output += run_testcase_objecthash(testcase_opts)
     elif testcase_opts["test_case"].endswith(".sh"):
         output += run_testcase_shell(testcase_opts)
     duration = time.time() - start
@@ -414,6 +417,81 @@ def run_testcase_objecthash(test_case_opts):
 
     if failed:
         output += fail_msg("!!! Failed")
+
+    test_case_opts['passed'] = not failed
+
+    return output
+
+
+def run_testcase_def_use_export(test_case_opts):
+    output = "" # Return value
+    test_case = test_case_opts['test_case']
+
+    # Gather information from test-case file
+    known_to_fail = test_case_opts['check-known-to-fail']
+    compile_command = get_tag(test_case, "compile-command", default_compile_command)
+    hash_command = get_tag(test_case, "hash-command", default_hash_command)
+    compile_flags = get_tag(test_case, "compile-flags", default_compile_flags)
+    variants = get_variants(test_case) # TODO: remove
+
+    references = filter(None, (get_tag(test_case, "references") or '').split(','))
+    no_references = filter(None, (get_tag(test_case, "no-references") or '').split(' '))
+    no_entry = filter(None, (get_tag(test_case, "no-entry") or '').split(' '))
+
+    test_dependency_map = {}
+    for reference in references:
+        elems = reference.split('->')
+        assert len(elems) is 2
+        key = elems[0].strip()
+        val = elems[1].strip()
+        test_dependency_map[key] = sorted(filter(None, val.split(' ')))
+
+    def fail_msg(fmt, *args):
+        if known_to_fail:
+            color, bold = "green", False
+        else:
+            color, bold = "red", True
+        return COLOR.format(fmt % args, color, bold=bold) + "\n"
+
+    source_file = test_case
+    this_cc = compile_command
+    this_cflags = compile_flags
+
+    cmd = "{compiler} -c {source_file} -fsyntax-only -hash-verbose {flags}".format(
+        compiler=this_cc,
+        source_file=source_file,
+        flags=this_cflags)
+    (ret_compiler, x, _, __) = run_command(cmd)
+    assert os.path.exists(source_file)
+
+    if LOGLEVEL >= LOGLEVEL_NORMAL and ret_compiler != 0:
+        output += x
+    elif LOGLEVEL >= LOGLEVEL_DEBUG:
+        output += x
+
+    failed = False
+
+    if ret_compiler != 0:
+        output += fail_msg("!!! Failure: compile failed with %d", ret_compiler)
+        failed = True
+
+    # get dependencies
+    element_hashes_key = 'element-hashes'
+    for line in x.split('\n'):
+        if element_hashes_key in line:
+            line = line[line.find('['):]
+            element_hashes = eval(line)
+            dependency_map = {}
+            for symbol, element_hash, dependencies in element_hashes:
+                if dependencies:
+                    symbol = symbol[symbol.find(':') + 1:]
+                    dependency_map[symbol] = sorted([val[val.find(':') + 1:] for val in dependencies])
+            break
+
+    # compare dependencies
+    if cmp(dependency_map, test_dependency_map) is not 0:
+        output += fail_msg("!!! Failure: wrong dependencies\nAre       %s\nShould be %s", str(dependency_map), str(test_dependency_map))
+        failed = True
 
     test_case_opts['passed'] = not failed
 
