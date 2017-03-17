@@ -7,16 +7,17 @@ import sys
 
 DEFINITION_FLAG = '--definition'
 OBJECT_FILE_FLAG = '--object-file'
+OUTPUT_FLAG = '-o'
+HELP_FLAG = '-h'
 
-FUNCTION_PREFIX = 'function:'
+FUNCTION_PREFIX = 'function'
+VARIABLE_PREFIX = 'variable'
 INFO_EXTENSION = '.info'
 
-def print_help():
+def usage():
     # TODO: add detailed description
-    print """Usage:
-    ./clang-hash-global --definition <symbol> [directory]
-    ./clang-hash-global --object-file <file> [directory]
-    """
+    print "%s %s <symbol> [directory] [%s <outfile>]" % (sys.argv[0], DEFINITION_FLAG, OUTPUT_FLAG)
+    print "%s %s <file> [directory] [%s <outfile>]" % (sys.argv[0], OBJECT_FILE_FLAG, OUTPUT_FLAG)
 
 
 def get_param_of(flag):
@@ -35,9 +36,13 @@ def get_record_from(info_filename):
     """ .info files can contain more than a single record, since new ones are appended by the wrapper script: only read most recent one
     """
     record = None
-    with open(info_filename, 'r') as info_file:
-        lines = info_file.read().splitlines()
-        record = eval(lines[-1])
+    try:
+        with open(info_filename, 'r') as info_file:
+            lines = info_file.read().splitlines()
+            record = eval(lines[-1])
+    except IOError: # have to catch this to prevent failing testcases when some
+                    # .info files are deleted by another testcase while reading
+        pass
     return record
  
 
@@ -49,21 +54,27 @@ used_definitions = {}
 global_hashes = {}
 
 
+def get_name_of(symbol):
+    return symbol.split(':')[1]
+
+def get_prefix_of(symbol):
+    return symbol.split(':')[0]
+
 def read_info_files(directory):
     global local_hashes, used_definitions
 
     for info_file in get_list_of_info_files(directory):
         record = get_record_from(info_file)
- 
-        for elem in record['element-hashes']:
-            symbol = elem[0]
-            assert symbol not in local_hashes # every symbol must be unique
+        if record:
+            for elem in record['element-hashes']:
+                prefix = get_prefix_of(elem[0])
+                symbol = get_name_of(elem[0])
+                assert symbol not in local_hashes # every symbol must be unique
 
-            local_hashes[symbol] = elem[1]
+                local_hashes[symbol] = elem[1]
 
-            if len(elem) > 2 and symbol.startswith(FUNCTION_PREFIX):
-                used_definitions[symbol] = elem[2]
-
+                if len(elem) > 2 and (prefix == FUNCTION_PREFIX or prefix == VARIABLE_PREFIX):
+                    used_definitions[symbol] = elem[2]
 
 # all symbols that are already being processed; to prevent recursion
 currently_processed = set()
@@ -72,7 +83,6 @@ def get_global_hash(symbol):
     """Calculates the global hash of the symbol recursively over all used definitions
     """
     global global_hashes, currently_processed 
-
     if symbol in global_hashes:
         return global_hashes[symbol]
 
@@ -84,11 +94,11 @@ def get_global_hash(symbol):
     global_hash = hashlib.md5()
     global_hash.update(local_hashes[symbol])
 
-    if symbol.startswith(FUNCTION_PREFIX): # recurse only if function
-        used_defs = used_definitions[symbol]
-        for used_def in used_defs:
-            used_def_global_hash = get_global_hash(used_def)
-            global_hash.update(used_def_global_hash)
+    used_defs = used_definitions[symbol]
+    for used_def in used_defs:
+        used_def = get_name_of(used_def)
+        used_def_global_hash = get_global_hash(used_def)
+        global_hash.update(used_def_global_hash)
     
     currently_processed.remove(symbol)
 
@@ -97,17 +107,29 @@ def get_global_hash(symbol):
 
 
 def print_checked_symbol_hashes(symbols_to_check):
+    #print "{"
     for k, v in global_hashes.items():
         if k in symbols_to_check:
             print "{:35} {}".format(k, v)
+    #print "}"
+
+
+def write_checked_symbol_hashes(symbols_to_check, fn):
+    with open(fn, 'w') as o_file:
+        o_file.write("{")
+        for k, v in global_hashes.items():
+            if k in symbols_to_check:
+                o_file.write("'{}':'{}',\n".format(k, v))
+        o_file.write("}")
 
 
 def get_symbols_to_check(filename):
     record = get_record_from(info_filename)
     symbols_to_check = []
     for elem in record['element-hashes']:
-        symbol = elem[0]
-        if symbol.startswith(FUNCTION_PREFIX): # TODO: check global variables, too?
+        prefix = get_prefix_of(elem[0])
+        symbol = get_name_of(elem[0])
+        if prefix == FUNCTION_PREFIX or prefix == VARIABLE_PREFIX:
             symbols_to_check.append(symbol)
     return symbols_to_check
 
@@ -122,8 +144,8 @@ if __name__ == "__main__":
         if argc > 3: # 3rd param is path
             working_directory = args[3]
             os.chdir(working_directory)
-        working_directory = os.getcwd() 
-        
+        working_directory = os.getcwd()
+
         # fill local_hashes
         read_info_files(working_directory)
         
@@ -132,7 +154,7 @@ if __name__ == "__main__":
         if DEFINITION_FLAG in args:
             """Recursive starting from a single function or global variable definition"""
             symbol = get_param_of(DEFINITION_FLAG)
-            symbols_to_check.append(FUNCTION_PREFIX + symbol)
+            symbols_to_check.append(symbol)
             
         elif OBJECT_FILE_FLAG in args:
             """Recursive, starting from all definitions within an object file"""
@@ -140,11 +162,24 @@ if __name__ == "__main__":
             info_filename = object_filename + INFO_EXTENSION
             symbols_to_check = get_symbols_to_check(info_filename) 
         
-        for function in symbols_to_check:
-            get_global_hash(function)
+        for symbol in symbols_to_check:
+            if symbol not in local_hashes:
+                print "Error: symbol '%s' not found" % symbol
+                sys.exit(1)
+            get_global_hash(symbol)
 
-        print_checked_symbol_hashes(symbols_to_check)
-   
-    elif argc == 2 and 'help' in args:
-        print_help()
+        out_filename = None
+        if OUTPUT_FLAG in args:
+            out_filename = get_param_of(OUTPUT_FLAG)
+
+        if out_filename is None:
+            if DEFINITION_FLAG in args:
+                print global_hashes[symbol] # if in definition mode, only print that definition's global hash
+            else:
+                print_checked_symbol_hashes(symbols_to_check)
+        else:
+            write_checked_symbol_hashes(symbols_to_check, out_filename)
+
+    elif argc == 2 and HELP_FLAG in args:
+        usage()
 
