@@ -183,6 +183,7 @@ def run_testcase_cleaner(basename):
     cruftfiles.extend(glob.glob(basename + ".*.var.c"))
     cruftfiles.extend(glob.glob(basename + ".*.o.hash"))
     cruftfiles.extend(glob.glob(basename + ".*.o.clang-hash-stderr"))
+    cruftfiles.extend(glob.glob(basename + ".*.o.info"))
 
     for cruft in cruftfiles:
         try:
