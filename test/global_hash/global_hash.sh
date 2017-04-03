@@ -12,11 +12,19 @@ function cleanup() {
 trap cleanup EXIT
 
 
+function compile() {
+    src="$1"; shift
+    obj="$1"; shift
+
+    env CLANG_HASH_OUTPUT_DIR=$PWD "/home/cip/2015/yb90ifym/clang-hash/build/wrappers/clang-hash-collect" -hash-verbose -c ${src} -o ${obj} 2> /dev/null
+}
+
+
 function recompile() {
     src="$1"; shift
     echo "${src}" > ${fn}.var.c 
 
-    env CLANG_HASH_OUTPUT_DIR=$PWD "/home/cip/2015/yb90ifym/clang-hash/build/wrappers/clang-hash-collect" -hash-verbose -c ${fn}.var.c -o ${fn}.var.o 2> /dev/null
+    compile "${fn}.var.c" "${fn}.var.o"
 }
 
 
@@ -27,16 +35,21 @@ function get_global_hash() {
 }
 
 
-function check_global_hash_changed() {
+function check_global_hash_changed() { # checks for a single symbol
     loc="$1"; shift
     src_a="$1"; shift
     src_b="$1"; shift
 
     fn="${loc/:/.}" # provide each test with a unique filename
                     # to prevent failing tests because of race conditions
-    
+
     cleanup
-   
+
+    # cleanup main - only for small project test, but not actually required,
+    # as the .o and .o.info files are also checked in
+    #rm -f "main.o" "main.o.info"
+    #compile "main.c" "main.o"
+
     re_a=$(recompile "$src_a")
 
     index=0
@@ -70,10 +83,9 @@ function check_global_hash_changed() {
     for symbol in "$@"
     do
         if [ $(($index%2)) -eq 0 ]; then
-            [[ ${global_hashes_a} == ${global_hashes_b} ]] \
+            [[ ${global_hashes_a[$index/2]} == ${global_hashes_b[$index/2]} ]] \
                 && hashes_differ=false \
                 || hashes_differ=true
-
 
             if [ $hashes_differ != ${expected[$index/2]} ]; then
                 if [ $hashes_differ = true ]; then
@@ -81,13 +93,14 @@ function check_global_hash_changed() {
                 else
                     echo "!!!Failure ${loc}: hashes are the same, should differ!"
                 fi
+                cleanup
                 exit 1 # TODO: move test cases to extra files
             fi
-
-            ((index = index + 1))
         fi
+        ((index = index + 1))
     done
    
+    cleanup
     echo "  OK: ${loc}"
 }
 
