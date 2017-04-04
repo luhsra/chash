@@ -3,11 +3,12 @@ set -e
 
 fn=test_use_global # placeholder
 
-# TODO: make paths independent
-
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 WORK_DIR=""
+
+CLANG_HASH_COLLECT="${DIR}/../../build/wrappers/clang-hash-collect"
+CLANG_HASH_GLOBAL="${DIR}/../../clang-hash-global"
+
 
 function prepare() {
     WORK_DIR=`mktemp -d -p "$DIR"`
@@ -29,7 +30,7 @@ function cleanup() {
 
 function cleanup_all() {
     cleanup
-    echo "cla: ${WORK_DIR}"
+
     if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
         echo "Could not remove temp dir ${WORK_DIR}"
     else
@@ -43,7 +44,7 @@ function compile() {
     src="$1"; shift
     obj="$1"; shift
 
-    env CLANG_HASH_OUTPUT_DIR=$PWD "/home/cip/2015/yb90ifym/clang-hash/build/wrappers/clang-hash-collect" -hash-verbose -c ${src} -o ${obj} 2> /dev/null
+    env CLANG_HASH_OUTPUT_DIR=$PWD $CLANG_HASH_COLLECT -hash-verbose -c ${src} -o ${obj} 2> /dev/null
 }
 
 
@@ -58,7 +59,7 @@ function recompile() {
 function get_global_hash() {
     symbol="$1"; shift
 
-    "/home/cip/2015/yb90ifym/clang-hash/clang-hash-global" --definition $symbol
+    $CLANG_HASH_GLOBAL --definition $symbol
 }
 
 
@@ -83,7 +84,7 @@ function check_global_hash_changed() {
     #compile "main.c" "main.o"
 
     re_a=$(recompile "$src_a")
-    echo $PWD
+
     index=0
     for symbol in "$@"
     do
