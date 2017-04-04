@@ -16,7 +16,9 @@ function prepare() {
         echo "Could not create temp dir"
         exit 1
     fi
-    cp -r "${DIR}/src/." $WORK_DIR
+    # Only the .info file is required
+    find "${DIR}/src/" -name \*.info -exec cp {} $WORK_DIR \;
+
     cd $WORK_DIR
 }
 
