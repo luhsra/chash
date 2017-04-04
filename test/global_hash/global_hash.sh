@@ -6,10 +6,35 @@ fn=test_use_global # placeholder
 # TODO: make paths independent
 
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+WORK_DIR=""
+
+function prepare() {
+    WORK_DIR=`mktemp -d -p "$DIR"`
+
+    if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
+        echo "Could not create temp dir"
+        exit 1
+    fi
+    cp -r "${DIR}/src/." $WORK_DIR
+    cd $WORK_DIR
+}
+
+
 function cleanup() {
     rm -f ${fn}.*
 }
-trap cleanup EXIT
+
+function cleanup_all() {
+    cleanup
+    echo "cla: ${WORK_DIR}"
+    if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
+        echo "Could not remove temp dir ${WORK_DIR}"
+    else
+        rm -rf "$WORK_DIR"
+    fi
+}
+trap cleanup_all EXIT
 
 
 function compile() {
@@ -35,13 +60,18 @@ function get_global_hash() {
 }
 
 
-function check_global_hash_changed() { # checks for a single symbol
+function check_global_hash_changed() {
     loc="$1"; shift
     src_a="$1"; shift
     src_b="$1"; shift
 
+    prepare
+
     fn="${loc/:/.}" # provide each test with a unique filename
                     # to prevent failing tests because of race conditions
+    fname=$(basename $fn)
+    fn="./${fname}"
+
 
     cleanup
 
@@ -51,7 +81,7 @@ function check_global_hash_changed() { # checks for a single symbol
     #compile "main.c" "main.o"
 
     re_a=$(recompile "$src_a")
-
+    echo $PWD
     index=0
     for symbol in "$@"
     do
@@ -93,14 +123,14 @@ function check_global_hash_changed() { # checks for a single symbol
                 else
                     echo "!!!Failure ${loc}: hashes are the same, should differ!"
                 fi
-                cleanup
+                cleanup_all
                 exit 1 # TODO: move test cases to extra files
             fi
         fi
         ((index = index + 1))
     done
    
-    cleanup
+    cleanup_all
     echo "  OK: ${loc}"
 }
 
