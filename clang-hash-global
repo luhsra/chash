@@ -110,11 +110,11 @@ def get_global_hash(symbol):
 
 
 def print_checked_symbol_hashes(symbols_to_check):
-    #print "{"
+    print "{"
     for k, v in global_hashes.items():
         if k in symbols_to_check:
-            print "{:35} {}".format(k, v)
-    #print "}"
+            print "'{}':'{}',".format(k, v)
+    print "}"
 
 
 def write_checked_symbol_hashes(symbols_to_check, fn):
