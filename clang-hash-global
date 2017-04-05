@@ -83,6 +83,9 @@ def get_global_hash(symbol):
     """Calculates the global hash of the symbol recursively over all used definitions
     """
     global global_hashes, currently_processed 
+
+    assert symbol in local_hashes # every symbol must have a local hash
+
     if symbol in global_hashes:
         return global_hashes[symbol]
 
