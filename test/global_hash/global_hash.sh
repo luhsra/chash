@@ -32,7 +32,8 @@ function cleanup_all() {
     cleanup
 
     if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
-        echo "Could not remove temp dir ${WORK_DIR}"
+    #    echo "Could not remove temp dir ${WORK_DIR}"
+        echo "" # TODO
     else
         rm -rf "$WORK_DIR"
     fi
@@ -56,6 +57,14 @@ function recompile() {
 }
 
 
+function recompile_src() {
+    # cleanup main - only for small project test, but not actually required,
+    # as the .o and .o.info files are also checked in
+    rm -f "main.o" "main.o.info"
+    compile "main.c" "main.o"
+}
+
+
 function get_global_hash() {
     symbol="$1"; shift
 
@@ -63,6 +72,14 @@ function get_global_hash() {
 }
 
 
+function get_global_hashes() {
+    obj_file="$1"; shift
+
+    $CLANG_HASH_GLOBAL --object-file $obj_file
+}
+
+
+# for checking --definition
 function check_global_hash_changed() {
     loc="$1"; shift
     src_a="$1"; shift
@@ -78,12 +95,11 @@ function check_global_hash_changed() {
 
     cleanup
 
-    # cleanup main - only for small project test, but not actually required,
-    # as the .o and .o.info files are also checked in
-    #rm -f "main.o" "main.o.info"
-    #compile "main.c" "main.o"
+    # recompile_src
 
     re_a=$(recompile "$src_a")
+
+    #TODO: use associative arrays
 
     index=0
     for symbol in "$@"
@@ -137,3 +153,94 @@ function check_global_hash_changed() {
     echo "  OK: ${loc}"
 }
 
+
+# for checking --object-file
+function check_global_hashes_changed() {
+    loc="$1"; shift
+    src_a="$1"; shift
+    src_b="$1"; shift
+
+    prepare
+
+    fn="${loc/:/.}" # provide each test with a unique filename
+                    # to prevent failing tests because of race conditions
+    fname=$(basename $fn)
+    fn="./${fname}"
+
+
+    cleanup
+
+    # recompile_src
+
+    re_a=$(recompile "$src_a")
+
+    # get all hashes of the obj file and store them
+    hashes=$(get_global_hashes "main.o")
+
+    # split up the output of get_global_hashes and store the key-value pairs in a dictionary
+    declare -A global_hashes_a
+    while IFS=',' read -ra arr; do
+        for i in "${arr[@]}"; do
+            if [[ $i == *":"* ]]; then
+                key=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[0][1:-1]")
+                val=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[1][1:-1]")
+            global_hashes_a[$key]="$val"
+            fi
+        done
+    done <<< "$hashes"
+
+
+    cleanup
+
+    re_b=$(recompile "$src_b")
+
+    # get all hashes of the obj file and store them
+    hashes=$(get_global_hashes "main.o")
+
+    # split up the output of get_global_hashes and store the key-value pairs in a dictionary
+    declare -A global_hashes_b
+    while IFS=',' read -ra arr; do
+        for i in "${arr[@]}"; do
+            if [[ $i == *":"* ]]; then
+                key=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[0][1:-1]")
+                val=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[1][1:-1]")
+            global_hashes_b[$key]="$val"
+            fi
+        done
+    done <<< "$hashes"
+
+
+    # get the expected changes from the arguments
+    declare -A expected
+    index=0
+    for symbol in "$@"; do
+        if [ $(($index%2)) -eq 0 ]; then
+            key="$symbol"
+        else
+            expected["$key"]="$symbol"
+        fi
+        ((index = index + 1))
+    done
+
+
+    # check if the expectations are met
+    for symbol in ${!expected[@]}; do
+        [[ ${global_hashes_a["$symbol"]} == ${global_hashes_b["$symbol"]} ]] \
+            && hashes_differ=false \
+            || hashes_differ=true
+
+        if [ $hashes_differ != "${expected["$symbol"]}" ]; then
+            if [ $hashes_differ = true ]; then
+                echo "!!!Failure ${loc}: hashes differ, should be the same!"
+            else
+                echo "!!!Failure ${loc}: hashes are the same, should differ!"
+            fi
+            cleanup_all
+            exit 1
+        fi
+    done
+
+
+    cleanup_all
+    echo "  OK: ${loc}"
+}
