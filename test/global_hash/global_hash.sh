@@ -184,7 +184,13 @@ function check_global_hashes_changed() {
             if [[ $i == *":"* ]]; then
                 key=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[0][1:-1]")
                 val=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[1][1:-1]")
-            global_hashes_a[$key]="$val"
+                global_hashes_a[$key]="$val"
+
+
+                # Additional check: check if --object-file and --definition provide the same hashes
+                if [[ $(get_global_hash ${key}) != "$value" ]]; then
+                    echo "!!!Failure ${loc}: hash of definition mode differs"
+                fi
             fi
         done
     done <<< "$hashes"
@@ -204,8 +210,13 @@ function check_global_hashes_changed() {
             if [[ $i == *":"* ]]; then
                 key=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[0][1:-1]")
                 val=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[1][1:-1]")
-            global_hashes_b[$key]="$val"
-            fi
+                global_hashes_b[$key]="$val"
+
+                # Additional check: check if --object-file and --definition provide the same hashes
+                if [[ $(get_global_hash ${key}) != "$value" ]]; then
+                    echo "!!!Failure ${loc}: hash of definition mode differs"
+                fi
+             fi
         done
     done <<< "$hashes"
 
