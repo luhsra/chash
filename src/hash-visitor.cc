@@ -94,7 +94,11 @@ void HashVisitor::hashDecl(const Decl *D) {
     const Hash::Digest CurrentDigest = popHash(CurrentHash);
 
     // Store hash for underlying type
-    storeHash(D, CurrentDigest);
+    const bool DoNotSaveHash =
+        isa<RecordDecl>(D) && !dyn_cast<RecordDecl>(D)->isCompleteDefinition();
+    if (!DoNotSaveHash) { // Do not store incomplete types
+      storeHash(D, CurrentDigest);
+    }
 
     // Hash into parent
     topHash() << CurrentDigest;
