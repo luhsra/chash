@@ -233,7 +233,17 @@ public:
           else
             continue;
 
-          *Terminal << cast<NamedDecl>(D)->getName();
+          if (cast<NamedDecl>(D)->getName() != "") {
+            *Terminal << cast<NamedDecl>(D)->getName();
+          } else if (auto TD = cast<TypeDecl>(D)) {
+            // If the name is empty, use the typedef'ed name (or the generic
+            // identifier provided by the compiler).
+            // This happens e.g. when a struct is unnamed (and may or may not be
+            // typedef'ed at definition).
+            *Terminal << TD->getTypeForDecl()
+                             ->getCanonicalTypeInternal()
+                             .getAsString();
+          }
           *Terminal << "\", \"";
           *Terminal << Dig.asString();
           *Terminal << "\"";
