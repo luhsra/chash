@@ -224,9 +224,12 @@ public:
           const bool IsNonExternVariableDeclaration =
               isa<VarDecl>(D) && !cast<VarDecl>(D)->hasExternalStorage();
 
-          if (IsFunctionDefinition) // Ignore declarations without definition
-            *Terminal << "(\"function:";
-          else if (IsNonExternVariableDeclaration) // Ignore extern variables
+          if (IsFunctionDefinition) {// Ignore declarations without definition
+            if (cast<FunctionDecl>(D)->getStorageClass() == SC_Static)
+              *Terminal << "(\"static function:";
+            else
+              *Terminal << "(\"function:";
+          } else if (IsNonExternVariableDeclaration) // Ignore extern variables
             *Terminal << "(\"variable:";
           else if (isa<RecordDecl>(D))
             *Terminal << "(\"record:";
