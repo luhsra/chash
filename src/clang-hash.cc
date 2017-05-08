@@ -255,7 +255,10 @@ public:
             *Terminal << ", [";
             for (const auto &SavedCallee : Visitor.DefUseSilo[cast<Decl>(D)]) {
               if (isa<FunctionDecl>(SavedCallee)) {
-                *Terminal << "\"function:";
+                if (cast<FunctionDecl>(SavedCallee)->getStorageClass() == SC_Static)
+                  *Terminal << "\"static function:";
+                else
+                  *Terminal << "\"function:";
               } else {
                 *Terminal << "\"variable:";
               }
