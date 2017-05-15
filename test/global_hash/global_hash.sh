@@ -9,7 +9,7 @@ WORK_DIR=""
 CLANG_HASH_COLLECT="${DIR}/../../build/wrappers/clang-hash-collect"
 CLANG_HASH_GLOBAL="${DIR}/../../clang-hash-global"
 
-
+do_copy=true
 function prepare() {
     WORK_DIR=`mktemp -d -p "$DIR"`
 
@@ -18,7 +18,9 @@ function prepare() {
         exit 1
     fi
     # Only the .info file is required
-    find "${DIR}/src/" -name \*.info -exec cp {} $WORK_DIR \;
+    if [ "$do_copy" == true ]; then
+        find "${DIR}/src/" -name \*.info -exec cp {} $WORK_DIR \;
+    fi
 
     cd $WORK_DIR
 }
@@ -151,6 +153,15 @@ function check_global_hash_changed() {
    
     cleanup_all
     echo "  OK: ${loc}"
+}
+
+
+# for checking --definition without copying the default .info file
+function check_global_hash_changed_no_copy() {
+    do_copy=false
+    ret=$(check_global_hash_changed "$@")
+    do_copy=true
+    echo "$ret"
 }
 
 
