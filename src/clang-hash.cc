@@ -220,7 +220,8 @@ public:
             isa<TranslationUnitDecl>(D->getDeclContext()) &&
             isa<NamedDecl>(D)) {
           const bool IsFunctionDefinition =
-              isa<FunctionDecl>(D) && cast<FunctionDecl>(D)->hasBody();
+              isa<FunctionDecl>(D) &&
+              cast<FunctionDecl>(D)->isThisDeclarationADefinition();
           const bool IsNonExternVariableDeclaration =
               isa<VarDecl>(D) && !cast<VarDecl>(D)->hasExternalStorage();
 
