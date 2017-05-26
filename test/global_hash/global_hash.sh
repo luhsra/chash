@@ -80,6 +80,88 @@ function get_global_hashes() {
     $CLANG_HASH_GLOBAL --object-file $obj_file
 }
 
+function get_local_hash() {
+    symbol="$1"; shift
+
+    $CLANG_HASH_GLOBAL --local $symbol
+}
+
+# for checking --local
+# TODO: refactor this!
+function check_local_hash_changed() {
+    loc="$1"; shift
+    src_a="$1"; shift
+    src_b="$1"; shift
+
+    do_copy=false
+    prepare
+
+    fn="${loc/:/.}" # provide each test with a unique filename
+                    # to prevent failing tests because of race conditions
+    fname=$(basename $fn)
+    fn="./${fname}"
+
+
+    cleanup
+
+    # recompile_src
+
+    re_a=$(recompile "$src_a")
+
+    #TODO: use associative arrays
+
+    index=0
+    for symbol in "$@"
+    do
+        if [ $(($index%2)) -eq 0 ]; then
+            global_hashes_a[$index/2]=$(get_local_hash ${symbol})
+        else
+            expected[$index/2]=$symbol
+        fi
+        
+        ((index = index + 1))
+    done
+    
+
+    cleanup
+ 
+    re_b=$(recompile "$src_b")
+
+    index=0
+    for symbol in "$@"
+    do
+        if [ $(($index%2)) -eq 0 ]; then
+            global_hashes_b[$index/2]=$(get_local_hash ${symbol})
+        fi
+        ((index = index + 1))
+    done
+
+
+    index=0
+    for symbol in "$@"
+    do
+        if [ $(($index%2)) -eq 0 ]; then
+            [[ ${global_hashes_a[$index/2]} == ${global_hashes_b[$index/2]} ]] \
+                && hashes_differ=false \
+                || hashes_differ=true
+
+            if [ $hashes_differ != ${expected[$index/2]} ]; then
+                if [ $hashes_differ = true ]; then
+                    echo "!!!Failure ${loc}: hashes differ, should be the same!"
+                else
+                    echo "!!!Failure ${loc}: hashes are the same, should differ!"
+                fi
+                cleanup_all
+                exit 1 # TODO: move test cases to extra files
+            fi
+        fi
+        ((index = index + 1))
+    done
+   
+    cleanup_all
+    do_copy=true
+    echo "  OK: ${loc}"
+}
 
 # for checking --definition
 function check_global_hash_changed() {
