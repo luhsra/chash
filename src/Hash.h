@@ -98,11 +98,8 @@ struct Hash : protected MurMurHash3 {
   }
 
   Hash &operator<<(const Digest &X) {
-    m_byteCount += X.Length;
-    // X.Length = 0; // Include the hashed bytes only once into the hash
-    // statistic. TODO: Unfortunately, this causes a bug in the calculation of
-    // the element-hashes, so it's commented out for now.
-    return processBytes(X.Value, sizeof(X.Value));
+      m_byteCount += X.Length;
+      return processBytes(X.Value, sizeof(X.Value));
   }
 
   Hash &operator<<(const Hash &Other) {
