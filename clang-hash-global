@@ -7,6 +7,7 @@ import sys
 
 DEFINITION_FLAG = '--definition'
 OBJECT_FILE_FLAG = '--object-file'
+LOCAL_FLAG = '--local' # print the symbol's local hash
 OUTPUT_FLAG = '-o'
 HELP_FLAG = '-h'
 
@@ -18,6 +19,7 @@ def usage():
     # TODO: add detailed description
     print "%s %s <symbol> [directory] [%s <outfile>]" % (sys.argv[0], DEFINITION_FLAG, OUTPUT_FLAG)
     print "%s %s <file> [directory] [%s <outfile>]" % (sys.argv[0], OBJECT_FILE_FLAG, OUTPUT_FLAG)
+    print "%s %s <symbol> [directory] [%s <outfile>]" % (sys.argv[0], LOCAL_FLAG, OUTPUT_FLAG)
 
 
 def get_param_of(flag):
@@ -164,6 +166,11 @@ if __name__ == "__main__":
             object_filename = get_param_of(OBJECT_FILE_FLAG)
             info_filename = object_filename + INFO_EXTENSION
             symbols_to_check = get_symbols_to_check(info_filename) 
+
+        elif LOCAL_FLAG in args:
+            symbol = get_param_of(LOCAL_FLAG)
+            print local_hashes[symbol]
+            sys.exit(0)
         
         for symbol in symbols_to_check:
             if symbol not in local_hashes:
