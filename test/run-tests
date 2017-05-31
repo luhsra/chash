@@ -455,10 +455,10 @@ def run_testcase_def_use_export(test_case_opts):
         return COLOR.format(fmt % args, color, bold=bold) + "\n"
 
     source_file = test_case
-    this_cc = compile_command
+    this_cc = hash_command
     this_cflags = compile_flags
 
-    cmd = "{compiler} -c {source_file} -fsyntax-only -hash-verbose {flags}".format(
+    cmd = "{compiler} -c {source_file} -fsyntax-only {flags}".format(
         compiler=this_cc,
         source_file=source_file,
         flags=this_cflags)
@@ -478,11 +478,11 @@ def run_testcase_def_use_export(test_case_opts):
 
     # get dependencies
     element_hashes_key = 'element-hashes'
+    dependency_map = {}
     for line in x.split('\n'):
         if element_hashes_key in line:
             line = line[line.find('['):]
             element_hashes = eval(line)
-            dependency_map = {}
             for symbol, element_hash, dependencies in element_hashes:
                 if dependencies:
                     symbol = symbol[symbol.find(':') + 1:]
