@@ -4,6 +4,10 @@
 configure_file(clang-hash.in ${PROJECT_BINARY_DIR}/wrappers/clang-hash)
 configure_file(clang-hash-collect.in ${PROJECT_BINARY_DIR}/wrappers/clang-hash-collect)
 
+# The same for gcc
+configure_file(gcc-hash.in ${PROJECT_BINARY_DIR}/wrappers/gcc-hash)
+
+
 # These wrappers can be used for the actual (re)compilation of whole procects.
 # - clang-normal: normal clang operation; no speedup
 # - clang-ccache: ccache assisted clang

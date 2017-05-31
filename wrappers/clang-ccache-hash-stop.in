@@ -1,6 +1,6 @@
 #!/bin/sh
 
-exec ccache ${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so \
+exec ccache ${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/clang-plugin/libclang-hash.so \
      -Xclang -plugin-arg-clang-hash -Xclang -stop-if-same-hash \
      "$@" -Wno-extra-semi
 

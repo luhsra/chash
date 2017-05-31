@@ -3,6 +3,6 @@
 # information about the hashing process. It calls the given clang
 # compiler with our plugin and outputs the information on stderr.
 
-exec ${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so \
+exec ${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/clang-plugin/libclang-hash.so \
                    -Xclang -plugin-arg-clang-hash -Xclang -hash-verbose \
                    "$@"

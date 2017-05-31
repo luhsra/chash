@@ -33,7 +33,7 @@ if __name__ == "__main__":
     logging.debug(str(sys.argv))
 
     compiler = "${LLVM_C_COMPILER}"
-    plugin = "${PROJECT_BINARY_DIR}/src/libclang-hash.so"
+    plugin = "${PROJECT_BINARY_DIR}/clang-plugin/libclang-hash.so"
 
     if os.environ.get('STOP_IF_SAME_HASH') or "-stop-if-same-hash" in args:
         try:

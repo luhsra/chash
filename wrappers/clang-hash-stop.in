@@ -1,6 +1,6 @@
 #!/bin/sh
 
-exec ${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/src/libclang-hash.so \
+exec ${LLVM_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/clang-plugin/libclang-hash.so \
      -Xclang -plugin-arg-clang-hash -Xclang -stop-if-same-hash \
      "$@" -Wno-extra-semi
 
