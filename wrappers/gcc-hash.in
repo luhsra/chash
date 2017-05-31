@@ -1,0 +1,7 @@
+#!/bin/bash
+# This wrapper script should be used, if you want to gather insight
+# information about the hashing process. It calls the given gcc
+# compiler with our plugin and outputs the information on stderr.
+
+exec ${GCC_C_COMPILER} -fplugin=${PROJECT_BINARY_DIR}/gcc-plugin/libchash.so \
+     "$@"
