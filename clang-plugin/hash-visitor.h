@@ -402,10 +402,22 @@ protected:
   }
 
   // Hash Silo
-  void storeHash(const Type *Obj, Hash::Digest Dig) { TypeSilo[Obj] = Dig; }
+  void storeHash(const Type *Obj, Hash::Digest Dig) {
+    if (Obj->isPointerType() && inRecordType) {
+      // Do not save hashes for pointer types in records, as those values are
+      // dummy values
+      return;
+    }
+    TypeSilo[Obj] = Dig;
+  }
   void storeHash(const Decl *Obj, Hash::Digest Dig) { DeclSilo[Obj] = Dig; }
 
   const Hash::Digest *getHash(const Type *Obj) {
+    if (Obj->isPointerType() && inRecordType) {
+      // Do not load hashes for pointer types inside records, use dummy value
+      // instead
+      return nullptr;
+    }
     if (TypeSilo.find(Obj) != TypeSilo.end()) {
       return &TypeSilo[Obj];
     }
