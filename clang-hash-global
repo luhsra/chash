@@ -71,7 +71,10 @@ def read_info_files(directory):
             for elem in record['element-hashes']:
                 prefix = get_prefix_of(elem[0])
                 symbol = get_name_of(elem[0])
-                assert symbol not in local_hashes # every symbol must be unique
+
+                if symbol in local_hashes:
+                    if local_hashes[symbol] != elem[1]: # duplicate ok if hashes are the same
+                        assert symbol not in local_hashes # otherwise, every symbol must be unique
 
                 local_hashes[symbol] = elem[1]
 
@@ -86,7 +89,10 @@ def get_global_hash(symbol):
     """
     global global_hashes, currently_processed 
 
-    assert symbol in local_hashes # every symbol must have a local hash
+    # If a symbol does not have a local hash, we assume it is a library
+    # function and therefore does not require a local hash.
+    if symbol not in local_hashes:
+        return None
 
     if symbol in global_hashes:
         return global_hashes[symbol]
@@ -99,11 +105,13 @@ def get_global_hash(symbol):
     global_hash = hashlib.md5()
     global_hash.update(local_hashes[symbol])
 
-    used_defs = used_definitions[symbol]
-    for used_def in used_defs:
-        used_def = get_name_of(used_def)
-        used_def_global_hash = get_global_hash(used_def)
-        global_hash.update(used_def_global_hash)
+    if symbol in used_definitions:
+        used_defs = used_definitions[symbol]
+        for used_def in used_defs:
+            used_def = get_name_of(used_def)
+            used_def_global_hash = get_global_hash(used_def)
+            if used_def_global_hash is not None:
+                global_hash.update(used_def_global_hash)
     
     currently_processed.remove(symbol)
 
@@ -169,6 +177,7 @@ if __name__ == "__main__":
 
         elif LOCAL_FLAG in args:
             symbol = get_param_of(LOCAL_FLAG)
+            assert symbol in local_hashes
             print local_hashes[symbol]
             sys.exit(0)
         
