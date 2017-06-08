@@ -1,2 +1,4 @@
 build
 *.hash
+hash-projects
+experiments/tmp
