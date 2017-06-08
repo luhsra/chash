@@ -5,6 +5,20 @@
  *  See git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
  */
 
+/* needed:
+ *	sudo apt install llvm-3.9-dev
+ *	sudo apt install clang-3.9-dev
+ * 	sudo apt install gcc-6-plugin-dev
+ *	(in build)
+ *	touch test.c; 
+ * 	wrappers/gcc-hash -c test.c -o test.o
+ *
+ */
+
+
+
+
+
 #ifndef GCC_COMMON_H_INCLUDED
 #define GCC_COMMON_H_INCLUDED
 
