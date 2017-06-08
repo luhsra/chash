@@ -5,6 +5,6 @@ execute_process(COMMAND ${GCC_CXX_COMPILER} -print-file-name=plugin
 add_definitions(-std=c++11 -Wno-strict-aliasing -Wall -Wextra -fno-rtti)
 include_directories(${GCCPLUGINS_DIR}/include)
 
-add_library(chash SHARED
+add_library(gcc-hash SHARED
   chash.cc
   )
