@@ -1,0 +1,94 @@
+#!/usr/bin/python3
+
+from collections import OrderedDict
+import subprocess
+import sys
+import re
+
+def call_gcc(fn):
+    """Calls GCC compiler on file and dumps original AST"""
+    x = subprocess.check_output(['gcc', '-fdump-tree-original-raw=stdout', '-c',
+                                 '-o/dev/null', fn])
+    return x.decode("utf-8")
+
+def get_keys(line):
+    for x in re.finditer('([^\s]+)\s*:\s+([^\s]+)', line.strip()):
+        yield(x.groups())
+
+def parse_output(lines):
+    ret = OrderedDict()
+    function = None
+    node = None
+    for line in lines:
+        if line.startswith(";; Function"):
+            name = line.lstrip(";; Function").split()[0]
+            function = OrderedDict()
+            node = None
+            ret[name] = function
+
+        if function is not None and line.startswith("@"):
+            # New node found
+            name,type,rest = re.split('\s+', line, 2)
+            node = OrderedDict({None: type})
+            function[name] = node
+            node.update(get_keys(rest))
+        if node:
+            node.update(get_keys(line))
+    return ret
+
+def dump(nodes, visited, current, indent=0):
+    node = nodes[current]
+    print(current, end=" ")
+    visited.add(current)
+    rec = []
+    for k,v in node.items():
+        if v[0] == '@':
+            rec.append( (k,v) )
+        elif k is not None:
+            print("%s:%s" % (k,v), end=" ")
+        else:
+            print("%s" % v, end=" ")
+    print()
+    indent += 2
+    for k,v in rec:
+        print(" " * indent + k + ": ", end="")
+        if v in visited:
+            print("REC:%s" % v)
+        else:
+            dump(nodes, visited, v, indent)
+
+def dump_dot(funcs):
+    with open("ast.dot", "w+") as fd:
+        fd.write("digraph g {\n");
+        for func,nodes in funcs.items():
+            for node,keys in nodes.items():
+                others = []
+                name = func+node.replace("@", "__");
+                label = "<TABLE>"
+                label += "<TR><TD>Name</TD><TD>%s</TD></TR>" %(node)
+
+                for x in keys.items():
+                    label += "<TR><TD>%s</TD><TD>%s</TD></TR>" %(x)
+                    if x[1][0] == "@":
+                        others.append(x)
+                label += "</TABLE>"
+                fd.write('%s [shape=box,label=<%s>];\n' % (name, label))
+                for field, other in others:
+                    name2 = (func+other.replace("@", "__"))
+                    fd.write("%s -> %s [label=\"%s\"];" %(name, name2, field))
+        fd.write("}");
+
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit("%s FILENAME" % sys.argv[0])
+    output = call_gcc(sys.argv[1])
+    funcs = parse_output(output.split("\n"))
+
+    for func, items in funcs.items():
+        print("Function " + func)
+        dump(items, set(), '@1')
+        print()
+
+    dump_dot(funcs)
