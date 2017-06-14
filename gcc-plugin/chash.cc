@@ -52,10 +52,68 @@ struct cgraph_node *get_fn_cnode(const_tree fndecl)
  */
 static unsigned int chash_ast_hash_execute() {
     using namespace ipa_icf;
+    struct cgraph_node *node;
 
     debug_printf("Hello World\n");
 
+    FOR_EACH_DEFINED_FUNCTION(node) {
+         print_full_node(*node);
+    }
+
     return 0;
+}
+static void print_full_node(struct cgraph_node &node){
+    std::string fname = IDENTIFIER_POINTER(DECL_NAME(node.decl));
+    debug_printf("PTR: %s\n", fname.c_str());
+    printf("order\t%i\n", node.order);
+// struct cgraph_edge * 	callers
+// struct cgraph_edge * 	indirect_calls
+    printf("call_site_hash\t%i\n", node.call_site_hash);
+// tree 	former_clone_of
+    printf("%i", node.ipa_transforms_to_apply);
+// vec< ipa_opt_pass > 	ipa_transforms_to_apply
+// struct cgraph_local_info 	local
+// struct cgraph_global_info 	global
+// struct cgraph_rtl_info 	rtl
+// struct cgraph_clone_info 	clone
+// struct cgraph_thunk_info 	thunk
+// gcov_type 	count
+// int 	count_materialization_scale
+// int 	uid
+// unsigned int 	profile_id
+// unsigned 	used_as_abstract_origin: 1
+// unsigned 	lowered: 1
+// unsigned 	process: 1
+// ENUM_BITFIELD(node_frequency)
+// frequency unsigned 	only_called_at_startup: 1
+// unsigned 	only_called_at_exit: 1
+// unsigned 	tm_clone: 1
+// unsigned 	dispatcher_function: 1
+// ENUM_BITFIELD(symtab_type)
+// type ENUM_BITFIELD(ld_plugin_symbol_resolution)
+// resolution unsigned 	definition: 1
+// unsigned 	alias: 1
+// unsigned 	weakref: 1
+// unsigned 	cpp_implicit_alias: 1
+// unsigned 	analyzed: 1
+// unsigned 	externally_visible: 1
+// unsigned 	force_output: 1
+// unsigned 	forced_by_abi: 1
+// unsigned 	unique_name: 1
+// unsigned 	used_from_other_partition: 1
+// unsigned 	in_other_partition: 1
+// unsigned 	address_taken: 1
+// int 	order
+// tree 	decl
+// symtab_node 	next
+// symtab_node 	previous
+// symtab_node 	next_sharing_asm_name
+// symtab_node 	previous_sharing_asm_name
+// symtab_node 	same_comdat_group
+// struct ipa_ref_list 	ref_list
+// tree 	alias_target
+// struct lto_file_decl_data * 	lto_file_data
+// PTR 	aux
 }
 
 
