@@ -10,5 +10,3 @@
 #include "gcc-common.h"
 
 #endif
-
-static void print_full_node(struct cgraph_node &node);
