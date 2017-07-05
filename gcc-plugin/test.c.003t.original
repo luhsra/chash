@@ -1,0 +1,37 @@
+
+;; Function foo (null)
+;; enabled by -tree-original
+
+@1      bind_expr        type: @2       body: @3      
+@2      void_type        name: @4       algn: 8       
+@3      return_expr      type: @2       expr: @5      
+@4      type_decl        name: @6       type: @2      
+@5      modify_expr      type: @7       op 0: @8       op 1: @9      
+@6      identifier_node  strg: void     lngt: 4       
+@7      integer_type     name: @10      size: @11      algn: 32      
+                         prec: 32       sign: signed   min : @12     
+                         max : @13     
+@8      result_decl      type: @7       scpe: @14      srcp: test.c:1      
+                         note: artificial              size: @11     
+                         algn: 32      
+@9      integer_cst      type: @7      int: 2
+@10     type_decl        name: @15      type: @7      
+@11     integer_cst      type: @16     int: 32
+@12     integer_cst      type: @7      int: -2147483648
+@13     integer_cst      type: @7      int: 2147483647
+@14     function_decl    name: @17      type: @18      srcp: test.c:1      
+                         link: extern  
+@15     identifier_node  strg: int      lngt: 3       
+@16     integer_type     name: @19      size: @20      algn: 128     
+                         prec: 128      sign: unsigned min : @21     
+                         max : @22     
+@17     identifier_node  strg: foo      lngt: 3       
+@18     function_type    unql: @23      size: @24      algn: 8       
+                         retn: @7      
+@19     identifier_node  strg: bitsizetype             lngt: 11      
+@20     integer_cst      type: @16     int: 128
+@21     integer_cst      type: @16     int: 0
+@22     integer_cst      type: @16     int: -1
+@23     function_type    size: @24      algn: 8        retn: @7      
+@24     integer_cst      type: @16     int: 8
+
