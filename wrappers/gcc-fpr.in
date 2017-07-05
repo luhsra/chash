@@ -1,0 +1,26 @@
+#!/usr/bin/python
+
+import sys, os
+import logging, time, hashlib, xattr
+from subprocess import *
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+
+    # compile the File
+    x = Popen(args, stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
+    (stdout, stderr) = x.communicate()
+    sys.stdout.write(stdout.decode('ascii'))
+    sys.stderr.write(stderr.decode('ascii'))
+    retcode = x.wait()
+
+    if "-c" in args and "-o" in args and "/dev/null" not in args:
+
+        # Save Objectfile data
+        objectfile = args[args.index("-o")+1]
+        if os.path.exists(objectfile):
+            objectfile_data = open(objectfile,'rb').read()
+            objectfile_fpr = hashlib.md5(objectfile_data).hexdigest()
+            xattr.setxattr(objectfile, 'user.fprmd5', objectfile_fpr.encode('ascii'))
+            xattr.setxattr(objectfile, 'user.fprtime', time.time().hex().encode('ascii')) 
+    sys.exit(retcode)
