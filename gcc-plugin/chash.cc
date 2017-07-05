@@ -50,16 +50,25 @@ struct cgraph_node *get_fn_cnode(const_tree fndecl)
 /*
  * Pass to calculate the AST hash
  */
-static unsigned int chash_ast_hash_execute() {
-    using namespace ipa_icf;
-    struct cgraph_node *node;
+extern "C" void chash_ast_hash_execute(void *gcc_data, void*) {
+      // If there were errors during compilation,
+    // let GCC handle the exit.
+    //
+    if (errorcount || sorrycount)
+        return;
+    
+    static bool already_run = false;
+    if (already_run) return;
+    already_run = true;
 
-    debug_printf("Hello World\n");
+    struct cgraph_node *node;
 
     FOR_EACH_DEFINED_FUNCTION(node) {
         printf("Name:\t%s\n", IDENTIFIER_POINTER(DECL_NAME(node->decl)));
-
-        printf("Is Defined:\t%s\n", TREE_STATIC(node->decl)==1?"true":"false");
+        printf("%p %p\n", DECL_SAVED_TREE(node->decl), TREE_TYPE(node->decl));
+        // print-tree.c
+        debug_tree(node->decl);
+        //printf("Is Defined:\t%s\n", TREE_STATIC(node->decl)==1?"true":"false");
         //printf("%s\n", IDENTIFIER_POINTER(DECL_SAVED_TREE(node->decl)));
     }
 /*
@@ -114,12 +123,12 @@ TREE_TYPE
 
     This macro returns the FUNCTION_TYPE or METHOD_TYPE for the function.
 */
-    return 0;
+    //return 0;
 }
 
-#define PASS_NAME chash_ast_hash
-#define NO_GATE
-#include "gcc-generate-simple_ipa-pass.h"
+//#define PASS_NAME chash_ast_hash
+//#define NO_GATE
+//#include "gcc-generate-simple_ipa-pass.h"
 
 /*
  * Initialization function of this plugin: the very heart & soul.
@@ -142,12 +151,17 @@ int plugin_init(struct plugin_name_args *info, struct plugin_gcc_version *versio
     // Register plugin information
     register_callback(plugin_name, PLUGIN_INFO, NULL, &chash_plugin_info);
 
+    // Register callbacks.
+    register_callback (plugin_name,
+                     PLUGIN_OVERRIDE_GATE,
+                     &chash_ast_hash_execute,
+                     0);
     // Register pass: generate chash pass
-    chash_ast_hash_info.pass = make_chash_ast_hash_pass();
-    chash_ast_hash_info.reference_pass_name = "*free_lang_data";
-    chash_ast_hash_info.ref_pass_instance_number = 0;
-    chash_ast_hash_info.pos_op = PASS_POS_INSERT_BEFORE;
-    register_callback(plugin_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &chash_ast_hash_info);
+    //chash_ast_hash_info.pass = make_chash_ast_hash_pass();
+    //chash_ast_hash_info.reference_pass_name = "gimplify";
+    //chash_ast_hash_info.ref_pass_instance_number = 0;
+    //chash_ast_hash_info.pos_op = PASS_POS_INSERT_BEFORE;
+    //register_callback(plugin_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &chash_ast_hash_info);
 
     // Finish off the generation of multiverse info
     // register_callback(plugin_name, PLUGIN_FINISH_UNIT, mv_info_finish, &mv_ctx);
