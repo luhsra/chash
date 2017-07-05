@@ -39,7 +39,9 @@ class ClangHashHelper:
         if self.mode.value == "normal":
             CC = os.path.join(clang_path, "build/wrappers/clang-normal")
         elif self.mode.value == "clang-hash":
-            CC = os.path.join(clang_path, "build/wrappers/clang-hash-stop")
+        #    CC = os.path.join(clang_path, "build/wrappers/clang-hash-stop")
+        #elif self.mode.value == "clang-hash-collect":
+            CC = os.path.join(clang_path, "build/wrappers/clang-hash-collect")
         elif self.mode.value == "ccache-clang-hash":
             CC = os.path.join(clang_path, "build/wrappers/clang-ccache-hash-stop")
         elif self.mode.value == "ccache":
@@ -116,6 +118,8 @@ class ClangHashHelper:
         if "clang-hash" in self.mode.value:
             hash_log = tempfile.NamedTemporaryFile()
             os.environ["CLANG_HASH_LOGFILE"] = hash_log.name
+            os.environ["CLANG_HASH_OUTPUT_DIR"] = path # TODO: create new mode 'collect'
+            os.environ["HASH_VERBOSE"] = '1'
 
         # Recompile!
         start_time = time.time()
