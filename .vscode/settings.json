@@ -10,7 +10,8 @@
         "typeof.c": "cpp",
         "const_global.c": "cpp",
         "dynamic_init.c": "cpp",
-        "pointer.c": "cpp"
+        "pointer.c": "cpp",
+        "array": "cpp"
     },
     "git.ignoreLimitWarning": true
 }

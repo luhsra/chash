@@ -3,3 +3,4 @@ int foo() {
 }
 
 int bar() {}
+void main(){foo();bar();}

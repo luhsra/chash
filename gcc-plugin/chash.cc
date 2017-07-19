@@ -85,11 +85,16 @@ extern "C" void chash_ast_hash_execute(void *gcc_data, void*) {
         printf("%p\n", DECL_FUNCTION_SPECIFIC_TARGET(node->decl)); // ??
         printf("%p\n", DECL_FUNCTION_SPECIFIC_OPTIMIZATION(node->decl)); // ??
         printf("Mangled name of the function.\t\t%p\n", DECL_ASSEMBLER_NAME(node->decl)); // ??
-        printf("First parameter type.\t\t\t%p\n", TREE_CHAIN(DECL_ARGUMENTS(node->decl))); // ??
         printf("First parameter type.\t\t\t%p\n", DECL_ARGUMENTS(node->decl)); // ??
-        printf("Function return type.\t\t\t%p\n", DECL_RESULT(node->decl)); // ??
+        printf("First parameter type.\t\t\t%p\n", DECL_ARGUMENTS(node->decl)); // ??
+        printf("Function return type.\t\t\t%i\n", DECL_RESULT(node->decl)); // ??
+        printf("Function return type.\t\t\t%i\n", TYPE_CANONICAL(DECL_RESULT(node->decl))); // ??
+        printf("Function return type.\t\t\t%i\n", DECL_RESULT(node->decl)); // ??
+        // woher bekomme ich vergleichswerte?
+        printf("null: %i, enum: %i, bool: %i, int: %i, real: %i, pointer: %i, reference: %i, fixed point: %i, complex: %i, void: %i, function: %i\n", NULL_TREE, ENUMERAL_TYPE, BOOLEAN_TYPE, INTEGER_TYPE, REAL_TYPE, POINTER_TYPE, REFERENCE_TYPE, FIXED_POINT_TYPE, COMPLEX_TYPE, VOID_TYPE, FUNCTION_TYPE);
         printf("Function body.\t\t\t\t%p\n", DECL_SAVED_TREE(node->decl)); // ??
         printf("Function type.\t\t\t\t%p\n", &(TREE_TYPE(node->decl))); // ??
+        printf("%i", TYPE_DECL); // was soll das überhaupt sein
         printf("\n");
 
         // print-tree.c
