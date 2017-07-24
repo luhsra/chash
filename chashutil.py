@@ -8,8 +8,18 @@ OUTPUT_FLAG = '-o'
 HELP_FLAG = '-h'
 
 FUNCTION_PREFIX = 'function'
+STATIC_FUNCTION_PREFIX = 'static function'
 VARIABLE_PREFIX = 'variable'
 INFO_EXTENSION = '.info'
+
+
+def static_vars(**kwargs):
+    '''To enable C-style static function members'''
+    def decorate(func):
+        for k in kwargs:
+            setattr(func, k, kwargs[k])
+        return func
+    return decorate
 
 
 def get_param_of(flag):
@@ -45,9 +55,14 @@ def get_name_of(symbol):
 def get_prefix_of(symbol):
     return symbol.split(':')[0]
 
+def has_function_prefix(symbol):
+    return get_prefix_of(symbol) in {FUNCTION_PREFIX, STATIC_FUNCTION_PREFIX}
+
 
 def read_info_files(directory):
+    # map function -> local hash
     local_hashes = {}
+    # map function -> list of used defs
     used_definitions = {}
 
     for info_file in get_list_of_info_files(directory):
