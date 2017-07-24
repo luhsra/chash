@@ -1,0 +1,158 @@
+#!/usr/bin/env python
+
+#import fnmatch
+#import hashlib
+import os
+import sys
+
+# TODO: is this ok? or better prefix every call?
+from chashutil import get_param_of
+#get_list_of_info_files, get_record_from, get_name_of, get_prefix_of
+
+from chashutil import static_vars
+from chashutil import read_info_files
+from chashutil import has_function_prefix
+from chashutil import FUNCTION_PREFIX, VARIABLE_PREFIX, INFO_EXTENSION, OUTPUT_FLAG, HELP_FLAG
+
+
+#DEPENDEES_FLAG = '--dependees'
+#DEPENDEES_HELP = 'output list of symbols the symbol depends on'
+
+DEPENDENTS_FLAG = '--dependents'
+DEPENDENTS_HELP = 'output list of symbols that depend on the symbol'
+
+DIRECT_FLAG = '--direct'
+DIRECT_HELP = 'output list of symbols that directly depend on the symbol (i.e. the cHash dependency list)'
+
+
+def usage():
+    print "Usage:"
+ #   print "%s\n\t%s %s <symbol> [directory] [%s <outfile>]\n" % (DEPENDEES_HELP, sys.argv[0], DEPENDEES_FLAG, OUTPUT_FLAG)
+    print "%s\n\t%s %s <symbol> [directory] [%s <outfile>]\n" % (DEPENDENTS_HELP, sys.argv[0], DEPENDENTS_FLAG, OUTPUT_FLAG)
+    print "%s\n\t%s %s <symbol> [directory] [%s <outfile>]\n" % (DIRECT_HELP, sys.argv[0], DIRECT_FLAG, OUTPUT_FLAG)
+
+
+def build_call_graph(used_definitions):
+    """used_definitions is actually already <almost> a call graph
+    (plus additional elements such as records and global variables)
+    This function removed all record and variables from the used_definitions
+    """
+    call_graph = {}
+    for symbol, dependencies in used_definitions.iteritems():
+        call_graph[symbol] = [ d for d in dependencies if has_function_prefix(d) ]
+    return call_graph
+
+
+@static_vars(processed=set())
+def get_dependents(symbol, call_graph):
+    """Return a list of all symbols that call symbol/are dependent on it
+    (directly or indirectly, i.e. the transitive closure).
+    """
+    processed = get_dependents.processed # to break recursion
+    
+    if symbol in processed:
+        return set() 
+
+    processed.add(symbol)
+    dependents = { s for s in call_graph if symbol in call_graph[s] }
+    keys = set(dependents)
+    for sym in keys:
+        dependents |= get_dependents(sym, call_graph)
+    processed.remove(symbol)
+    return dependents 
+
+
+@static_vars(processed=set())
+def get_dependees(symbol, call_graph):
+    """Return a list of all symbols that are called by symbol/symbol depends on
+    (directly or indirectly, i.e. the transitive closure).
+    """
+    processed = get_dependees.processed # to break recursion
+     
+    if symbol in processed:
+        return set()
+
+    processed.add(symbol)
+    dependees = { s for s in call_graph if s in call_graph[symbol] }
+    keys = set(dependees)
+    for sym in keys:
+        dependees |= get_dependees(sym, call_graph)
+    processed.remove(symbol)
+    return dependees
+
+
+def get_dependency_graph_of(symbol, call_graph):
+    "Return a sub-graph of the call graph with symbol as the root element."
+    dependees = get_dependees(symbol, call_graph)
+    dependees.add(symbol) # Also include the symbol itself
+    return {sym : call_graph[sym] for sym in dependees}
+
+
+################################################################################
+# TODO: when fed a symbol, this script should output e.g. all symbols dependent
+# on that symbol, or all symbols the entered symbol depends on
+
+PATH_TO_PROJECT = "/home/cip/2015/yb90ifym/clang-hash/hash-projects/lua/"
+
+# Path to .o.info files of the previous commit
+PREVIOUS_HASH_FILES = PATH_TO_PROJECT + "prev_info/"
+# Path to the .o.info files of the current commit
+CURRENT_HASH_FILES = PATH_TO_PROJECT + "cur_info/"
+
+
+if __name__ == "__main__":
+    args = sys.argv
+    argc = len(args)
+    if argc > 2:
+        if argc > 3: # 4th param is path
+            working_directory = args[3]
+            os.chdir(working_directory)
+        working_directory = os.getcwd()
+
+        # get data
+        local_hashes, used_definitions = read_info_files(working_directory)
+        
+        symbol_to_check = None 
+
+        if DEPENTENTS_FLAG in args:
+            symbol_to_check = get_param_of(DEPENTENTS_FLAG)
+
+        ''' 
+        elif DIRECT_FLAG in args:
+            symbol = get_param_of(LOCAL_FLAG)
+            assert symbol in local_hashes
+            #print local_hashes[symbol]
+            # TODO: print dependency list
+            sys.exit(0)
+
+        else:
+            # TODO: kompletten call graph ausgeben/analysieren?
+            pass
+        '''
+
+        # Brauche folgendes experiment:
+        # 1. build, save hashes, build, save hashes
+        # 2. run dependency_analyzer, feed paths to both build's hash files
+
+
+        # TODO: write tool that takes old and new local hashes and outputs all
+        # changed local hashes as input for this and global_hash_analyzer
+
+        # TODO: need old an new/changed hashes as input
+        #       -> would be nice here instead of only in the experiment
+
+        call_graph = build_call_graph(used_definitions)
+        dependents = get_dependents(symbol_to_check, call_graph)
+
+
+        # TODO: check symbols
+
+        # TODO: check if local hash changed, then say changed/not changed based on call graph
+        # -> ??? same as cHash? muss das iwie auch noch in ein experiment giessen...
+
+        # TODO: Verfahren aus Zhang/Li/Sun2012 anwenden!
+
+
+    else:
+        usage()
+
