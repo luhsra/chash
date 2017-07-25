@@ -1,46 +1,42 @@
 #!/usr/bin/env python
 
-#import fnmatch
-#import hashlib
 import os
 import sys
 
-# TODO: is this ok? or better prefix every call?
 from chashutil import get_param_of
-#get_list_of_info_files, get_record_from, get_name_of, get_prefix_of
-
 from chashutil import static_vars
-from chashutil import read_info_files
-from chashutil import has_function_prefix
-from chashutil import FUNCTION_PREFIX, VARIABLE_PREFIX, INFO_EXTENSION, OUTPUT_FLAG, HELP_FLAG
+from chashutil import read_info_files_functions_only
+from chashutil import FUNCTION_PREFIX, VARIABLE_PREFIX, \
+                      INFO_EXTENSION, OUTPUT_FLAG, HELP_FLAG
+
+"""This script implements call graph mining and only works on the hashes of
+functions. Other hashes are ignored.
+"""
 
 
-#DEPENDEES_FLAG = '--dependees'
-#DEPENDEES_HELP = 'output list of symbols the symbol depends on'
-
+CHANGED_FUNCS_FLAG = '--changed-functions'
+IMPACTED_FUNCS_FLAG = '--impacted-functions'
+DEPENDEES_FLAG = '--dependees'
 DEPENDENTS_FLAG = '--dependents'
-DEPENDENTS_HELP = 'output list of symbols that depend on the symbol'
-
 DIRECT_FLAG = '--direct'
-DIRECT_HELP = 'output list of symbols that directly depend on the symbol (i.e. the cHash dependency list)'
+
+HELP_TEXTS = {
+    CHANGED_FUNCS_FLAG : 'list of all functions that changed',
+    IMPACTED_FUNCS_FLAG : 'list of all functions that changed or a depend on a function that changed or is impacted',
+    DEPENDENTS_FLAG : 'list of symbols that depend on the symbol',
+    DIRECT_FLAG : 'list of symbols that the function calls directly (i.e. the cHash dependency list)',
+    DEPENDEES_FLAG : 'output list of symbols the symbol depends on',
+}
 
 
 def usage():
     print "Usage:"
- #   print "%s\n\t%s %s <symbol> [directory] [%s <outfile>]\n" % (DEPENDEES_HELP, sys.argv[0], DEPENDEES_FLAG, OUTPUT_FLAG)
-    print "%s\n\t%s %s <symbol> [directory] [%s <outfile>]\n" % (DEPENDENTS_HELP, sys.argv[0], DEPENDENTS_FLAG, OUTPUT_FLAG)
-    print "%s\n\t%s %s <symbol> [directory] [%s <outfile>]\n" % (DIRECT_HELP, sys.argv[0], DIRECT_FLAG, OUTPUT_FLAG)
-
-
-def build_call_graph(used_definitions):
-    """used_definitions is actually already <almost> a call graph
-    (plus additional elements such as records and global variables)
-    This function removed all record and variables from the used_definitions
-    """
-    call_graph = {}
-    for symbol, dependencies in used_definitions.iteritems():
-        call_graph[symbol] = [ d for d in dependencies if has_function_prefix(d) ]
-    return call_graph
+    for flag in (DEPENDENTS_FLAG, DIRECT_FLAG, DEPENDEES):
+        print "  %s\n\t%s %s <symbol>\n" % \
+                (HELP_TEXTS[flag], sys.argv[0], flag)
+    for flag in (CHANGED_FUNCS_FLAG, IMPACTED_FUNCS_FLAG):
+        print "  %s\n\t%s %s\n" % \
+                (HELP_TEXTS[flag], sys.argv[0], flag)
 
 
 @static_vars(processed=set())
@@ -82,76 +78,113 @@ def get_dependees(symbol, call_graph):
 
 
 def get_dependency_graph_of(symbol, call_graph):
-    "Return a sub-graph of the call graph with symbol as the root element."
+    """Return a sub-graph of the call graph with symbol as the root element.
+    """
     dependees = get_dependees(symbol, call_graph)
     dependees.add(symbol) # Also include the symbol itself
     return {sym : call_graph[sym] for sym in dependees}
 
 
+def get_changed_functions(local_hashes, prev_local_hashes):
+    """Compare the hashes and return all functions for which the hash changed.
+
+    Returns:
+        A tuple of sets containing the changed functions.
+        (modified, added, deleted)
+    """
+    current_functions = set(local_hashes.keys())
+    previous_functions = set(prev_local_hashes.keys())
+
+    kept_functions = current_functions & previous_functions # not added or deleted
+    modified_functions = set()
+    for symbol in kept_functions:
+        if local_hashes[symbol] != prev_local_hashes[symbol]:
+            modified_functions.add(symbol)
+
+    added_functions = current_functions - previous_functions
+    deleted_functions = previous_functions - current_functions
+
+    return (modified_functions, added_functions, deleted_functions)
+
+
+def get_impacted_funcs(changed_functions, call_graph):
+    """
+    Args:
+        changed_functions: A set of all functions that changed.
+        call_graph: A dict with all dependencies.
+
+    Returns:
+        A set of all function names that are impacted by any change.
+    """
+    impacted_functions = set(changed_functions)
+    for symbol in changed_functions:
+        impacted_functions |= get_dependents(symbol, call_graph)
+
+    return impacted_functions
+
+
 ################################################################################
-# TODO: when fed a symbol, this script should output e.g. all symbols dependent
-# on that symbol, or all symbols the entered symbol depends on
+
 
 PATH_TO_PROJECT = "/home/cip/2015/yb90ifym/clang-hash/hash-projects/lua/"
 
-# Path to .o.info files of the previous commit
-PREVIOUS_HASH_FILES = PATH_TO_PROJECT + "prev_info/"
 # Path to the .o.info files of the current commit
 CURRENT_HASH_FILES = PATH_TO_PROJECT + "cur_info/"
-
+# Path to .o.info files of the previous commit
+PREVIOUS_HASH_FILES = PATH_TO_PROJECT + "prev_info/"
 
 if __name__ == "__main__":
     args = sys.argv
     argc = len(args)
-    if argc > 2:
-        if argc > 3: # 4th param is path
-            working_directory = args[3]
-            os.chdir(working_directory)
-        working_directory = os.getcwd()
+    if argc > 1 and HELP_FLAG not in args:
+        #if argc > 3: # 4th param is path # TODO: this does not hold anymore!
+        #    working_directory = args[3]
+        #    os.chdir(working_directory)
+        #working_directory = os.getcwd() # TODO: get path from command line
 
         # get data
-        local_hashes, used_definitions = read_info_files(working_directory)
-        
-        symbol_to_check = None 
+        local_hashes, call_graph = read_info_files_functions_only(CURRENT_HASH_FILES)
+        prev_hashes, prev_call_graph = read_info_files_functions_only(PREVIOUS_HASH_FILES)
 
-        if DEPENTENTS_FLAG in args:
-            symbol_to_check = get_param_of(DEPENTENTS_FLAG)
 
-        ''' 
+        if DEPENDENTS_FLAG in args:
+            symbol_to_check = get_param_of(DEPENDENTS_FLAG)
+            dependents = get_dependents(symbol_to_check, call_graph)
+            print dependents
+
         elif DIRECT_FLAG in args:
-            symbol = get_param_of(LOCAL_FLAG)
-            assert symbol in local_hashes
-            #print local_hashes[symbol]
-            # TODO: print dependency list
-            sys.exit(0)
+            symbol = get_param_of(DIRECT_FLAG)
+            assert symbol in call_graph
+            print call_graph[symbol]
 
-        else:
-            # TODO: kompletten call graph ausgeben/analysieren?
-            pass
-        '''
+        elif DEPENDEES_FLAG in args:
+            symbol_to_check = get_param_of(DEPENDEES_FLAG)
+            dependees = get_dependees(symbol_to_check, call_graph)
+            print dependees
+
+        elif CHANGED_FUNCS_FLAG in args:
+            changed_functions = get_changed_functions(local_hashes, prev_hashes)
+            print changed_functions
+
+        elif IMPACTED_FUNCS_FLAG in args:
+            changed_funcs = get_changed_functions(local_hashes, prev_hashes)
+            changed_funcs_set = changed_funcs[0] | changed_funcs[1] | changed_funcs[2]
+            impacted_funcs = get_impacted_funcs(changed_funcs_set, call_graph)
+            print impacted_funcs
+
+        # vllt auch noch als option machen: aenderungen in den dependencies ausgeben lassen (geadded/deleted) new dependencies/removed dependencies
+
 
         # Brauche folgendes experiment:
         # 1. build, save hashes, build, save hashes
         # 2. run dependency_analyzer, feed paths to both build's hash files
-
-
-        # TODO: write tool that takes old and new local hashes and outputs all
-        # changed local hashes as input for this and global_hash_analyzer
-
-        # TODO: need old an new/changed hashes as input
-        #       -> would be nice here instead of only in the experiment
-
-        call_graph = build_call_graph(used_definitions)
-        dependents = get_dependents(symbol_to_check, call_graph)
-
-
-        # TODO: check symbols
 
         # TODO: check if local hash changed, then say changed/not changed based on call graph
         # -> ??? same as cHash? muss das iwie auch noch in ein experiment giessen...
 
         # TODO: Verfahren aus Zhang/Li/Sun2012 anwenden!
 
+        # WICHTIG: im experiment muss ichs gar nicht erst einmal "save" frisch bauen und dann erst richtig, es reicht einfach cleanen, dann bauen, dann parent holen, cleanen bauen
 
     else:
         usage()
