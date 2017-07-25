@@ -5,6 +5,8 @@ import hashlib
 import os
 import sys
 
+from chashutil import static_vars
+
 # TODO: is this ok? or better prefix every call?
 from chashutil import get_param_of, get_list_of_info_files, get_record_from, get_name_of, get_prefix_of, read_info_files
 from chashutil import FUNCTION_PREFIX, VARIABLE_PREFIX, INFO_EXTENSION, OUTPUT_FLAG, HELP_FLAG
@@ -30,13 +32,13 @@ used_definitions = {}
 global_hashes = {}
 
 
-# all symbols that are already being processed; to prevent recursion
-currently_processed = set() # TODO: use new static_vars decorator
-
+@static_vars(currently_processed=set())
 def get_global_hash(symbol):
     """Calculates the global hash of the symbol recursively over all used definitions
     """
     global global_hashes, currently_processed 
+
+    currently_processed = get_global_hash.currently_processed # to break recursion
 
     # If a symbol does not have a local hash, we assume it is a library
     # function and therefore does not require a local hash.
