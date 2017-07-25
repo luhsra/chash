@@ -31,7 +31,7 @@ global_hashes = {}
 
 
 # all symbols that are already being processed; to prevent recursion
-currently_processed = set()
+currently_processed = set() # TODO: use new static_vars decorator
 
 def get_global_hash(symbol):
     """Calculates the global hash of the symbol recursively over all used definitions
@@ -86,7 +86,7 @@ def write_checked_symbol_hashes(symbols_to_check, fn):
 
 
 def get_symbols_to_check(filename):
-    record = get_record_from(info_filename)
+    record = get_record_from(filename)
     symbols_to_check = []
     for elem in record['element-hashes']:
         prefix = get_prefix_of(elem[0])
@@ -98,8 +98,9 @@ def get_symbols_to_check(filename):
 
 ################################################################################
 
-
-if __name__ == "__main__":
+#if __name__ == "__main__":
+def run():
+    global local_hashes, used_definitions, global_hashes
     args = sys.argv
     argc = len(args)
     if argc > 2:
@@ -150,4 +151,8 @@ if __name__ == "__main__":
 
     elif argc == 2 and HELP_FLAG in args:
         usage()
+
+
+if __name__ == "__main__":
+    run()
 
