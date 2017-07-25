@@ -24,20 +24,10 @@ def usage():
     print "%s %s <symbol> [directory] [%s <outfile>]" % (sys.argv[0], LOCAL_FLAG, OUTPUT_FLAG)
 
 
-# map function -> local hash
-local_hashes = {}
-# map function -> list of used defs
-used_definitions = {}
-# map function -> global hash
-global_hashes = {}
-
-
 @static_vars(currently_processed=set())
-def get_global_hash(symbol):
+def get_global_hash(symbol, global_hashes, local_hashes, used_definitions):
     """Calculates the global hash of the symbol recursively over all used definitions
     """
-    global global_hashes, currently_processed 
-
     currently_processed = get_global_hash.currently_processed # to break recursion
 
     # If a symbol does not have a local hash, we assume it is a library
@@ -60,7 +50,7 @@ def get_global_hash(symbol):
         used_defs = used_definitions[symbol]
         for used_def in used_defs:
             used_def = get_name_of(used_def)
-            used_def_global_hash = get_global_hash(used_def)
+            used_def_global_hash = get_global_hash(used_def, global_hashes, local_hashes, used_definitions)
             if used_def_global_hash is not None:
                 global_hash.update(used_def_global_hash)
     
@@ -70,7 +60,7 @@ def get_global_hash(symbol):
     return global_hashes[symbol]
 
 
-def print_checked_symbol_hashes(symbols_to_check):
+def print_checked_symbol_hashes(symbols_to_check, global_hashes):
     print "{"
     for k, v in global_hashes.items():
         if k in symbols_to_check:
@@ -78,7 +68,7 @@ def print_checked_symbol_hashes(symbols_to_check):
     print "}"
 
 
-def write_checked_symbol_hashes(symbols_to_check, fn):
+def write_checked_symbol_hashes(symbols_to_check, global_hashes, fn):
     with open(fn, 'w') as o_file:
         o_file.write("{")
         for k, v in global_hashes.items():
@@ -100,9 +90,8 @@ def get_symbols_to_check(filename):
 
 ################################################################################
 
-#if __name__ == "__main__":
+
 def run():
-    global local_hashes, used_definitions, global_hashes
     args = sys.argv
     argc = len(args)
     if argc > 2:
@@ -132,12 +121,15 @@ def run():
             assert symbol in local_hashes
             print local_hashes[symbol]
             sys.exit(0)
-        
+
+        # map function -> global hash TODO: could be moved to get_global_hash?
+        global_hashes = {}
+
         for symbol in symbols_to_check:
             if symbol not in local_hashes:
                 print "Error: symbol '%s' not found" % symbol
                 sys.exit(1)
-            get_global_hash(symbol)
+            get_global_hash(symbol, global_hashes, local_hashes, used_definitions)
 
         out_filename = None
         if OUTPUT_FLAG in args:
@@ -147,9 +139,9 @@ def run():
             if DEFINITION_FLAG in args:
                 print global_hashes[symbol] # if in definition mode, only print that definition's global hash
             else:
-                print_checked_symbol_hashes(symbols_to_check)
+                print_checked_symbol_hashes(symbols_to_check, global_hashes)
         else:
-            write_checked_symbol_hashes(symbols_to_check, out_filename)
+            write_checked_symbol_hashes(symbols_to_check, global_hashes, out_filename)
 
     elif argc == 2 and HELP_FLAG in args:
         usage()
