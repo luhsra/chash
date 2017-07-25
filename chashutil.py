@@ -81,3 +81,53 @@ def read_info_files(directory):
                 if len(elem) > 2 and (prefix == FUNCTION_PREFIX or prefix == VARIABLE_PREFIX):
                     used_definitions[symbol] = elem[2]
     return (local_hashes, used_definitions)
+
+
+def read_info_files_functions_only(directory):
+    # map function -> local hash
+    local_hashes = {}
+    # map function -> list of used defs. In this case, this is the call graph
+    used_definitions = {}
+
+    for info_file in get_list_of_info_files(directory):
+        record = get_record_from(info_file)
+        if record:
+            for elem in record['element-hashes']:
+                if not has_function_prefix(elem[0]):
+                    continue
+
+                symbol = get_name_of(elem[0])
+                if symbol in local_hashes:
+                    if local_hashes[symbol] != elem[1]: # duplicate ok if hashes are the same
+                        assert symbol not in local_hashes # otherwise, every symbol must be unique
+
+                local_hashes[symbol] = elem[1]
+
+                if len(elem) > 2:
+                    used_definitions[symbol] = [get_name_of(sym) for sym in elem[2]]
+    return (local_hashes, used_definitions)
+
+'''
+def read_info_files_with_prefix(directory):
+    # map function -> local hash
+    local_hashes = {}
+    # map function -> list of used defs
+    used_definitions = {}
+
+    for info_file in get_list_of_info_files(directory):
+        record = get_record_from(info_file)
+        if record:
+            for elem in record['element-hashes']:
+                prefix = get_prefix_of(elem[0])
+                symbol = elem[0]
+
+                if symbol in local_hashes:
+                    if local_hashes[symbol] != elem[1]: # duplicate ok if hashes are the same
+                        assert symbol not in local_hashes # otherwise, every symbol must be unique
+
+                local_hashes[symbol] = elem[1]
+
+                if len(elem) > 2 and (prefix == FUNCTION_PREFIX or prefix == VARIABLE_PREFIX):
+                    used_definitions[symbol] = elem[2]
+    return (local_hashes, used_definitions)
+'''
