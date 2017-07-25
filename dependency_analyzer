@@ -5,9 +5,11 @@ import sys
 
 from chashutil import get_param_of
 from chashutil import static_vars
-from chashutil import read_info_files_functions_only
+from chashutil import read_info_files, read_info_files_functions_only
 from chashutil import FUNCTION_PREFIX, VARIABLE_PREFIX, \
                       INFO_EXTENSION, OUTPUT_FLAG, HELP_FLAG
+
+from clang_hash_global import get_global_hash
 
 """This script implements call graph mining and only works on the hashes of
 functions. Other hashes are ignored.
@@ -19,6 +21,7 @@ IMPACTED_FUNCS_FLAG = '--impacted-functions'
 DEPENDEES_FLAG = '--dependees'
 DEPENDENTS_FLAG = '--dependents'
 DIRECT_FLAG = '--direct'
+CHASH_GLOBAL_FLAG = '--chash-global'
 
 HELP_TEXTS = {
     CHANGED_FUNCS_FLAG : 'list of all functions that changed',
@@ -26,15 +29,16 @@ HELP_TEXTS = {
     DEPENDENTS_FLAG : 'list of symbols that depend on the symbol',
     DIRECT_FLAG : 'list of symbols that the function calls directly (i.e. the cHash dependency list)',
     DEPENDEES_FLAG : 'output list of symbols the symbol depends on',
+    CHASH_GLOBAL_FLAG : 'output list of symbols whose global hash changed'
 }
 
 
 def usage():
     print "Usage:"
-    for flag in (DEPENDENTS_FLAG, DIRECT_FLAG, DEPENDEES):
+    for flag in (DEPENDENTS_FLAG, DIRECT_FLAG, DEPENDEES_FLAG):
         print "  %s\n\t%s %s <symbol>\n" % \
                 (HELP_TEXTS[flag], sys.argv[0], flag)
-    for flag in (CHANGED_FUNCS_FLAG, IMPACTED_FUNCS_FLAG):
+    for flag in (CHANGED_FUNCS_FLAG, IMPACTED_FUNCS_FLAG, CHASH_GLOBAL_FLAG):
         print "  %s\n\t%s %s\n" % \
                 (HELP_TEXTS[flag], sys.argv[0], flag)
 
@@ -85,7 +89,7 @@ def get_dependency_graph_of(symbol, call_graph):
     return {sym : call_graph[sym] for sym in dependees}
 
 
-def get_changed_functions(local_hashes, prev_local_hashes):
+def get_changed_functions(local_hashes, prev_local_hashes): # TODO: rename get_changed_elements
     """Compare the hashes and return all functions for which the hash changed.
 
     Returns:
@@ -123,6 +127,13 @@ def get_impacted_funcs(changed_functions, call_graph):
     return impacted_functions
 
 
+def get_global_hashes(local_hashes, used_definitions):
+    global_hashes = {}
+    for symbol in local_hashes:
+       get_global_hash(symbol, global_hashes, local_hashes, used_definitions)
+    return global_hashes
+
+
 ################################################################################
 
 
@@ -142,7 +153,28 @@ if __name__ == "__main__":
         #    os.chdir(working_directory)
         #working_directory = os.getcwd() # TODO: get path from command line
 
+
         # get data
+        if CHASH_GLOBAL_FLAG in args:
+
+            local_hashes, used_definitions = read_info_files(CURRENT_HASH_FILES)
+            prev_hashes, prev_used_definitions = read_info_files(PREVIOUS_HASH_FILES)
+
+            # TODO: create more modes, perhaps make this flag a little switch (e.g. -c)
+            # TODO: also create all the FLAGs below for cHash-global
+
+            # Print all symbols whose global hash changed
+            global_hashes = get_global_hashes(local_hashes, used_definitions)
+            prev_global_hashes = get_global_hashes(prev_hashes, prev_used_definitions)
+
+            changed_global_hashes = get_changed_functions(global_hashes, prev_global_hashes)
+            print changed_global_hashes
+
+            sys.exit(0)
+
+
+        # else, work with call graph based analysis
+
         local_hashes, call_graph = read_info_files_functions_only(CURRENT_HASH_FILES)
         prev_hashes, prev_call_graph = read_info_files_functions_only(PREVIOUS_HASH_FILES)
 
@@ -171,6 +203,7 @@ if __name__ == "__main__":
             changed_funcs_set = changed_funcs[0] | changed_funcs[1] | changed_funcs[2]
             impacted_funcs = get_impacted_funcs(changed_funcs_set, call_graph)
             print impacted_funcs
+
 
         # vllt auch noch als option machen: aenderungen in den dependencies ausgeben lassen (geadded/deleted) new dependencies/removed dependencies
 
