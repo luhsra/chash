@@ -11,7 +11,8 @@
         "const_global.c": "cpp",
         "dynamic_init.c": "cpp",
         "pointer.c": "cpp",
-        "array": "cpp"
+        "array": "cpp",
+        "random.h": "c"
     },
     "git.ignoreLimitWarning": true
 }
