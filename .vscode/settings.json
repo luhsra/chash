@@ -12,7 +12,9 @@
         "dynamic_init.c": "cpp",
         "pointer.c": "cpp",
         "array": "cpp",
-        "random.h": "c"
+        "random.h": "c",
+        "dump.cc": "c",
+        "test.h": "c"
     },
     "git.ignoreLimitWarning": true
 }
