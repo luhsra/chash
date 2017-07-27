@@ -14,7 +14,10 @@
         "array": "cpp",
         "random.h": "c",
         "dump.cc": "c",
-        "test.h": "c"
+        "test.h": "c",
+        "string": "cpp",
+        "tree.h": "c",
+        "basic_file.h": "c"
     },
     "git.ignoreLimitWarning": true
 }

@@ -16,31 +16,7 @@
 
 #include "gcc-common.h"
 #include "chash.h"
-#include "config.h"
-#include "system.h"
-#include "coretypes.h"
-#include "backend.h"
-#include "target.h"
 #include "tree.h"
-#include "gimple.h"
-#include "cfghooks.h"
-#include "tree-pass.h"
-#include "ssa.h"
-#include "cgraph.h"
-#include "diagnostic-core.h"
-#include "fold-const.h"
-#include "varasm.h"
-#include "tree-nested.h"
-#include "gimplify.h"
-#include "gimple-iterator.h"
-#include "gimplify-me.h"
-#include "tree-cfg.h"
-#include "tree-into-ssa.h"
-#include "value-prof.h"
-#include "profile.h"
-#include "tree-cfgcleanup.h"
-#include "params.h"
-
 
 int plugin_is_GPL_compatible;
 
@@ -56,7 +32,6 @@ struct plugin_info chash_plugin_info = {
             fprintf(dump_file, args);           \
         }                                       \
     } while(0)
-
 
 /*
  * Return the call graph node of fndecl.
@@ -76,7 +51,7 @@ struct cgraph_node *get_fn_cnode(const_tree fndecl)
  */
 extern "C" void chash_ast_hash_execute(void *gcc_data, void*) {
     tree fndecl = (tree)gcc_data;
-
+    
     int code = TREE_CODE(fndecl);
     if(code==FUNCTION_DECL){
         tree rType = TREE_TYPE(DECL_RESULT(fndecl)),   
@@ -85,16 +60,35 @@ extern "C" void chash_ast_hash_execute(void *gcc_data, void*) {
         printf("Function decl:\n");
         printf("Name:\t\t\t\t\t%s\n", IDENTIFIER_POINTER(DECL_NAME(fndecl)));
         printf("Type of return value:\t\t\t%s\n", get_tree_code_name(TREE_CODE(rType)));
-        printf("%s\n", IDENTIFIER_POINTER(DECL_NAME(TREE_OPERAND(STATEMENT_LIST_HEAD(body)->stmt, 0))));
-        // printf("%s\n", IDENTIFIER_POINTER(DECL_NAME(TREE_OPERAND(STATEMENT_LIST_TAIL(body)->stmt, 0))));
         tree_statement_list_node* tmp= STATEMENT_LIST_HEAD(body);
-        while(tmp!=0){
-            printf("%s\n", tmp == 0 ? "a": "b");
-            tmp=tmp->next;
-        }
-        printf("%s\n", STATEMENT_LIST_HEAD(body)->next->next == 0 ? "c": "d");
-        // printf("%s\n", get_tree_code_name(TREE_CODE(TREE_OPERAND(STATEMENT_LIST_HEAD(body)->next->next->stmt, 0))));
-        // debug_tree(body);
+        // printf("bodyparsing\n");
+        // while(tmp!=0){
+        //     int i=0;
+        //     tree tmp2=TREE_OPERAND(tmp->stmt,i);
+        //     while(tmp2!=0)
+        //     {
+        //         printf("%s\n", get_tree_code_name(TREE_CODE(tmp2)));
+        //         tmp2 = TREE_OPERAND(tmp->stmt,++i);
+        //     }
+        //     tmp= tmp->next;
+        // }
+        // printf("bodyparsing\n");
+        printf("<%s ", get_tree_code_name(TREE_CODE(body)));
+        printf("%p\n", body);
+        printf("\ttype <%s ", get_tree_code_name(TREE_CODE(TREE_TYPE(body))));
+        printf("%p\n", TREE_TYPE(body));
+        printf("\t\talign %i ", TYPE_ALIGN(TREE_TYPE(body)));
+        printf("canonical type %p\n", TYPE_CANONICAL(TREE_TYPE(body)));
+        printf("\t\tpointer_to_this <%s ", get_tree_code_name(TREE_CODE(TYPE_POINTER_TO(TREE_TYPE(body)))));
+        printf("%p>>\n", TYPE_POINTER_TO(TREE_TYPE(body)));
+
+        printf("\t%s ", TREE_SIDE_EFFECTS(body)?"side-effects":"");
+        printf("head %p ", tmp);
+        printf("tail %p ", STATEMENT_LIST_TAIL(body));
+        printf("stmts %p ", tmp->stmt);
+        printf("%p\n\n", STATEMENT_LIST_TAIL(body)->stmt);
+        // printf("%p\n", debug_tree(TREE_SIDE_EFFECTS(body)));
+        debug_tree(body);
         // debug_tree(COMPOUND_STMT(body));
         // if(body != 0){
         //     printf("****\n");
@@ -110,43 +104,44 @@ extern "C" void chash_ast_hash_execute(void *gcc_data, void*) {
         // }
         
 
-        while(1){ // Will only run once. Special attributes.
-            if (DECL_FUNCTION_SPECIFIC_TARGET (fndecl)){
-                printf("%s\n", "1");
-                break;
-            }
-            if (DECL_FUNCTION_SPECIFIC_OPTIMIZATION (fndecl)){
-                printf("%s\n", "2");
-                break;
-            }
-            if (DECL_DECLARED_INLINE_P (fndecl)){
-                printf("%s\n", "inlined");
-                break;
-            }
-            if (DECL_BUILT_IN (fndecl)){
-                printf("%s\n", "4");
-                break;
-                }
-            if (DECL_STATIC_CHAIN (fndecl)){
-                printf("%s\n", "5");
-                break;
-            }
-            if (decl_is_tm_clone (fndecl)){
-                printf("%s\n", "6");
-                break;
-            }
-            printf("No special Attributes\n");
-            break;
-        }
-
-        // while(body != 0 ){
-        //     printf(":\t\t\t%s\n", IDENTIFIER_POINTER(DECL_NAME(body)));
-        //     body = TREE_CHAIN(body);
+        // while(1){ // Will only run once. Special attributes.
+        //     if (DECL_FUNCTION_SPECIFIC_TARGET (fndecl)){
+        //         printf("%s\n", "1");
+        //         break;
+        //     }
+        //     if (DECL_FUNCTION_SPECIFIC_OPTIMIZATION (fndecl)){
+        //         printf("%s\n", "2");
+        //         break;
+        //     }
+        //     if (DECL_DECLARED_INLINE_P (fndecl)){
+        //         printf("%s\n", "inlined");
+        //         break;
+        //     }
+        //     if (DECL_BUILT_IN (fndecl)){
+        //         printf("%s\n", "4");
+        //         break;
+        //         }
+        //     if (DECL_STATIC_CHAIN (fndecl)){
+        //         printf("%s\n", "5");
+        //         break;
+        //     }
+        //     if (decl_is_tm_clone (fndecl)){
+        //         printf("%s\n", "6");
+        //         break;
+        //     }
+        //     printf("No special Attributes\n");
+        //     break;
         // }
-        while(arguments!=0){ // Parse all arguments of the fndecltion
-            printf("%s\n", get_tree_code_name(TREE_CODE(DECL_ARG_TYPE(arguments))));
-            arguments = TREE_CHAIN(arguments);
-        }
+
+        // // while(body != 0 ){
+        // //     printf(":\t\t\t%s\n", IDENTIFIER_POINTER(DECL_NAME(body)));
+        // //     body = TREE_CHAIN(body);
+        // // }
+        // while(arguments!=0){ // Parse all arguments of the fndecltion
+        //     printf("%s\n", get_tree_code_name(TREE_CODE(DECL_ARG_TYPE(arguments))));
+        //     arguments = TREE_CHAIN(arguments);
+        // }
+        printf("\n");
     }
         // // int dExt = DECL_EXTERNAL(node->decl);
         // // printf("fndecltion is undefined?\t\t\t%s\n", dExt == 1 ? "true" : dExt == 0 ? "false" : "cHash Error");
