@@ -7,4 +7,4 @@ include_directories(${GCCPLUGINS_DIR}/include)
 
 add_library(gcc-hash SHARED
   chash.cc
-  )
+)
