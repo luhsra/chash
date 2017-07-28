@@ -156,8 +156,8 @@ struct ObjectCache {
 
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
-  HashTranslationUnitConsumer(raw_ostream *OS, bool StopIfSameHash)
-      : Terminal(OS), StopIfSameHash(StopIfSameHash) {}
+    HashTranslationUnitConsumer(CompilerInstance &CI,raw_ostream *OS, bool StopIfSameHash)
+        : CI(CI), Terminal(OS), StopIfSameHash(StopIfSameHash) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
     /// Step 1: Calculate Hash
@@ -281,6 +281,7 @@ public:
       // We are in caching mode and there should be an objectfile
       atexit(link_object_file);
       if (HashEqual) {
+        CI.clearOutputFiles(true);
         atexit_mode = ATEXIT_FROM_CACHE;
         exit(0);
       } else {
@@ -342,6 +343,7 @@ private:
     }
   }
 
+  CompilerInstance &CI;
   raw_ostream *const Terminal;
   TranslationUnitHashVisitor Visitor;
   bool StopIfSameHash;
@@ -377,7 +379,7 @@ protected:
     if (Verbose)
       Terminal = &errs();
 
-    return make_unique<HashTranslationUnitConsumer>(Terminal, StopIfSameHash);
+    return make_unique<HashTranslationUnitConsumer>(CI, Terminal, StopIfSameHash);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
