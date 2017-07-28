@@ -73,3 +73,7 @@ in different seperate file.
     example.o
     example.o.hash
     example.o.hash.copy
+
+For a detailed information, use the verbose mode
+
+    $ build/wrappers/clang-hash-stop -c example.c -o example.o -Xclang -plugin-arg-clang-hash -Xclang -hash-verbose
