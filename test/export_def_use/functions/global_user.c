@@ -12,5 +12,5 @@ int global_user() {
 
 /*
  * check-name: function using global variables
- * references: global_user -> global arr other_foo
+ * references: global_user:export_def_use/functions/global_user.c -> global:export_def_use/functions/global_user.c arr:export_def_use/functions/global_user.c other_foo:export_def_use/functions/global_user.c
  */

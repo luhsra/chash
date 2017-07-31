@@ -6,5 +6,5 @@ void g() { f(); }
 
 /*
  * check-name: mutual recursion
- * references: f -> g, g -> f
+ * references: f:export_def_use/functions/mutual_recursion.c -> g:export_def_use/functions/mutual_recursion.c, g:export_def_use/functions/mutual_recursion.c -> f:export_def_use/functions/mutual_recursion.c
  */

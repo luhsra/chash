@@ -15,5 +15,5 @@ int calc() {
 
 /*
  * check-name: some function calls
- * references: bar -> foo, baz -> bar foo, calc -> foo bar baz
+ * references: bar:export_def_use/functions/function_calls.c -> foo:export_def_use/functions/function_calls.c, baz:export_def_use/functions/function_calls.c -> bar:export_def_use/functions/function_calls.c foo:export_def_use/functions/function_calls.c, calc:export_def_use/functions/function_calls.c -> foo:export_def_use/functions/function_calls.c bar:export_def_use/functions/function_calls.c baz:export_def_use/functions/function_calls.c
  */
