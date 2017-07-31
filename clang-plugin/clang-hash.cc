@@ -248,6 +248,9 @@ public:
                              ->getCanonicalTypeInternal()
                              .getAsString();
           }
+          // Append the filename to the symbol's name
+          const auto Filename = CI.getSourceManager().getFilename(D->getLocation());
+          *Terminal << ":" << Filename.slice(2, Filename.size());
           *Terminal << "\", \"";
           *Terminal << Dig.asString();
           *Terminal << "\"";
@@ -264,6 +267,9 @@ public:
                 *Terminal << "\"variable:";
               }
               *Terminal << cast<NamedDecl>(SavedCallee)->getName();
+              // Append the filename to the symbol's name
+              const auto Filename = CI.getSourceManager().getFilename(SavedCallee->getLocation());
+              *Terminal << ":" << Filename.slice(2, Filename.size());
               *Terminal << "\", ";
             }
             *Terminal << "]";
