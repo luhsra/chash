@@ -250,7 +250,7 @@ public:
           }
           // Append the filename to the symbol's name
           const auto Filename = CI.getSourceManager().getFilename(D->getLocation());
-          *Terminal << ":" << Filename.slice(2, Filename.size());
+          *Terminal << ":" << (Filename.startswith("./") ? Filename.slice(2, Filename.size()) : Filename);
           *Terminal << "\", \"";
           *Terminal << Dig.asString();
           *Terminal << "\"";
@@ -269,7 +269,7 @@ public:
               *Terminal << cast<NamedDecl>(SavedCallee)->getName();
               // Append the filename to the symbol's name
               const auto Filename = CI.getSourceManager().getFilename(SavedCallee->getLocation());
-              *Terminal << ":" << Filename.slice(2, Filename.size());
+              *Terminal << ":" << (Filename.startswith("./") ? Filename.slice(2, Filename.size()) : Filename);
               *Terminal << "\", ";
             }
             *Terminal << "]";
