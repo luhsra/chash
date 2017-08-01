@@ -50,7 +50,7 @@ def get_record_from(info_filename):
 
 def get_name_of(symbol):
     """Name consists of symbol [1] and filename [2]"""
-    elements =  symbol.split(':')[1:2]
+    elements =  symbol.split(':')[1:3]
     return ':'.join(elements)
 
 
