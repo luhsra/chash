@@ -49,7 +49,9 @@ def get_record_from(info_filename):
  
 
 def get_name_of(symbol):
-    return symbol.split(':')[1]
+    """Name consists of symbol [1] and filename [2]"""
+    elements =  symbol.split(':')[1:2]
+    return ':'.join(elements)
 
 
 def get_prefix_of(symbol):
