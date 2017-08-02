@@ -225,16 +225,25 @@ public:
           const bool IsNonExternVariableDeclaration =
               isa<VarDecl>(D) && !cast<VarDecl>(D)->hasExternalStorage();
 
-          if (IsFunctionDefinition) {// Ignore declarations without definition
-            if (cast<FunctionDecl>(D)->getStorageClass() == SC_Static)
+          bool AppendFilename = false;
+          if (IsFunctionDefinition) { // Ignore declarations without definition
+            if (cast<FunctionDecl>(D)->getStorageClass() == SC_Static) {
               *Terminal << "(\"static function:";
-            else
+              AppendFilename = true;
+            } else {
               *Terminal << "(\"function:";
-          } else if (IsNonExternVariableDeclaration) // Ignore extern variables
-            *Terminal << "(\"variable:";
-          else if (isa<RecordDecl>(D))
+            }
+          } else if (IsNonExternVariableDeclaration) { // Ignore extern variables
+            if (cast<VarDecl>(D)->getStorageClass() == SC_Static) {
+              *Terminal << "(\"static variable:";
+              AppendFilename = true;
+            } else {
+              *Terminal << "(\"variable:";
+            }
+          } else if (isa<RecordDecl>(D)) {
             *Terminal << "(\"record:";
-          else
+            AppendFilename = true;
+          } else
             continue;
 
           if (cast<NamedDecl>(D)->getName() != "") {
@@ -248,9 +257,11 @@ public:
                              ->getCanonicalTypeInternal()
                              .getAsString();
           }
-          // Append the filename to the symbol's name
-          const auto Filename = CI.getSourceManager().getFilename(D->getLocation());
-          *Terminal << ":" << (Filename.startswith("./") ? Filename.slice(2, Filename.size()) : Filename);
+          if (AppendFilename) {
+            // Append the filename to the symbol's name
+            const auto Filename = CI.getSourceManager().getFilename(D->getLocation());
+            *Terminal << ":" << (Filename.startswith("./") ? Filename.slice(2, Filename.size()) : Filename);
+          }
           *Terminal << "\", \"";
           *Terminal << Dig.asString();
           *Terminal << "\"";
@@ -258,18 +269,27 @@ public:
           if (IsFunctionDefinition || IsNonExternVariableDeclaration) {
             *Terminal << ", [";
             for (const auto &SavedCallee : Visitor.DefUseSilo[cast<Decl>(D)]) {
+              // TODO: also dump records? could be forward-declarated?!
+              bool AppendFilename = false;
               if (isa<FunctionDecl>(SavedCallee)) {
-                if (cast<FunctionDecl>(SavedCallee)->getStorageClass() == SC_Static)
+                if (cast<FunctionDecl>(SavedCallee)->getStorageClass() == SC_Static) {
                   *Terminal << "\"static function:";
-                else
+                  AppendFilename = true;
+                } else
                   *Terminal << "\"function:";
               } else {
-                *Terminal << "\"variable:";
+                if (cast<VarDecl>(SavedCallee)->getStorageClass() == SC_Static) {
+                  *Terminal << "\"static variable:";
+                  AppendFilename = true;
+                } else
+                  *Terminal << "\"variable:";
               }
               *Terminal << cast<NamedDecl>(SavedCallee)->getName();
-              // Append the filename to the symbol's name
-              const auto Filename = CI.getSourceManager().getFilename(SavedCallee->getLocation());
-              *Terminal << ":" << (Filename.startswith("./") ? Filename.slice(2, Filename.size()) : Filename);
+              if (AppendFilename) {
+                // Append the filename to the symbol's name
+                const auto Filename = CI.getSourceManager().getFilename(SavedCallee->getLocation());
+                *Terminal << ":" << (Filename.startswith("./") ? Filename.slice(2, Filename.size()) : Filename);
+              }
               *Terminal << "\", ";
             }
             *Terminal << "]";
