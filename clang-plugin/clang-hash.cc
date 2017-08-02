@@ -156,8 +156,9 @@ struct ObjectCache {
 
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
-    HashTranslationUnitConsumer(CompilerInstance &CI,raw_ostream *OS, bool StopIfSameHash)
-        : CI(CI), Terminal(OS), StopIfSameHash(StopIfSameHash) {}
+  HashTranslationUnitConsumer(CompilerInstance &CI, raw_ostream *OS,
+                              bool StopIfSameHash)
+      : CI(CI), Terminal(OS), StopIfSameHash(StopIfSameHash) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
     /// Step 1: Calculate Hash
@@ -233,7 +234,8 @@ public:
             } else {
               *Terminal << "(\"function:";
             }
-          } else if (IsNonExternVariableDeclaration) { // Ignore extern variables
+          } else if (IsNonExternVariableDeclaration) { // Ignore extern
+                                                       // variables
             if (cast<VarDecl>(D)->getStorageClass() == SC_Static) {
               *Terminal << "(\"static variable:";
               AppendFilename = true;
@@ -259,8 +261,11 @@ public:
           }
           if (AppendFilename) {
             // Append the filename to the symbol's name
-            const auto Filename = CI.getSourceManager().getFilename(D->getLocation());
-            *Terminal << ":" << (Filename.startswith("./") ? Filename.slice(2, Filename.size()) : Filename);
+            const auto Filename =
+                CI.getSourceManager().getFilename(D->getLocation());
+            *Terminal << ":" << (Filename.startswith("./")
+                                     ? Filename.slice(2, Filename.size())
+                                     : Filename);
           }
           *Terminal << "\", \"";
           *Terminal << Dig.asString();
@@ -272,13 +277,15 @@ public:
               // TODO: also dump records? could be forward-declarated?!
               bool AppendFilename = false;
               if (isa<FunctionDecl>(SavedCallee)) {
-                if (cast<FunctionDecl>(SavedCallee)->getStorageClass() == SC_Static) {
+                if (cast<FunctionDecl>(SavedCallee)->getStorageClass() ==
+                    SC_Static) {
                   *Terminal << "\"static function:";
                   AppendFilename = true;
                 } else
                   *Terminal << "\"function:";
               } else {
-                if (cast<VarDecl>(SavedCallee)->getStorageClass() == SC_Static) {
+                if (cast<VarDecl>(SavedCallee)->getStorageClass() ==
+                    SC_Static) {
                   *Terminal << "\"static variable:";
                   AppendFilename = true;
                 } else
@@ -287,8 +294,11 @@ public:
               *Terminal << cast<NamedDecl>(SavedCallee)->getName();
               if (AppendFilename) {
                 // Append the filename to the symbol's name
-                const auto Filename = CI.getSourceManager().getFilename(SavedCallee->getLocation());
-                *Terminal << ":" << (Filename.startswith("./") ? Filename.slice(2, Filename.size()) : Filename);
+                const auto Filename = CI.getSourceManager().getFilename(
+                    SavedCallee->getLocation());
+                *Terminal << ":" << (Filename.startswith("./")
+                                         ? Filename.slice(2, Filename.size())
+                                         : Filename);
               }
               *Terminal << "\", ";
             }
@@ -405,7 +415,8 @@ protected:
     if (Verbose)
       Terminal = &errs();
 
-    return make_unique<HashTranslationUnitConsumer>(CI, Terminal, StopIfSameHash);
+    return make_unique<HashTranslationUnitConsumer>(CI, Terminal,
+                                                    StopIfSameHash);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
