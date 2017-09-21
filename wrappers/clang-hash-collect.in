@@ -13,7 +13,7 @@ from subprocess import *
 if "CLANG_HASH_OUTPUT_DIR" in os.environ:
     outputDir = os.environ["CLANG_HASH_OUTPUT_DIR"]
 else:
-    outputDir = "/srv/scratch/yb90ifym/muslHashes"
+    outputDir = "/home/cip/2015/yb90ifym/clang-hash/hash-projects/lua"
 
 if not os.path.exists(outputDir):
     outputDir = None
@@ -47,7 +47,7 @@ if __name__ == "__main__":
             args.remove("-hash-verbose")
         except ValueError:
             pass
-        args.extend(["-Xclang", "-plugin-arg-clang-hash", "-Xclang","-hash-verbose"])
+    args.extend(["-Xclang", "-plugin-arg-clang-hash", "-Xclang","-hash-verbose", "-c", "-fsyntax-only"])
 
     start_time = time.time()
     x = Popen([compiler, "-fplugin=" + plugin] + args,
@@ -87,9 +87,12 @@ if __name__ == "__main__":
                 'compile-duration': compileTime, # time the compiler was running (incl. parse-duration)
                 'object-hash': objectfile_hash,
                 'start-time': start_time,
-                'object-file-size': os.stat(objectfile).st_size,
                 'run_id': int(run_id), # for run with stopping compilation
             }
+            try:
+                record['object-file-size'] = os.stat(objectfile).st_size
+            except:
+                pass
 
             lines = stderr.split("\n")
             for line in lines:
