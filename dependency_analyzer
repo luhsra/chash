@@ -1,0 +1,224 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+from chashutil import get_param_of
+from chashutil import static_vars
+from chashutil import read_info_files, read_info_files_functions_only
+from chashutil import FUNCTION_PREFIX, VARIABLE_PREFIX, \
+                      INFO_EXTENSION, OUTPUT_FLAG, HELP_FLAG
+
+from clang_hash_global import get_global_hash
+
+"""This script implements call graph mining and only works on the hashes of
+functions. Other hashes are ignored.
+"""
+
+
+CHANGED_FUNCS_FLAG = '--changed-functions'
+IMPACTED_FUNCS_FLAG = '--impacted-functions'
+DEPENDEES_FLAG = '--dependees'
+DEPENDENTS_FLAG = '--dependents'
+DIRECT_FLAG = '--direct'
+CHASH_GLOBAL_FLAG = '--chash-global'
+
+HELP_TEXTS = {
+    CHANGED_FUNCS_FLAG : 'list of all functions that changed',
+    IMPACTED_FUNCS_FLAG : 'list of all functions that changed or a depend on a function that changed or is impacted',
+    DEPENDENTS_FLAG : 'list of symbols that depend on the symbol',
+    DIRECT_FLAG : 'list of symbols that the function calls directly (i.e. the cHash dependency list)',
+    DEPENDEES_FLAG : 'output list of symbols the symbol depends on',
+    CHASH_GLOBAL_FLAG : 'output list of symbols whose global hash changed'
+}
+
+
+def usage():
+    print "Usage:"
+    for flag in (DEPENDENTS_FLAG, DIRECT_FLAG, DEPENDEES_FLAG):
+        print "  %s\n\t%s %s <symbol>\n" % \
+                (HELP_TEXTS[flag], sys.argv[0], flag)
+    for flag in (CHANGED_FUNCS_FLAG, IMPACTED_FUNCS_FLAG, CHASH_GLOBAL_FLAG):
+        print "  %s\n\t%s %s\n" % \
+                (HELP_TEXTS[flag], sys.argv[0], flag)
+
+
+@static_vars(processed=set())
+def get_dependents(symbol, call_graph):
+    """Return a list of all symbols that call symbol/are dependent on it
+    (directly or indirectly, i.e. the transitive closure).
+    """
+    processed = get_dependents.processed # to break recursion
+    
+    if symbol in processed:
+        return set() 
+
+    processed.add(symbol)
+    dependents = { s for s in call_graph if symbol in call_graph[s] }
+    keys = set(dependents)
+    for sym in keys:
+        dependents |= get_dependents(sym, call_graph)
+    processed.remove(symbol)
+    return dependents 
+
+
+@static_vars(processed=set())
+def get_dependees(symbol, call_graph):
+    """Return a list of all symbols that are called by symbol/symbol depends on
+    (directly or indirectly, i.e. the transitive closure).
+    """
+    processed = get_dependees.processed # to break recursion
+     
+    if symbol in processed:
+        return set()
+
+    processed.add(symbol)
+    dependees = { s for s in call_graph if s in call_graph[symbol] }
+    keys = set(dependees)
+    for sym in keys:
+        dependees |= get_dependees(sym, call_graph)
+    processed.remove(symbol)
+    return dependees
+
+
+def get_dependency_graph_of(symbol, call_graph):
+    """Return a sub-graph of the call graph with symbol as the root element.
+    """
+    dependees = get_dependees(symbol, call_graph)
+    dependees.add(symbol) # Also include the symbol itself
+    return {sym : call_graph[sym] for sym in dependees}
+
+
+def get_changed_functions(local_hashes, prev_local_hashes): # TODO: rename get_changed_elements
+    """Compare the hashes and return all functions for which the hash changed.
+
+    Returns:
+        A tuple of sets containing the changed functions.
+        (modified, added, deleted)
+    """
+    current_functions = set(local_hashes.keys())
+    previous_functions = set(prev_local_hashes.keys())
+
+    kept_functions = current_functions & previous_functions # not added or deleted
+    modified_functions = set()
+    for symbol in kept_functions:
+        if local_hashes[symbol] != prev_local_hashes[symbol]:
+            modified_functions.add(symbol)
+
+    added_functions = current_functions - previous_functions
+    deleted_functions = previous_functions - current_functions
+
+    return (modified_functions, added_functions, deleted_functions)
+
+
+def get_impacted_funcs(changed_functions, call_graph):
+    """
+    Args:
+        changed_functions: A set of all functions that changed.
+        call_graph: A dict with all dependencies.
+
+    Returns:
+        A set of all function names that are impacted by any change.
+    """
+    impacted_functions = set(changed_functions)
+    for symbol in changed_functions:
+        impacted_functions |= get_dependents(symbol, call_graph)
+
+    return impacted_functions
+
+
+def get_global_hashes(local_hashes, used_definitions):
+    global_hashes = {}
+    for symbol in local_hashes:
+       get_global_hash(symbol, global_hashes, local_hashes, used_definitions)
+    return global_hashes
+
+
+################################################################################
+
+
+PATH_TO_PROJECT = "/home/cip/2015/yb90ifym/clang-hash/hash-projects/lua/"
+
+# Path to the .o.info files of the current commit
+CURRENT_HASH_FILES = PATH_TO_PROJECT + "cur_info/"
+# Path to .o.info files of the previous commit
+PREVIOUS_HASH_FILES = PATH_TO_PROJECT + "prev_info/"
+
+if __name__ == "__main__":
+    args = sys.argv
+    argc = len(args)
+    if argc > 1 and HELP_FLAG not in args:
+        #if argc > 3: # 4th param is path # TODO: this does not hold anymore!
+        #    working_directory = args[3]
+        #    os.chdir(working_directory)
+        #working_directory = os.getcwd() # TODO: get path from command line
+
+
+        # get data
+        if CHASH_GLOBAL_FLAG in args:
+
+            local_hashes, used_definitions = read_info_files(CURRENT_HASH_FILES)
+            prev_hashes, prev_used_definitions = read_info_files(PREVIOUS_HASH_FILES)
+
+            # TODO: create more modes, perhaps make this flag a little switch (e.g. -c)
+            # TODO: also create all the FLAGs below for cHash-global
+
+            # Print all symbols whose global hash changed
+            global_hashes = get_global_hashes(local_hashes, used_definitions)
+            prev_global_hashes = get_global_hashes(prev_hashes, prev_used_definitions)
+
+            changed_global_hashes = get_changed_functions(global_hashes, prev_global_hashes)
+            print changed_global_hashes
+
+            sys.exit(0)
+
+
+        # else, work with call graph based analysis
+
+        local_hashes, call_graph = read_info_files_functions_only(CURRENT_HASH_FILES)
+        prev_hashes, prev_call_graph = read_info_files_functions_only(PREVIOUS_HASH_FILES)
+
+
+        if DEPENDENTS_FLAG in args:
+            symbol_to_check = get_param_of(DEPENDENTS_FLAG)
+            dependents = get_dependents(symbol_to_check, call_graph)
+            print dependents
+
+        elif DIRECT_FLAG in args:
+            symbol = get_param_of(DIRECT_FLAG)
+            assert symbol in call_graph
+            print call_graph[symbol]
+
+        elif DEPENDEES_FLAG in args:
+            symbol_to_check = get_param_of(DEPENDEES_FLAG)
+            dependees = get_dependees(symbol_to_check, call_graph)
+            print dependees
+
+        elif CHANGED_FUNCS_FLAG in args:
+            changed_functions = get_changed_functions(local_hashes, prev_hashes)
+            print changed_functions
+
+        elif IMPACTED_FUNCS_FLAG in args:
+            changed_funcs = get_changed_functions(local_hashes, prev_hashes)
+            changed_funcs_set = changed_funcs[0] | changed_funcs[1] | changed_funcs[2]
+            impacted_funcs = get_impacted_funcs(changed_funcs_set, call_graph)
+            print impacted_funcs
+
+
+        # vllt auch noch als option machen: aenderungen in den dependencies ausgeben lassen (geadded/deleted) new dependencies/removed dependencies
+
+
+        # Brauche folgendes experiment:
+        # 1. build, save hashes, build, save hashes
+        # 2. run dependency_analyzer, feed paths to both build's hash files
+
+        # TODO: check if local hash changed, then say changed/not changed based on call graph
+        # -> ??? same as cHash? muss das iwie auch noch in ein experiment giessen...
+
+        # TODO: Verfahren aus Zhang/Li/Sun2012 anwenden!
+
+        # WICHTIG: im experiment muss ichs gar nicht erst einmal "save" frisch bauen und dann erst richtig, es reicht einfach cleanen, dann bauen, dann parent holen, cleanen bauen
+
+    else:
+        usage()
+

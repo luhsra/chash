@@ -1,5 +1,23 @@
 {
     "files.associations": {
-        "functional": "cpp"
-    }
+        "functional": "cpp",
+        "array_var1.c": "cpp",
+        "typedecls_unused.c": "cpp",
+        "typedecls_used.c": "cpp",
+        "cmakeccompilerid.c": "cpp",
+        "assign_desinit.c": "cpp",
+        "assign_intlit_2.c": "cpp",
+        "typeof.c": "cpp",
+        "const_global.c": "cpp",
+        "dynamic_init.c": "cpp",
+        "pointer.c": "cpp",
+        "array": "cpp",
+        "random.h": "c",
+        "dump.cc": "c",
+        "test.h": "c",
+        "string": "cpp",
+        "tree.h": "c",
+        "basic_file.h": "c"
+    },
+    "git.ignoreLimitWarning": true
 }

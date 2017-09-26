@@ -9,6 +9,6 @@ source "$DIR/../global_hash.sh"
 check_local_hash_changed ${0}:${LINENO} \
                           "struct S { void *s; }; void foo (void *p); void func() { (void) sizeof(struct S); }" \
                           "struct S { void *s; }; void foo (void *p); void func() { foo(0); (void) sizeof(struct S); }" \
-                          "S" false \
+                          "S:test_struct_void_member.sh.9.var.c" false \
                           "func" true
 

@@ -156,8 +156,9 @@ struct ObjectCache {
 
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
-  HashTranslationUnitConsumer(raw_ostream *OS, bool StopIfSameHash)
-      : Terminal(OS), StopIfSameHash(StopIfSameHash) {}
+  HashTranslationUnitConsumer(CompilerInstance &CI, raw_ostream *OS,
+                              bool StopIfSameHash)
+      : CI(CI), Terminal(OS), StopIfSameHash(StopIfSameHash) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
     /// Step 1: Calculate Hash
@@ -225,16 +226,26 @@ public:
           const bool IsNonExternVariableDeclaration =
               isa<VarDecl>(D) && !cast<VarDecl>(D)->hasExternalStorage();
 
-          if (IsFunctionDefinition) {// Ignore declarations without definition
-            if (cast<FunctionDecl>(D)->getStorageClass() == SC_Static)
+          bool AppendFilename = false;
+          if (IsFunctionDefinition) { // Ignore declarations without definition
+            if (cast<FunctionDecl>(D)->getStorageClass() == SC_Static) {
               *Terminal << "(\"static function:";
-            else
+              AppendFilename = true;
+            } else {
               *Terminal << "(\"function:";
-          } else if (IsNonExternVariableDeclaration) // Ignore extern variables
-            *Terminal << "(\"variable:";
-          else if (isa<RecordDecl>(D))
+            }
+          } else if (IsNonExternVariableDeclaration) { // Ignore extern
+                                                       // variables
+            if (cast<VarDecl>(D)->getStorageClass() == SC_Static) {
+              *Terminal << "(\"static variable:";
+              AppendFilename = true;
+            } else {
+              *Terminal << "(\"variable:";
+            }
+          } else if (isa<RecordDecl>(D)) {
             *Terminal << "(\"record:";
-          else
+            AppendFilename = true;
+          } else
             continue;
 
           if (cast<NamedDecl>(D)->getName() != "") {
@@ -248,6 +259,14 @@ public:
                              ->getCanonicalTypeInternal()
                              .getAsString();
           }
+          if (AppendFilename) {
+            // Append the filename to the symbol's name
+            const auto Filename =
+                CI.getSourceManager().getFilename(D->getLocation());
+            *Terminal << ":" << (Filename.startswith("./")
+                                     ? Filename.slice(2, Filename.size())
+                                     : Filename);
+          }
           *Terminal << "\", \"";
           *Terminal << Dig.asString();
           *Terminal << "\"";
@@ -255,15 +274,32 @@ public:
           if (IsFunctionDefinition || IsNonExternVariableDeclaration) {
             *Terminal << ", [";
             for (const auto &SavedCallee : Visitor.DefUseSilo[cast<Decl>(D)]) {
+              // TODO: also dump records? could be forward-declarated?!
+              bool AppendFilename = false;
               if (isa<FunctionDecl>(SavedCallee)) {
-                if (cast<FunctionDecl>(SavedCallee)->getStorageClass() == SC_Static)
+                if (cast<FunctionDecl>(SavedCallee)->getStorageClass() ==
+                    SC_Static) {
                   *Terminal << "\"static function:";
-                else
+                  AppendFilename = true;
+                } else
                   *Terminal << "\"function:";
               } else {
-                *Terminal << "\"variable:";
+                if (cast<VarDecl>(SavedCallee)->getStorageClass() ==
+                    SC_Static) {
+                  *Terminal << "\"static variable:";
+                  AppendFilename = true;
+                } else
+                  *Terminal << "\"variable:";
               }
               *Terminal << cast<NamedDecl>(SavedCallee)->getName();
+              if (AppendFilename) {
+                // Append the filename to the symbol's name
+                const auto Filename = CI.getSourceManager().getFilename(
+                    SavedCallee->getLocation());
+                *Terminal << ":" << (Filename.startswith("./")
+                                         ? Filename.slice(2, Filename.size())
+                                         : Filename);
+              }
               *Terminal << "\", ";
             }
             *Terminal << "]";
@@ -281,6 +317,7 @@ public:
       // We are in caching mode and there should be an objectfile
       atexit(link_object_file);
       if (HashEqual) {
+        CI.clearOutputFiles(true);
         atexit_mode = ATEXIT_FROM_CACHE;
         exit(0);
       } else {
@@ -342,6 +379,7 @@ private:
     }
   }
 
+  CompilerInstance &CI;
   raw_ostream *const Terminal;
   TranslationUnitHashVisitor Visitor;
   bool StopIfSameHash;
@@ -377,7 +415,8 @@ protected:
     if (Verbose)
       Terminal = &errs();
 
-    return make_unique<HashTranslationUnitConsumer>(Terminal, StopIfSameHash);
+    return make_unique<HashTranslationUnitConsumer>(CI, Terminal,
+                                                    StopIfSameHash);
   }
 
   bool ParseArgs(const CompilerInstance &CI,
