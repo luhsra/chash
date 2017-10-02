@@ -47,7 +47,9 @@ if __name__ == "__main__":
             args.remove("-hash-verbose")
         except ValueError:
             pass
-    args.extend(["-Xclang", "-plugin-arg-clang-hash", "-Xclang","-hash-verbose", "-c", "-fsyntax-only"])
+    args.extend(["-Xclang", "-plugin-arg-clang-hash", "-Xclang","-hash-verbose"])#, "-c", "-fsyntax-only"])
+    if os.environ.get('NO_COMPILE'):
+        args.extend(["-c", "-fsyntax-only"])
 
     start_time = time.time()
     x = Popen([compiler, "-fplugin=" + plugin] + args,
