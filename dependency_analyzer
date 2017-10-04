@@ -3,6 +3,9 @@
 import os
 import sys
 
+from subprocess import check_output
+import re
+
 from chashutil import get_param_of
 from chashutil import static_vars
 from chashutil import read_info_files, read_info_files_functions_only
@@ -89,6 +92,20 @@ def get_dependency_graph_of(symbol, call_graph):
     return {sym : call_graph[sym] for sym in dependees}
 
 
+def get_changed_functions_from_commit(path, rev = "HEAD"):
+    diff = check_output(['git', '--git-dir', path + '/.git', 'show', rev])#.decode('utf-8')
+    fns = set()
+    for line in diff.split("\n"):
+        if not line.startswith("@@"):
+            continue
+        where = line.split("@@",2)[2]
+        m = re.search('.*?([a-zA-Z_][a-zA-Z0-9_]*)\s*\\(', where)
+        if m:
+            fn = m.group(1) # TODO: das hier ist komisch, return 'get_record_from'
+            fns.add(fn)
+    return fns
+
+
 def get_changed_functions(local_hashes, prev_local_hashes): # TODO: rename get_changed_elements
     """Compare the hashes and return all functions for which the hash changed.
 
@@ -132,6 +149,66 @@ def get_global_hashes(local_hashes, used_definitions):
     for symbol in local_hashes:
        get_global_hash(symbol, global_hashes, local_hashes, used_definitions)
     return global_hashes
+
+
+@static_vars(currently_processed=set())
+def get_fake_global_hash(symbol, global_hashes, local_hashes, used_definitions):
+    """Calculates the fake global hash of the symbol recursively over all used definitions
+    """
+    currently_processed = get_global_hash.currently_processed # to break recursion
+
+    # If a symbol does not have a local hash, we assume it is a library
+    # function and therefore does not require a local hash.
+    if symbol not in local_hashes:
+        return None
+
+    if symbol in global_hashes:
+        return global_hashes[symbol]
+
+    if local_hashes[symbol] == 1:
+        global_hashes[symbol] = 1
+        return global_hashes[symbol]
+
+    # Below this point, local_hash[element] is always 0
+
+    if symbol in currently_processed: # TODO: prevents recursion
+        return 0
+
+    currently_processed.add(symbol)
+
+    global_hash = 0
+
+    if symbol in used_definitions:
+        used_defs = used_definitions[symbol]
+        for used_def in used_defs:
+            used_def_global_hash = get_fake_global_hash(used_def, global_hashes, local_hashes, used_definitions)
+            if used_def_global_hash is not None:
+                global_hash += used_def_global_hash
+                if global_hash:
+                    break
+
+    currently_processed.remove(symbol)
+
+    global_hashes[symbol] = global_hash
+    return global_hashes[symbol]
+
+
+def get_fake_global_hashes(changed_functions, used_definitions):
+    """Set the local hashes of all changed elements to 1 and also all global hashes of changed elements will be non-zero"""
+    local_hashes = {f:(1 if f in changed_functions else 0) for f in used_definitions.keys()}
+    global_hashes = {}
+    for symbol in local_hashes:
+       get_fake_global_hash(symbol, global_hashes, local_hashes, used_definitions)
+    return global_hashes
+
+
+def get_impacted_funcs_fake_hash(changed_functions, call_graph):
+    """For efficience"""
+    global_hashes = get_fake_global_hashes(changed_functions, call_graph)
+    impacted_functions = {f for f in global_hashes.keys() if global_hashes[f] != 0}
+    return impacted_functions
+
+
 
 
 ################################################################################
@@ -196,13 +273,22 @@ if __name__ == "__main__":
 
         elif CHANGED_FUNCS_FLAG in args:
             changed_functions = get_changed_functions(local_hashes, prev_hashes)
+            for func in changed_functions[0]:
+                print func, " ", local_hashes[func], " ", prev_hashes[func]
+            print "Calced from hashes:"
             print changed_functions
+            changed_from_commit = get_changed_functions_from_commit(PATH_TO_PROJECT)
+            print "Got from commit:"
+            print changed_from_commit
 
         elif IMPACTED_FUNCS_FLAG in args:
             changed_funcs = get_changed_functions(local_hashes, prev_hashes)
             changed_funcs_set = changed_funcs[0] | changed_funcs[1] | changed_funcs[2]
             impacted_funcs = get_impacted_funcs(changed_funcs_set, call_graph)
             print impacted_funcs
+            changed_from_commit = get_changed_functions_from_commit(PATH_TO_PROJECT)
+            impacted_from_commit = get_impacted_funcs(changed_from_commit, call_graph)
+            print impacted_from_commit
 
 
         # vllt auch noch als option machen: aenderungen in den dependencies ausgeben lassen (geadded/deleted) new dependencies/removed dependencies

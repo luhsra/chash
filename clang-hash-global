@@ -15,13 +15,14 @@ from chashutil import FUNCTION_PREFIX, VARIABLE_PREFIX, INFO_EXTENSION, OUTPUT_F
 DEFINITION_FLAG = '--definition'
 OBJECT_FILE_FLAG = '--object-file'
 LOCAL_FLAG = '--local' # print the symbol's local hash
-
+ALL_FLAG = '--all'
 
 def usage():
     # TODO: add detailed description
     print "%s %s <symbol> [directory] [%s <outfile>]" % (sys.argv[0], DEFINITION_FLAG, OUTPUT_FLAG)
     print "%s %s <file> [directory] [%s <outfile>]" % (sys.argv[0], OBJECT_FILE_FLAG, OUTPUT_FLAG)
     print "%s %s <symbol> [directory] [%s <outfile>]" % (sys.argv[0], LOCAL_FLAG, OUTPUT_FLAG)
+    print "%s %s [directory] [%s <outfile>]" % (sys.argv[0], ALL_FLAG, OUTPUT_FLAG)
 
 
 @static_vars(currently_processed=set())
@@ -49,7 +50,7 @@ def get_global_hash(symbol, global_hashes, local_hashes, used_definitions):
     if symbol in used_definitions:
         used_defs = used_definitions[symbol]
         for used_def in used_defs:
-            used_def = get_name_of(used_def)
+            #used_def = get_name_of(used_def)
             used_def_global_hash = get_global_hash(used_def, global_hashes, local_hashes, used_definitions)
             if used_def_global_hash is not None:
                 global_hash.update(used_def_global_hash)
@@ -95,8 +96,8 @@ def run():
     args = sys.argv
     argc = len(args)
     if argc > 2:
-        if argc > 3: # 3rd param is path
-            working_directory = args[3]
+        if argc > 3 or ALL_FLAG in args: # 3rd param is path
+            working_directory = args[2 if ALL_FLAG in args else 3]
             os.chdir(working_directory)
         working_directory = os.getcwd()
 
@@ -121,6 +122,9 @@ def run():
             assert symbol in local_hashes
             print local_hashes[symbol]
             sys.exit(0)
+
+        elif ALL_FLAG in args:
+            symbols_to_check = local_hashes.keys()
 
         # map function -> global hash TODO: could be moved to get_global_hash?
         global_hashes = {}
