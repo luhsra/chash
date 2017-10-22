@@ -9,18 +9,17 @@ if __name__ == "__main__":
     args[1:] = sys.argv[1:]
     relevant = False
 
-    if "-c" in args and "-o" in args and "/dev/null" not in args:
+    if "-o" in args and "/dev/null" not in args:
         objectfile = args[args.index("-o")+1]
-        if os.path.exists(objectfile):
-            relevant = True
-            try:
-                oldfpr = xattr.getxattr(objectfile, 'user.fingerprint')
-                oldtime = xattr.getxattr(objectfile, 'user.fpr_time')
-            except:
-                oldfpr = '0'
-                oldtime = '0'
+        relevant = True
+        try:
+            oldfpr = xattr.getxattr(objectfile, 'user.fingerprint')
+            oldtime = xattr.getxattr(objectfile, 'user.fpr_time')
+        except:
+            oldfpr = '0'
+            oldtime = '0'
 
-    # compile the File
+    # run the compiler
     x = Popen(args, stdin=sys.stdin, stdout=PIPE, stderr=PIPE)
     (stdout, stderr) = x.communicate()
     sys.stdout.write(stdout.decode('utf-8'))
@@ -28,17 +27,17 @@ if __name__ == "__main__":
     retcode = x.wait()
 
     if relevant:
-
-        # Save Objectfile data
-        objectfile_data = open(objectfile,'rb').read()
-        objectfile_fpr = (hashlib.md5(objectfile_data).hexdigest()+'\0').encode('ascii')
-        if oldfpr != objectfile_fpr:
-            print(str(oldfpr) + str(objectfile_fpr))
-            xattr.setxattr(objectfile, 'user.fingerprint', objectfile_fpr)
-            time_str = str(time.time())+'\0'
-            xattr.setxattr(objectfile, 'user.fpr_time', time_str.encode('ascii')) 
-        else:
-            xattr.setxattr(objectfile, 'user.fingerprint', oldfpr)
-            xattr.setxattr(objectfile, 'user.fpr_time', oldtime) 
+        if os.path.exists(objectfile):
+            xattr.setxattr(objectfile, 'user.fpp', ("1").encode('ascii'))
+            # Save Objectfile data
+            objectfile_data = open(objectfile,'rb').read()
+            objectfile_fpr = (hashlib.md5(objectfile_data).hexdigest()+'\0').encode('ascii')
+            if oldfpr != objectfile_fpr:
+                xattr.setxattr(objectfile, 'user.fingerprint', objectfile_fpr)
+                time_str = str(int(time.time()*1000000000))+'\0'
+                xattr.setxattr(objectfile, 'user.fpr_time', time_str.encode('ascii')) 
+            else:
+                xattr.setxattr(objectfile, 'user.fingerprint', oldfpr)
+                xattr.setxattr(objectfile, 'user.fpr_time', oldtime) 
 
     sys.exit(retcode)
