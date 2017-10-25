@@ -3,9 +3,8 @@
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
-#include "clang/AST/DeclVisitor.h"
-#include "clang/AST/StmtVisitor.h"
-#include "clang/AST/TypeVisitor.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+
 #include <string>
 #include <set>
 #include <map>
@@ -16,85 +15,246 @@
 
 using namespace clang;
 
-/// VisitXyz-Methods return true if case was handled
+namespace TranslationUnitHashVisitorPrefix {
+enum  {
+    VarDecl = 0xb19c2ee2,
+    VarDecl_init = 0x66734486,
+    ImplicitParamDecl = 0xd04f138f,
+    ParamVarDecl = 0x1fe2fcb9,
+
+    StmtExpr = 0xf4bb377e,
+    CastExpr = 0x7c505e88,
+
+    CharacterLiteral = 0x2a1c033f,
+    IntegerLiteral = 0x7b2daa87,
+    FloatingLiteral = 0xceee8473,
+    StringLiteral = 0xe5846c45,
+
+    ForStmt = 0xec4e334f,
+    IfStmt = 0x3de06c3c,
+    NullStmt = 0x777400e0,
+    DoStmt = 0xa80405bd,
+    GotoStmt = 0xec2a6be8,
+    ContinueStmt = 0x2c518360,
+    ReturnStmt = 0x1cf8354e,
+    WhileStmt = 0x6cb85f96,
+    LabelStmt = 0xe3d17613,
+    SwitchStmt = 0x6ef423db,
+    CaseStmt = 0x9640cc21,
+    DefaultStmt = 0x2f6febe9,
+    DeclStmt = 0xbe748556,
+
+    PointerType = 0x5b868718,
+    ArrayType = 0xd0b37bef,
+    ConstantArrayType = 0x6439c9ef,
+    VariableArrayType = 0x74887cd4,
+    ComplexType = 0x75d5304a,
+    AtomicType = 0x8a024d89,
+    TypeOfExprType = 0x3417cfda,
+    TypeOfType = 0x98090139,
+    ParenType = 0x7c2df2fc,
+    FunctionType = 0x8647819b,
+    FunctionProtoType = 0x4dd5f204,
+    EnumType = 0x4acd4cde,
+    TagType = 0x94c7a399,
+    AttributedType = 0xddc8426,
+    UnaryTransformType = 0xca8afa5b,
+    DecayedType = 0x707c703e,
+    AdjustedType = 0x9936193,
+    ElaboratedType = 0x96681107,
+
+    DeclRefExpr = 0xa33a24f3,
+    PredefinedExpr = 0xffb3cc20,
+    InitListExpr = 0xe23aaddd,
+    UnaryExprOrTypeTraitExpr = 0xb4995380,
+    MemberExpr = 0xe682fc67,
+    AddrLabelExpr = 0xe511b92e,
+    CompoundLiteralExpr = 0xc54ffefa,
+    CallExpr = 0x427cc6e8,
+    OffsetOfExpr = 0x48232f36,
+    ParenExpr = 0xf1a9c911,
+    AtomicExpr = 0x7e5497b7,
+    ParenListExpr = 0x64600f,
+    DesignatedInitExpr = 0x8d017154,
+    Designator = 0x6cf40f99, // TODO: vllt. woanders "einsortieren"?
+    ArraySubscriptExpr = 0x8c7ab6b2, // TODO: = ArrayAccess?
+    ImplicitValueInitExpr = 0xfe7647fa,
+    VAArgExpr = 0xdf10fedc,
+    BlockExpr = 0xcc75aacd,
+
+    BlockDecl = 0x761e230f,
+    FunctionDecl = 0x2a34b689,
+    LabelDecl = 0xff6db781,
+    EnumDecl = 0xc564aed1,
+    EnumConstantDecl = 0x11050d85,
+    IndirectFieldDecl = 0x937408ea,
+    ValueDecl = 0xbb06d011,
+    FileScopeAsmDecl = 0x381879fa,
+    CapturedDecl = 0xa3a884ed,
+
+    Attr = 0x56b6cba9,
+    InheritableAttr = 0x7c0b04ce,
+    InheritableParamAttr = 0x6a4fdb90,
+
+    CompoundStmt = 0x906b6fb4,
+    BreakStmt = 0x530ae0a9,
+    GCCAsmStmt = 0x652782d6,
+    MSAsmStmt = 0xccd123ef,
+    AttributedStmt = 0x8e36d148,
+    CaptureStmt = 0x1cafe3db,
+    IndirectGotoStmt = 0x98888356,
+
+    StructureType = 0xa5b0d36d,
+    UnionType = 0x5057c896,
+
+    UnaryOperator = 0x496a1fb5,
+    BinaryOperator = 0xa6339d46,
+    CompoundAssignmentOperator = 0x9c582bf3,
+    AbstractConditionalOperator = 0x151982b7,
+    BinaryConditionalOperator = 0x40d2aa93,
+
+    // TODO: sort these:
+    ImaginaryLiteral = 0xe340180e,
+    OffsetOfNode = 0x17f2d532,
+    FieldDecl = 0xac0c83d4,
+
+    RecordDecl = 0x27892cea,
+    VectorType = 0x4ed393c3,
+    ShuffleVectorExpr = 0x2e2321ad,
+    ConvertVectorExpr = 0xfe447195,
+
+    // FIXME
+    TypeTraitExpr = 0xe9bda7a,
+    ArrayTypeTraitExpr = 0xd6b02f4,
+    AsmStmt = 0xe8cca40,
+    CXXBoolLiteralExpr = 0x45b2a746,
+    CXXCatchStmt = 0xc853e2ac,
+    CXXDeleteExpr = 0xbcfa92ec,
+    CXXFoldExpr = 0x1cc7935,
+    Stmt = 0xc1ac6c2,
+    ObjCPropertyRefExpr = 0x6636c2c,
+    ObjCIndirectCopyRestoreExpr= 0xb53e833,
+    ObjCBridgedCastExpr = 0xcc79223,
+    ObjCAtCatchStmt = 0xd6ce349,
+    MSDependentExistsStmt = 0xf2097b9,
+    LambdaExpr = 0xd799f74,
+    GenericSelectionExpr = 0x51b395c,
+    ExpressionTraitExpr = 0x8f308a7,
+    Expr = 0x821bad1,
+// = 0xe8cca403,
+// = 0xb190dc73,
+// = 0xe9bb85af,
+// = 0xa6c4b308,
+// = 0xdb0b2b7d,
+// = 0x6a185f1b,
+// = 0x8c64784e,
+// = 0x7d816c99,
+// = 0x80161e92,
+// = 0xb07dce69,
+// = 0x68ce4241,
+// = 0x4bfa546,
+// = 0x6ab898b3,
+// = 0xb5eb2dc1,
+// = 0xfbbc5e13,
+// = 0xe61ede42,
+// = 0x15937adc,
+// = 0xf14f6e4c,
+// = 0x2598e793,
+// = 0x3705a5dc,
+// = 0xbf501711,
+// = 0x94263251,
+// = 0x33510fa8,
+// = 0xaef072e3,
+// = 0xb4f29497,
+// = 0x4daa3158,
+// = 0xf612fb23,
+// = 0x6d9c820a,
+
+};
+}
+
+// FIXME: Some Collectors are broken out of tree.
+namespace data_collection {
+    static int getMacroStack(SourceLocation, ASTContext&) { return 42; }
+}
+
 class TranslationUnitHashVisitor
-    : public ConstDeclVisitor<TranslationUnitHashVisitor, bool>,
-      public ConstStmtVisitor<TranslationUnitHashVisitor, bool>,
-      public TypeVisitor<TranslationUnitHashVisitor, bool> {
+    : public RecursiveASTVisitor<TranslationUnitHashVisitor> {
+    typedef TranslationUnitHashVisitor Inherited;
 
-  typedef ConstDeclVisitor<TranslationUnitHashVisitor, bool> mt_declvisitor;
-  typedef ConstStmtVisitor<TranslationUnitHashVisitor, bool> mt_stmtvisitor;
-  typedef TypeVisitor<TranslationUnitHashVisitor, bool> mt_typevisitor;
+    ASTContext &Context;
 
-  Hash TopLevelHash;
+    Hash TopLevelHash;
 
-  // /// Pending[i] is an action to hash an entity at level i.
-  bool FirstChild;
-  llvm::SmallVector<std::function<void()>, 32> Pending;
+    /// Counter to handle recursion when hashing function calls
+    int ignoreFunctionBody = 0;
 
-  /// Counter to handle recursion when hashing function calls
-  int ignoreFunctionBody = 0;
+    llvm::SmallVector<Hash, 32> HashStack;
 
-  /// Hash a child of the current node.
-  unsigned beforeDescent() {
-    FirstChild = true;
-    return Pending.size();
-  }
-
-  template <typename Fn> void afterChildren(Fn Func) {
-    if (FirstChild) {
-      Pending.push_back(std::move(Func));
-    } else {
-      Pending.back()();
-      Pending.back() = std::move(Func);
-    }
-    FirstChild = false;
-  }
-
-  void afterDescent(unsigned Depth) {
-    // If any children are left, they're the last at their nesting level.
-    // Hash those ones out now.
-    while (Depth < Pending.size()) {
-      Pending.back()();
-      this->Pending.pop_back();
-    }
-  }
-
-  llvm::SmallVector<Hash, 32> HashStack;
+    // For the DataCollector, we implement a few addData() functions
+    void addData(uint64_t data) { topHash() << data; }
+    void addData(const StringRef &str) { topHash() << str;}
+    void addData(const QualType&);
 
 public:
-  // In this storage we save hashes for various memory objects
-  std::map<const Type *, Hash::Digest> TypeSilo;
-  std::map<const Decl *, Hash::Digest> DeclSilo;
 
-  // For tracking usage of functions/globals
-  // Maps each function to all functions called and global variables read
-  // by that function
-  std::map<const Decl *, std::set<const Decl *>> DefUseSilo;
+#define DEF_ADD_DATA(CLASS, CODE)                                   \
+    template<class=void> bool Visit##CLASS(const CLASS *S) {        \
+        addData(TranslationUnitHashVisitorPrefix::CLASS);           \
+        CODE;                                                       \
+        return true;                                                \
+    }
+#include "StmtDataCollectors.inc"
 
-  // Utilities
-  bool hasNodes(const DeclContext *DC);
+    TranslationUnitHashVisitor(ASTContext &Context)
+        : Context(Context) { }
 
-  void hashDecl(const Decl *D);
-  void hashStmt(const Stmt *Node);
-  void hashType(const QualType &T);
-  void hashAttr(const Attr *A);
 
-  void hashName(const NamedDecl *ND);
+    // In this storage we save hashes for various memory objects
+    std::map<const Type *, Hash::Digest> TypeSilo;
+    std::map<const Decl *, Hash::Digest> DeclSilo;
 
-  void hashCommandLine(const std::list<std::string> &CommandLineArgs);
+    // For tracking usage of functions/globals
+    // Maps each function to all functions called and global variables read
+    // by that function
+    std::map<const Decl *, std::set<const Decl *>> DefUseSilo;
 
-  // C Declarations
-  bool VisitTranslationUnitDecl(const TranslationUnitDecl *Unit);
-  bool VisitVarDecl(const VarDecl *D);
-  /// Not interesting
-  bool VisitEmptyDecl(const EmptyDecl *) { return true; }
-  bool VisitTypedefDecl(const TypedefDecl *) { return true; }
+    // Utilities
+    bool hasNodes(const DeclContext *DC);
 
-  bool VisitRecordDecl(const RecordDecl *D) { return true; }
-  bool VisitFieldDecl(const FieldDecl *D);
+    void hashDecl(Decl *D);
+    void hashStmt(const Stmt *Node);
+    void hashType(const QualType &T);
+    void hashAttr(const Attr *A);
 
-  // C Types
+    void hashName(const NamedDecl *ND);
+
+    void hashCommandLine(const std::list<std::string> &CommandLineArgs);
+
+    std::string getHash(unsigned *ProcessedBytes = nullptr);
+
+    /* For some special nodes, override the traverse function, since we
+       need both pre- and post order traversal */
+    bool TraverseTranslationUnitDecl(TranslationUnitDecl *Unit);
+
+
+    bool VisitTypedefType(const TypedefType *T) {
+        // For a Typedef Type, we include the typedef declaration
+        return TraverseDecl(T->getDecl());
+    }
+
+#if 0
+    // C Declarations
+    bool VisitTranslationUnitDecl(const TranslationUnitDecl *Unit);
+    bool VisitVarDecl(const VarDecl *D);
+    /// Not interesting
+    bool VisitEmptyDecl(const EmptyDecl *) { return true; }
+    bool VisitTypedefDecl(const TypedefDecl *) { return true; }
+
+    bool VisitRecordDecl(const RecordDecl *D) { return true; }
+    bool VisitFieldDecl(const FieldDecl *D);
+
+    // C Types
   bool VisitBuiltinType(const BuiltinType *T);
   bool VisitPointerType(const PointerType *T);
   bool VisitArrayType(const ArrayType *T);
@@ -117,7 +277,6 @@ public:
   bool VisitAdjustedType(const AdjustedType *T);
   bool VisitElaboratedType(const ElaboratedType *T);
 
-  std::string getHash(unsigned *ProcessedBytes = nullptr);
 
   // C Exprs (no clang-builtins, ...)
   /*bool VisitExpr(const Expr *Node);*/
@@ -212,123 +371,8 @@ public:
 
   // not implemented
   bool VisitOMPExecutableDirective(const OMPExecutableDirective *Node);
+#endif
 
-protected:
-  enum AstElementPrefix {
-    AstElementVarDecl = 0xb19c2ee2,
-    AstElementVarDecl_init = 0x66734486,
-    AstElementImplicitParamDecl = 0xd04f138f,
-    AstElementParamVarDecl = 0x1fe2fcb9,
-
-    AstElementStmtExpr = 0xf4bb377e,
-    AstElementCastExpr = 0x7c505e88,
-
-    AstElementCharacterLiteral = 0x2a1c033f,
-    AstElementIntegerLiteral = 0x7b2daa87,
-    AstElementFloatingLiteral = 0xceee8473,
-    AstElementStringLiteral = 0xe5846c45,
-
-    AstElementForStmt = 0xec4e334f,
-    AstElementIfStmt = 0x3de06c3c,
-    AstElementNullStmt = 0x777400e0,
-    AstElementDoStmt = 0xa80405bd,
-    AstElementGotoStmt = 0xec2a6be8,
-    AstElementContinueStmt = 0x2c518360,
-    AstElementReturnStmt = 0x1cf8354e,
-    AstElementWhileStmt = 0x6cb85f96,
-    AstElementLabelStmt = 0xe3d17613,
-    AstElementSwitchStmt = 0x6ef423db,
-    AstElementCaseStmt = 0x9640cc21,
-    AstElementDefaultStmt = 0x2f6febe9,
-    AstElementDeclStmt = 0xbe748556,
-
-    AstElementPointerType = 0x5b868718,
-    AstElementArrayType = 0xd0b37bef,
-    AstElementConstantArrayType = 0x6439c9ef,
-    AstElementVariableArrayType = 0x74887cd4,
-    AstElementComplexType = 0x75d5304a,
-    AstElementAtomicType = 0x8a024d89,
-    AstElementTypeOfExprType = 0x3417cfda,
-    AstElementTypeOfType = 0x98090139,
-    AstElementParenType = 0x7c2df2fc,
-    AstElementFunctionType = 0x8647819b,
-    AstElementFunctionProtoType = 0x4dd5f204,
-    AstElementEnumType = 0x4acd4cde,
-    AstElementTagType = 0x94c7a399,
-    AstElementAttributedType = 0xddc8426,
-    AstElementUnaryTransformType = 0xca8afa5b,
-    AstElementDecayedType = 0x707c703e,
-    AstElementAdjustedType = 0x9936193,
-    AstElementElaboratedType = 0x96681107,
-
-    AstElementDeclRefExpr = 0xa33a24f3,
-    AstElementPredefinedExpr = 0xffb3cc20,
-    AstElementInitListExpr = 0xe23aaddd,
-    AstElementUnaryExprOrTypeTraitExpr = 0xb4995380,
-    AstElementMemberExpr = 0xe682fc67,
-    AstElementAddrLabelExpr = 0xe511b92e,
-    AstElementCompoundLiteralExpr = 0xc54ffefa,
-    AstElementCallExpr = 0x427cc6e8,
-    AstElementOffsetOfExpr = 0x48232f36,
-    AstElementParenExpr = 0xf1a9c911,
-    AstElementAtomicExpr = 0x7e5497b7,
-    AstElementParenListExpr = 0x64600f,
-    AstElementDesignatedInitExpr = 0x8d017154,
-    AstElementDesignator = 0x6cf40f99, // TODO: vllt. woanders "einsortieren"?
-    AstElementArraySubscriptExpr = 0x8c7ab6b2, // TODO: = ArrayAccess?
-    AstElementImplicitValueInitExpr = 0xfe7647fa,
-    AstElementVAArgExpr = 0xdf10fedc,
-    AstElementBlockExpr = 0xcc75aacd,
-
-    AstElementBlockDecl = 0x761e230f,
-    AstElementFunctionDecl = 0x2a34b689,
-    AstElementLabelDecl = 0xff6db781,
-    AstElementEnumDecl = 0xc564aed1,
-    AstElementEnumConstantDecl = 0x11050d85,
-    AstElementIndirectFieldDecl = 0x937408ea,
-    AstElementValueDecl = 0xbb06d011,
-    AstElementFileScopeAsmDecl = 0x381879fa,
-    AstElementCapturedDecl = 0xa3a884ed,
-
-    AstElementAttr = 0x56b6cba9,
-    AstElementInheritableAttr = 0x7c0b04ce,
-    AstElementInheritableParamAttr = 0x6a4fdb90,
-
-    AstElementCompoundStmt = 0x906b6fb4,
-    AstElementBreakStmt = 0x530ae0a9,
-    AstElementGCCAsmStmt = 0x652782d6,
-    AstElementMSAsmStmt = 0xccd123ef,
-    AstElementAttributedStmt = 0x8e36d148,
-    AstElementCaptureStmt = 0x1cafe3db,
-    AstElementIndirectGotoStmt = 0x98888356,
-
-    AstElementStructureType = 0xa5b0d36d,
-    AstElementUnionType = 0x5057c896,
-
-    AstElementUnaryOperator = 0x496a1fb5,
-    AstElementBinaryOperator = 0xa6339d46,
-    AstElementCompoundAssignmentOperator = 0x9c582bf3,
-    AstElementAbstractConditionalOperator = 0x151982b7,
-    AstElementBinaryConditionalOperator = 0x40d2aa93,
-
-    // TODO: sort these:
-    AstElementImaginaryLiteral = 0xe340180e,
-    AstElementOffsetOfNode = 0x17f2d532,
-    AstElementFieldDecl = 0xac0c83d4,
-
-    AstElementRecordDecl = 0x27892cea,
-    AstElementVectorType = 0x4ed393c3,
-    AstElementShuffleVectorExpr = 0x2e2321ad,
-    AstElementConvertVectorExpr = 0xfe447195,
-    // AstElement = 0xe9bda7ae
-    // AstElement = 0x366466fc
-    // AstElement = 0xd6b02f4e
-    // AstElement = 0x9b31edf6
-    // AstElement = 0x45b2a746
-    // AstElement = 0xc853e2ac
-    // AstElement = 0xbcfa92ec
-    // AstElement = 0x1cc7935
-  };
 
   int inRecordType = 0; // Flag used to not follow pointers within structs
 

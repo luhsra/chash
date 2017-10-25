@@ -15,7 +15,7 @@ execute_process(COMMAND ${LLVM_CONFIG_EXE} --ldflags
   OUTPUT_VARIABLE LLVM_LDFLAGS
   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-add_definitions(${LLVM_CXXFLAGS} -std=c++11 -Wno-strict-aliasing)
+add_definitions(${LLVM_CXXFLAGS} -std=c++11 -Wno-strict-aliasing -Wno-implicit-fallthrough -O0)
 include_directories(${LLVM_OBJROOT}/tools/clang/include)
 include_directories(${LLVM_SRCROOT}/tools/clang/include)
 

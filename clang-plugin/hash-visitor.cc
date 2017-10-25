@@ -5,6 +5,7 @@
 using namespace llvm;
 using namespace clang;
 
+
 typedef TranslationUnitHashVisitor HashVisitor;
 
 std::string HashVisitor::getHash(unsigned *ProcessedBytes) {
@@ -15,55 +16,35 @@ std::string HashVisitor::getHash(unsigned *ProcessedBytes) {
   return TopLevelDigest.asString();
 }
 
-/// Declarations
+bool HashVisitor::TraverseTranslationUnitDecl(TranslationUnitDecl *TU) {
+    if (!TU) return true;
+    // First, we push a new hash onto the hashing stack. This hash
+    // will capture everythin within the TU*/
+    Hash *CurrentHash = pushHash();
 
-// Only called, if Decl should be visited
-void HashVisitor::hashDecl(const Decl *D) {
-  if (!D)
-    return;
+    VisitTranslationUnitDecl(TU);
 
-  if (const Hash::Digest *const SavedDigest = getHash(D)) {
-    topHash() << *SavedDigest;
-    return;
-  }
-
-  // Visit in Pre-Order
-  const unsigned Depth = beforeDescent();
-  const Hash *CurrentHash = nullptr;
-  if ((D->getDeclContext() != nullptr &&
-       isa<TranslationUnitDecl>(D->getDeclContext())) ||
-      isa<VarDecl>(D) || isa<FunctionDecl>(D)) {
-    CurrentHash = pushHash();
-  }
-
-  const bool Handled = mt_declvisitor::Visit(D);
-  if (!Handled) {
-    errs() << "---- START unhandled -----\n";
-    //    D->dump();
-    errs() << "---- END unhandled -----\n";
-  }
-
-  // Decls within functions are visited by the body.
-  if (!isa<FunctionDecl>(*D) && hasNodes(dyn_cast<DeclContext>(D))) {
-    const auto DC = cast<DeclContext>(D);
-    for (const auto *const Child : DC->noload_decls()) {
-      if (isa<TranslationUnitDecl>(D)) {
-        if (isa<TypedefDecl>(Child) || isa<RecordDecl>(Child) ||
-            isa<EnumDecl>(Child))
-          continue;
+    // Do recursion on our own, since we want to exclude some children
+    const auto DC = cast<DeclContext>(TU);
+    for (auto * Child : DC->noload_decls()) {
+        if (   isa<TypedefDecl>(Child)
+            || isa<RecordDecl>(Child)
+            || isa<EnumDecl>(Child))
+            continue;
 
         // Extern variable definitions at the top-level
         if (const auto VD = dyn_cast<VarDecl>(Child)) {
-          if (VD->hasExternalStorage()) {
-            continue;
-          }
+            if (VD->hasExternalStorage()) {
+                continue;
+            }
         }
 
         if (const auto FD = dyn_cast<FunctionDecl>(Child)) {
           // We try to avoid hashing of declarations that have no definition
           if (!FD->isThisDeclarationADefinition()) {
             bool doHashing = false;
-            // look for alias attribute. if alias, hash, else ignore
+            // HOWEVER! If this declaration is an alias Declaration, we
+            // hash it no matter what
             if (FD->hasAttrs()) {
               for (const Attr *const A : FD->getAttrs()) {
                 if (A->getKind() == attr::Kind::Alias) {
@@ -72,26 +53,59 @@ void HashVisitor::hashDecl(const Decl *D) {
                 }
               }
             }
-            if (!doHashing)
-              continue;
+            if (!doHashing) continue;
           }
         }
-      }
 
-      hashDecl(Child);
+        TraverseDecl(Child);
     }
-  }
 
-  // Visit attributes of the decl
-  for (const Attr *const A : D->attrs()) {
-    hashAttr(A);
-  }
+    storeHash(TU, popHash(CurrentHash));
+    TopLevelHash << *CurrentHash;
 
-  afterDescent(Depth);
+    return true;
+}
 
-  if (CurrentHash != nullptr) {
-    // We opened a new  hash context, close it again and hash it into the parent
-    const Hash::Digest CurrentDigest = popHash(CurrentHash);
+// On our way down, we meet a lot of qualified types.
+void HashVisitor::addData(const QualType &T) {
+    errs() << "TYPE: " << T.getAsString() << "\n";
+
+    // 1. Hash referenced type
+    const Type *const ActualType = T.getTypePtr();
+    assert(ActualType != nullptr);
+
+    // FIXME: Structural hash
+    // 1.1 Was it already hashed?
+    const Hash::Digest *const SavedDigest = getHash(ActualType);
+    if (SavedDigest) {
+        // 1.1.1 Use cached value
+        topHash() << *SavedDigest;
+    } else {
+        // 1.1.2 Calculate hash for type
+        const Hash *const CurrentHash = pushHash();
+        TraverseType(T); // Uses getTypePtr() internally
+        const Hash::Digest TypeDigest = popHash(CurrentHash);
+
+        topHash() << TypeDigest;
+
+        // Store hash for underlying type
+        storeHash(ActualType, TypeDigest);
+    }
+
+    topHash() << T.getCVRQualifiers();
+
+    errs() << "END\n";
+}
+
+void
+HashVisitor::hashCommandLine(const std::list<std::string> &CommandLineArgs) {
+    for (const auto &Arg : CommandLineArgs) {
+        TopLevelHash << Arg;
+    }
+}
+
+
+#if 0
 
     // Store hash for underlying type
     const bool DoNotSaveHash =
@@ -105,26 +119,6 @@ void HashVisitor::hashDecl(const Decl *D) {
   }
 }
 
-bool HashVisitor::hasNodes(const DeclContext *DC) {
-  if (!DC)
-    return false;
-
-  return DC->hasExternalLexicalStorage() ||
-         DC->noload_decls_begin() != DC->noload_decls_end();
-}
-
-bool HashVisitor::VisitTranslationUnitDecl(const TranslationUnitDecl *Unit) {
-  const Hash *const CurrentHash = pushHash();
-
-  afterChildren([=] {
-    storeHash(Unit, popHash(CurrentHash));
-    TopLevelHash << *CurrentHash;
-  });
-
-  //  Unit->dump();
-
-  return true;
-}
 
 bool HashVisitor::VisitVarDecl(const VarDecl *D) {
   if (D->hasGlobalStorage()) {
@@ -441,12 +435,6 @@ void HashVisitor::hashName(const NamedDecl *ND) {
   }
 }
 
-void
-HashVisitor::hashCommandLine(const std::list<std::string> &CommandLineArgs) {
-  for (const auto &Arg : CommandLineArgs) {
-    TopLevelHash << Arg;
-  }
-}
 
 // Expressions
 bool HashVisitor::VisitCastExpr(const CastExpr *Node) {
@@ -1240,3 +1228,5 @@ HashVisitor::VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {
   errs() << "OMPExecutableDirectives are not implemented yet.\n";
   exit(1);
 }
+
+#endif

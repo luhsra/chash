@@ -166,9 +166,10 @@ public:
 
     // Traversing the translation unit decl via a RecursiveASTVisitor
     // will visit all nodes in the AST.
-    Visitor.hashDecl(Context.getTranslationUnitDecl());
+    TranslationUnitHashVisitor Visitor(Context);
+    Visitor.TraverseDecl(Context.getTranslationUnitDecl());
 
-    hashCommandLineArguments();
+    hashCommandLineArguments(Visitor);
 
     const auto FinishHashing = std::chrono::high_resolution_clock::now();
 
@@ -331,7 +332,7 @@ public:
 
 private:
   // Returns true if the -stop-if-same-hash flag is set, else false.
-  void hashCommandLineArguments() {
+  void hashCommandLineArguments(TranslationUnitHashVisitor &Visitor) {
     // Get command line arguments
     const std::string PPID{std::to_string(getppid())};
     const std::string FilePath = "/proc/" + PPID + "/cmdline";
@@ -381,7 +382,6 @@ private:
 
   CompilerInstance &CI;
   raw_ostream *const Terminal;
-  TranslationUnitHashVisitor Visitor;
   bool StopIfSameHash;
 };
 
