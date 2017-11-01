@@ -241,18 +241,66 @@ class AttributedStmt {
     }
   }];
 }
+
+//--- Attributes ---------------------------------------------------------//
+class Attr {
+  code Code = [{
+    std::string AttrString;      
+    // Print all template arguments into ArgString
+    llvm::raw_string_ostream OS(AttrString);
+    S->printPretty(OS, Context.getLangOpts());
+    OS.flush();
+    std::cerr << " ATTR:" << AttrString << "\n";
+    addData(AttrString);
+  }];
+}
 //--- Declarations -------------------------------------------------------//
 
-class NamedDecl
+
+class ValueDecl  {
   code Code = [{
-  
+      /* Field Declarations can induce recursions */
+      if (isa<FieldDecl>(S)) {
+        addData(std::string(S->getType().getAsString()));
+      } else {
+        addData(S->getType());
+      }
+      addData(S->isWeak());
+  }];
+}
+
+class NamedDecl {
+  code Code = [{
       addData(S->getName());
+  }];
+}
+
+class TypeDecl {
+  code Code = [{
+      // If we would hash the resulting type for a typedef, we would get into an endless recursion.
+      if (!isa<TypedefNameDecl>(S)
+          && !isa<RecordDecl>(S)
+          && !isa<EnumDecl>(S)) {
+         addData(QualType(S->getTypeForDecl(),0));
+      }
+  }];
+}
+
+class TagDecl {
+  code Code = [{
+     addData(S->getTagKind());
+  }];
+}
+
+
+class TypedefNameDecl {
+  code Code = [{
+     addData(S->getUnderlyingType());
   }];
 }
 
 class VarDecl {
   code Code = [{
-      addData(S->getType());
       addData(S->getStorageClass());
       addData(S->getTLSKind());
       addData(S->isModulePrivate());
@@ -260,8 +308,83 @@ class VarDecl {
   }];
 }
 
-class TypedefNameDecl {
-  code Code = [{
-     
-  }];
+//--- Types ---------------------------------------------------------------//
+
+class BuiltinType {
+   code Code = [{
+      addData(S->getKind());
+   }];
 }
+
+class ConstantArrayType {
+   code Code = [{
+      addData(S->getSize().getZExtValue());
+   }];
+}
+
+class VectorType {
+   code Code = [{
+      addData(S->getNumElements());
+      addData(S->getVectorKind());
+   }];
+}
+
+class FunctionType {
+   code Code = [{
+      addData(S->getRegParmType());
+      addData(S->getCallConv());
+   }];
+}
+
+class FunctionProtoType {
+   code Code = [{
+      addData(S->getExceptionSpecType());
+      addData(S->isVariadic());
+      addData(S->getRefQualifier());
+      addData(S->hasTrailingReturn());
+   }];
+}
+
+class UnaryTransformType {
+   code Code = [{
+        addData(S->getUTTKind());
+   }];
+}
+
+class AttributedType {
+   code Code = [{
+        addData(S->getAttrKind());
+   }];
+}
+
+/* Some Types are just an extension to another type and wrap it. We
+   use TypeOfType with its empty code block for this. We define it as
+   empty to give the user of this file a hook for taking over control. */
+
+class TypeOfType { code Code = [{ }]; }
+class ComplexType         : TypeOfType {}
+class PointerType         : TypeOfType {}
+class BlockPointerType    : TypeOfType {}
+class LValueReferenceType : TypeOfType {}
+class RValueReferenceType : TypeOfType {}
+class MemberPointerType   : TypeOfType {}
+class AdjustedType        : TypeOfType {}
+class DecayedType         : TypeOfType {}
+class VariableArrayType   : TypeOfType {}
+class IncompleteArrayType : TypeOfType {}
+class DependentSizedArrayType     : TypeOfType {}
+/* FIXME: class DependentAddressSpaceType   : TypeOfType {} */
+class DependentSizedExtVectorType : TypeOfType {}
+class ExtVectorType       : TypeOfType {}
+class FunctionNoProtoType : TypeOfType {}
+class TypeOfExprType : TypeOfType {}
+class AtomicType     : TypeOfType {}
+class PipeType       : TypeOfType {}
+class DecltypeType   : TypeOfType {}
+
+class AutoType       : TypeOfType {}
+
+
+
+
+

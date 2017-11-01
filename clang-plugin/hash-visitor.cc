@@ -22,7 +22,7 @@ bool HashVisitor::TraverseTranslationUnitDecl(TranslationUnitDecl *TU) {
     // will capture everythin within the TU*/
     Hash *CurrentHash = pushHash();
 
-    VisitTranslationUnitDecl(TU);
+    WalkUpFromTranslationUnitDecl(TU);
 
     // Do recursion on our own, since we want to exclude some children
     const auto DC = cast<DeclContext>(TU);
@@ -68,7 +68,6 @@ bool HashVisitor::TraverseTranslationUnitDecl(TranslationUnitDecl *TU) {
 
 // On our way down, we meet a lot of qualified types.
 void HashVisitor::addData(const QualType &T) {
-    errs() << "TYPE: " << T.getAsString() << "\n";
 
     // 1. Hash referenced type
     const Type *const ActualType = T.getTypePtr();
@@ -80,7 +79,9 @@ void HashVisitor::addData(const QualType &T) {
     if (SavedDigest) {
         // 1.1.1 Use cached value
         topHash() << *SavedDigest;
+        errs() << "  TYPE-CACHE: " << T.getAsString() << "\n";
     } else {
+        errs() << "  TYPE-: " << T.getAsString() << "\n";
         // 1.1.2 Calculate hash for type
         const Hash *const CurrentHash = pushHash();
         TraverseType(T); // Uses getTypePtr() internally
@@ -93,8 +94,6 @@ void HashVisitor::addData(const QualType &T) {
     }
 
     topHash() << T.getCVRQualifiers();
-
-    errs() << "END\n";
 }
 
 void

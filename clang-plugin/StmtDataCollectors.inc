@@ -3,6 +3,9 @@ DEF_ADD_DATA(AddrLabelExpr, {
     addData(S->getLabel()->getName());
   }
 )
+DEF_ADD_DATA(AdjustedType, {
+ }
+)
 DEF_ADD_DATA(ArrayTypeTraitExpr, {
 
     addData(S->getTrait());
@@ -24,6 +27,20 @@ DEF_ADD_DATA(AsmStmt, {
     }
   }
 )
+DEF_ADD_DATA(AtomicType, {
+ }
+)
+DEF_ADD_DATA(Attr, {
+
+    std::string AttrString;      
+    // Print all template arguments into ArgString
+    llvm::raw_string_ostream OS(AttrString);
+    S->printPretty(OS, Context.getLangOpts());
+    OS.flush();
+    std::cerr << " ATTR:" << AttrString << "\n";
+    addData(AttrString);
+  }
+)
 DEF_ADD_DATA(AttributedStmt, {
 
     for (const Attr *A : S->getAttrs()) {
@@ -31,10 +48,26 @@ DEF_ADD_DATA(AttributedStmt, {
     }
   }
 )
+DEF_ADD_DATA(AttributedType, {
+
+        addData(S->getAttrKind());
+   }
+)
+DEF_ADD_DATA(AutoType, {
+ }
+)
 DEF_ADD_DATA(BinaryOperator, {
 
     addData(S->getOpcode());
   }
+)
+DEF_ADD_DATA(BlockPointerType, {
+ }
+)
+DEF_ADD_DATA(BuiltinType, {
+
+      addData(S->getKind());
+   }
 )
 DEF_ADD_DATA(CXXBoolLiteralExpr, {
 
@@ -85,6 +118,17 @@ DEF_ADD_DATA(CharacterLiteral, {
     addData(S->getValue());
   }
 )
+DEF_ADD_DATA(ComplexType, {
+ }
+)
+DEF_ADD_DATA(ConstantArrayType, {
+
+      addData(S->getSize().getZExtValue());
+   }
+)
+DEF_ADD_DATA(DecayedType, {
+ }
+)
 DEF_ADD_DATA(DeclRefExpr, {
 
     addData(S->getDecl()->getQualifiedNameAsString());
@@ -102,6 +146,15 @@ DEF_ADD_DATA(DeclStmt, {
     }
   }
 )
+DEF_ADD_DATA(DecltypeType, {
+ }
+)
+DEF_ADD_DATA(DependentSizedArrayType, {
+ }
+)
+DEF_ADD_DATA(DependentSizedExtVectorType, {
+ }
+)
 DEF_ADD_DATA(Expr, {
 
     addData(S->getType());
@@ -112,10 +165,30 @@ DEF_ADD_DATA(ExpressionTraitExpr, {
     addData(S->getTrait());
   }
 )
+DEF_ADD_DATA(ExtVectorType, {
+ }
+)
 DEF_ADD_DATA(FloatingLiteral, {
 
     addData(llvm::hash_value(S->getValue()));
   }
+)
+DEF_ADD_DATA(FunctionNoProtoType, {
+ }
+)
+DEF_ADD_DATA(FunctionProtoType, {
+
+      addData(S->getExceptionSpecType());
+      addData(S->isVariadic());
+      addData(S->getRefQualifier());
+      addData(S->hasTrailingReturn());
+   }
+)
+DEF_ADD_DATA(FunctionType, {
+
+      addData(S->getRegParmType());
+      addData(S->getCallConv());
+   }
 )
 DEF_ADD_DATA(GenericSelectionExpr, {
 
@@ -129,6 +202,9 @@ DEF_ADD_DATA(GotoStmt, {
     addData(S->getLabel()->getName());
   }
 )
+DEF_ADD_DATA(IncompleteArrayType, {
+ }
+)
 DEF_ADD_DATA(IndirectGotoStmt, {
 
     if (S->getConstantTarget())
@@ -139,6 +215,9 @@ DEF_ADD_DATA(IntegerLiteral, {
 
     addData(llvm::hash_value(S->getValue()));
   }
+)
+DEF_ADD_DATA(LValueReferenceType, {
+ }
 )
 DEF_ADD_DATA(LabelStmt, {
 
@@ -167,6 +246,14 @@ DEF_ADD_DATA(MemberExpr, {
     addData(S->getMemberDecl()->getName());
   }
 )
+DEF_ADD_DATA(MemberPointerType, {
+ }
+)
+DEF_ADD_DATA(NamedDecl, {
+
+      addData(S->getName());
+  }
+)
 DEF_ADD_DATA(ObjCAtCatchStmt, {
 
     addData(S->hasEllipsis());
@@ -187,10 +274,19 @@ DEF_ADD_DATA(ObjCPropertyRefExpr, {
     addData(S->isSuperReceiver()); addData(S->isImplicitProperty());
   }
 )
+DEF_ADD_DATA(PipeType, {
+ }
+)
+DEF_ADD_DATA(PointerType, {
+ }
+)
 DEF_ADD_DATA(PredefinedExpr, {
 
     addData(S->getIdentType());
   }
+)
+DEF_ADD_DATA(RValueReferenceType, {
+ }
 )
 DEF_ADD_DATA(Stmt, {
 
@@ -206,6 +302,27 @@ DEF_ADD_DATA(StringLiteral, {
     addData(S->getString());
 }
 )
+DEF_ADD_DATA(TagDecl, {
+
+     addData(S->getTagKind());
+  }
+)
+DEF_ADD_DATA(TypeDecl, {
+
+      // If we would hash the resulting type for a typedef, we would get into an endless recursion.
+      if (!isa<TypedefNameDecl>(S)
+          && !isa<RecordDecl>(S)
+          && !isa<EnumDecl>(S)) {
+         addData(QualType(S->getTypeForDecl(),0));
+      }
+  }
+)
+DEF_ADD_DATA(TypeOfExprType, {
+ }
+)
+DEF_ADD_DATA(TypeOfType, {
+ }
+)
 DEF_ADD_DATA(TypeTraitExpr, {
 
     addData(S->getTrait());
@@ -213,19 +330,47 @@ DEF_ADD_DATA(TypeTraitExpr, {
       addData(S->getArg(i)->getType());
   }
 )
+DEF_ADD_DATA(TypedefNameDecl, {
+
+     addData(S->getUnderlyingType());
+  }
+)
 DEF_ADD_DATA(UnaryOperator, {
 
     addData(S->getOpcode());
   }
 )
+DEF_ADD_DATA(UnaryTransformType, {
+
+        addData(S->getUTTKind());
+   }
+)
+DEF_ADD_DATA(ValueDecl, {
+
+      /* Field Declarations can induce recursions */
+      if (isa<FieldDecl>(S)) {
+        addData(std::string(S->getType().getAsString()));
+      } else {
+        addData(S->getType());
+      }
+      addData(S->isWeak());
+  }
+)
 DEF_ADD_DATA(VarDecl, {
 
-      addData(S->getName());
-      addData(S->getType());
       addData(S->getStorageClass());
       addData(S->getTLSKind());
       addData(S->isModulePrivate());
       addData(S->isNRVOVariable());
   }
+)
+DEF_ADD_DATA(VariableArrayType, {
+ }
+)
+DEF_ADD_DATA(VectorType, {
+
+      addData(S->getNumElements());
+      addData(S->getVectorKind());
+   }
 )
 #undef DEF_ADD_DATA

@@ -17,10 +17,19 @@ using namespace clang;
 
 namespace TranslationUnitHashVisitorPrefix {
 enum  {
+    /* Some Node Classes are only pure virtual. For speed reasons, we do not prefix them with a tag */
+    NamedDecl = 0,
+    TypeDecl = 0,
+    Expr = 0,
+    Decl = 0,
+    Stmt = 0,
+    TagDecl = 0,
+
     VarDecl = 0xb19c2ee2,
     VarDecl_init = 0x66734486,
     ImplicitParamDecl = 0xd04f138f,
     ParamVarDecl = 0x1fe2fcb9,
+    TypedefNameDecl = 0xe8cca403,
 
     StmtExpr = 0xf4bb377e,
     CastExpr = 0x7c505e88,
@@ -131,7 +140,6 @@ enum  {
     CXXCatchStmt = 0xc853e2ac,
     CXXDeleteExpr = 0xbcfa92ec,
     CXXFoldExpr = 0x1cc7935,
-    Stmt = 0xc1ac6c2,
     ObjCPropertyRefExpr = 0x6636c2c,
     ObjCIndirectCopyRestoreExpr= 0xb53e833,
     ObjCBridgedCastExpr = 0xcc79223,
@@ -140,25 +148,23 @@ enum  {
     LambdaExpr = 0xd799f74,
     GenericSelectionExpr = 0x51b395c,
     ExpressionTraitExpr = 0x8f308a7,
-    Expr = 0x821bad1,
-// = 0xe8cca403,
-// = 0xb190dc73,
-// = 0xe9bb85af,
-// = 0xa6c4b308,
-// = 0xdb0b2b7d,
-// = 0x6a185f1b,
-// = 0x8c64784e,
-// = 0x7d816c99,
-// = 0x80161e92,
-// = 0xb07dce69,
-// = 0x68ce4241,
-// = 0x4bfa546,
-// = 0x6ab898b3,
-// = 0xb5eb2dc1,
-// = 0xfbbc5e13,
-// = 0xe61ede42,
-// = 0x15937adc,
-// = 0xf14f6e4c,
+
+    BuiltinType = 0xb190dc73,
+    PipeType = 0xe9bb85af,
+    RValueReferenceType= 0xa6c4b308,
+    LValueReferenceType = 0xdb0b2b7d,
+    FunctionNoProtoType = 0x6a185f1b,
+    ExtVectorType = 0x7d816c99,
+    DependentSizedExtVector = 0x80161e92,
+    IncompleteArrayType= 0xb07dce69,
+    MemberPointerType = 0x68ce4241,
+    DependentAddressSpaceType = 0x4bfa546,
+    BlockPointerType = 0x6ab898b3,
+    DependentSizedExtVectorType = 0xb5eb2dc1,
+    DependentSizedArrayType = 0xfbbc5e13,
+    DecltypeType = 0xe61ede42,
+    AutoType = 0x15937adc,
+
 // = 0x2598e793,
 // = 0x3705a5dc,
 // = 0xbf501711,
@@ -180,7 +186,7 @@ namespace data_collection {
 
 class TranslationUnitHashVisitor
     : public RecursiveASTVisitor<TranslationUnitHashVisitor> {
-    typedef TranslationUnitHashVisitor Inherited;
+    typedef RecursiveASTVisitor<TranslationUnitHashVisitor> Inherited;
 
     ASTContext &Context;
 
@@ -198,11 +204,16 @@ class TranslationUnitHashVisitor
 
 public:
 
-#define DEF_ADD_DATA(CLASS, CODE)                                   \
-    template<class=void> bool Visit##CLASS(const CLASS *S) {        \
-        addData(TranslationUnitHashVisitorPrefix::CLASS);           \
-        CODE;                                                       \
-        return true;                                                \
+#define DEF_ADD_DATA(CLASS, CODE)                                       \
+    template<class=void>                                                \
+    bool Visit##CLASS(const CLASS *S) {                                 \
+        unsigned tag = TranslationUnitHashVisitorPrefix::CLASS;         \
+        if (tag != 0) {                                                 \
+            std::cerr << "  " #CLASS << " " << S << "\n";               \
+            addData(tag);                                               \
+        }                                                               \
+        CODE;                                                           \
+        return true;                                                    \
     }
 #include "StmtDataCollectors.inc"
 
@@ -233,15 +244,56 @@ public:
 
     std::string getHash(unsigned *ProcessedBytes = nullptr);
 
+    /// \brief Return whether this visitor should recurse into the types of
+    /// TypeLocs.
+    bool shouldWalkTypesOfTypeLocs() const { return false; }
+
+
+
     /* For some special nodes, override the traverse function, since we
        need both pre- and post order traversal */
     bool TraverseTranslationUnitDecl(TranslationUnitDecl *Unit);
 
+    /* For some special nodes, override the traverse function, since we
+       need both pre- and post order traversal */
+    bool TraverseDecl(Decl *D) {
+        std::cerr << "DECL: " << D << "\n";
+        /* For some declarations, we store the calculated hash value. */
+        bool CacheHash = false;
+        if (isa<FunctionDecl>(D) && cast<FunctionDecl>(D)->isGlobal())
+            CacheHash = true;
+        if (isa<VarDecl>(D) && cast<VarDecl>(D)->hasGlobalStorage())
+            CacheHash = true;
 
-    bool VisitTypedefType(const TypedefType *T) {
-        // For a Typedef Type, we include the typedef declaration
-        return TraverseDecl(T->getDecl());
+        if (!CacheHash) {
+            return Inherited::TraverseDecl(D);
+        }
+
+        const Hash::Digest *const SavedDigest = getHash(D);
+        if (SavedDigest) {
+           topHash() << *SavedDigest;
+           return true;
+        }
+        Hash *CurrentHash = pushHash();
+        bool ret = Inherited::TraverseDecl(D);
+        storeHash(D, popHash(CurrentHash));
+        TopLevelHash << *CurrentHash;
+
+        std::cerr << "DECL-END: " << D << "\n";
+
+
+        return ret;
     }
+
+#define DEF_TYPE_GOTO_DECL(CLASS, EXPR)                 \
+    bool Visit##CLASS(CLASS *T) {                       \
+       Inherited::Visit##CLASS(T);                      \
+       return TraverseDecl(EXPR);                       \
+    }
+
+    DEF_TYPE_GOTO_DECL(TypedefType, T->getDecl());
+    DEF_TYPE_GOTO_DECL(RecordType,  T->getDecl());
+    DEF_TYPE_GOTO_DECL(EnumType,    T->getDecl());
 
 #if 0
     // C Declarations
