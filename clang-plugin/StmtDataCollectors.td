@@ -237,6 +237,12 @@ class AsmStmt {
 class AttributedStmt {
   code Code = [{
     for (const Attr *A : S->getAttrs()) {
+       // We duplicate class Attr here to not rely on being integrated
+       // into a RecursiveASTVisitor.
+       std::string AttrString;      
+       llvm::raw_string_ostream OS(AttrString);
+       A->printPretty(OS, Context.getLangOpts());
+       OS.flush();
       addData(std::string(A->getSpelling()));
     }
   }];
@@ -246,11 +252,9 @@ class AttributedStmt {
 class Attr {
   code Code = [{
     std::string AttrString;      
-    // Print all template arguments into ArgString
     llvm::raw_string_ostream OS(AttrString);
     S->printPretty(OS, Context.getLangOpts());
     OS.flush();
-    std::cerr << " ATTR:" << AttrString << "\n";
     addData(AttrString);
   }];
 }

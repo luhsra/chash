@@ -96,6 +96,8 @@ void HashVisitor::addData(const QualType &T) {
     topHash() << T.getCVRQualifiers();
 }
 
+
+
 void
 HashVisitor::hashCommandLine(const std::list<std::string> &CommandLineArgs) {
     for (const auto &Arg : CommandLineArgs) {

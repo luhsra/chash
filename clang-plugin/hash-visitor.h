@@ -257,12 +257,16 @@ public:
     /* For some special nodes, override the traverse function, since we
        need both pre- and post order traversal */
     bool TraverseDecl(Decl *D) {
-        std::cerr << "DECL: " << D << "\n";
+        if (!D) return true;
+
+        // std::cerr << "DECL: " << D << "\n";
         /* For some declarations, we store the calculated hash value. */
         bool CacheHash = false;
         if (isa<FunctionDecl>(D) && cast<FunctionDecl>(D)->isGlobal())
             CacheHash = true;
         if (isa<VarDecl>(D) && cast<VarDecl>(D)->hasGlobalStorage())
+            CacheHash = true;
+        if (isa<RecordDecl>(D))
             CacheHash = true;
 
         if (!CacheHash) {
@@ -279,9 +283,26 @@ public:
         storeHash(D, popHash(CurrentHash));
         TopLevelHash << *CurrentHash;
 
-        std::cerr << "DECL-END: " << D << "\n";
+        // std::cerr << "DECL-END: " << D << "\n";
 
+        return ret;
+    }
 
+    bool VisitCallExpr(CallExpr *Call) {
+        addData(TranslationUnitHashVisitorPrefix::CallExpr);
+        bool ret;
+        if (FunctionDecl* FD = Call->getDirectCallee()) {
+            // FIXME: This is kind of an ugly non-const hack
+            // We do a hack to avoid the hashing of the callees body.
+            // If we would do that, we would get into an endless
+            // recursion on recursive functions.
+            Stmt *Body = FD->getBody();
+            FD->setBody(nullptr);
+            ret = TraverseDecl(FD);
+            FD->setBody(Body);
+        } else if (Expr *E = Call->getCallee()) {
+            ret = TraverseStmt(E);
+        }
         return ret;
     }
 
