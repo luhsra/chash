@@ -46,7 +46,7 @@ def get_record_from(info_filename):
                     # .info files are deleted by another testcase while reading
         pass
     return record
- 
+
 
 def get_name_of(symbol):
     """Name consists of symbol [1] and filename [2]"""
@@ -72,11 +72,11 @@ def read_info_files(directory):
         if record:
             for elem in record['element-hashes']:
                 prefix = get_prefix_of(elem[0])
-                symbol = get_name_of(elem[0])
+                symbol = elem[0]
 
                 if symbol in local_hashes:
                     if local_hashes[symbol] != elem[1]: # duplicate ok if hashes are the same
-                        assert symbol not in local_hashes # otherwise, every symbol must be unique
+                        assert symbol not in local_hashes, symbol # otherwise, every symbol must be unique
 
                 local_hashes[symbol] = elem[1]
 

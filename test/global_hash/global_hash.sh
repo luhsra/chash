@@ -53,7 +53,7 @@ function compile() {
 
 function recompile() {
     src="$1"; shift
-    echo "${src}" > ${fn}.var.c 
+    echo "${src}" > ${fn}.var.c
 
     compile "${fn}.var.c" "${fn}.var.o"
 }
@@ -118,13 +118,13 @@ function check_local_hash_changed() {
         else
             expected[$index/2]=$symbol
         fi
-        
+
         ((index = index + 1))
     done
-    
+
 
     cleanup
- 
+
     re_b=$(recompile "$src_b")
 
     index=0
@@ -157,7 +157,7 @@ function check_local_hash_changed() {
         fi
         ((index = index + 1))
     done
-   
+
     cleanup_all
     do_copy=true
     echo "  OK: ${loc}"
@@ -193,13 +193,13 @@ function check_global_hash_changed() {
         else
             expected[$index/2]=$symbol
         fi
-        
+
         ((index = index + 1))
     done
-    
+
 
     cleanup
- 
+
     re_b=$(recompile "$src_b")
 
     index=0
@@ -227,12 +227,12 @@ function check_global_hash_changed() {
                     echo "!!!Failure ${loc}: hashes are the same, should differ!"
                 fi
                 cleanup_all
-                exit 1 # TODO: move test cases to extra files
+                #exit 1 # TODO: move test cases to extra files
             fi
         fi
         ((index = index + 1))
     done
-   
+
     cleanup_all
     echo "  OK: ${loc}"
 }
@@ -242,8 +242,8 @@ function check_global_hash_changed() {
 function check_global_hash_changed_no_copy() {
     do_copy=false
     ret=$(check_global_hash_changed "$@")
-    do_copy=true
     echo "$ret"
+    do_copy=true
 }
 
 
@@ -276,13 +276,13 @@ function check_global_hashes_changed() {
         for i in "${arr[@]}"; do
             if [[ $i == *":"* ]]; then
                 key=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[0][1:-1]")
-                val=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[1][1:-1]")
-                global_hashes_a[$key]="$val"
+                value=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[1][1:-1]")
+                global_hashes_a[$key]="$value"
 
 
                 # Additional check: check if --object-file and --definition provide the same hashes
                 if [[ $(get_global_hash ${key}) != "$value" ]]; then
-                    echo "!!!Failure ${loc}: hash of definition mode differs"
+                    echo "!!!Failure ${loc}: --object-file and --definition differ for (${key},$value)"
                 fi
             fi
         done
@@ -302,12 +302,13 @@ function check_global_hashes_changed() {
         for i in "${arr[@]}"; do
             if [[ $i == *":"* ]]; then
                 key=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[0][1:-1]")
-                val=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[1][1:-1]")
-                global_hashes_b[$key]="$val"
+                value=$(PYTHON_ARG="$i" python -c "import os; print os.environ['PYTHON_ARG'].split(':')[1][1:-1]")
+                global_hashes_b[$key]="$value"
+
 
                 # Additional check: check if --object-file and --definition provide the same hashes
                 if [[ $(get_global_hash ${key}) != "$value" ]]; then
-                    echo "!!!Failure ${loc}: hash of definition mode differs"
+                    echo "!!!Failure ${loc}: --object-file and --definition differ for ($key)"
                 fi
              fi
         done
@@ -335,9 +336,9 @@ function check_global_hashes_changed() {
 
         if [ $hashes_differ != "${expected["$symbol"]}" ]; then
             if [ $hashes_differ = true ]; then
-                echo "!!!Failure ${loc}: hashes differ, should be the same!"
+                echo "!!!Failure ${loc}: hashes differ, should be the same! ($symbol)"
             else
-                echo "!!!Failure ${loc}: hashes are the same, should differ!"
+                echo "!!!Failure ${loc}: hashes are the same, should differ! ($symbol, ${global_hashes_b["$symbol"]})"
             fi
             cleanup_all
             exit 1

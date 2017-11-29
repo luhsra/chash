@@ -264,7 +264,7 @@ public:
             CacheHash = true;
         if (isa<VarDecl>(D) && cast<VarDecl>(D)->hasGlobalStorage())
             CacheHash = true;
-        if (isa<RecordDecl>(D))
+        if (isa<RecordDecl>(D) && dyn_cast<RecordDecl>(D)->isCompleteDefinition())
             CacheHash = true;
 
         if (!CacheHash) {

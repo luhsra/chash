@@ -12,4 +12,3 @@ check_global_hash_changed_no_copy ${0}:${LINENO} \
                           "struct A { struct B *p; }; struct B { float i; }; struct B b; struct A a;" \
                           "a" false \
                           "b" true
-

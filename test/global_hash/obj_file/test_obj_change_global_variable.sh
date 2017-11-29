@@ -12,4 +12,3 @@ check_global_hashes_changed ${0}:${LINENO} \
                           "main" true \
                           "changed" true \
                           "unchanged" false
-

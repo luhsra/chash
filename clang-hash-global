@@ -26,13 +26,16 @@ def usage():
 
 
 @static_vars(currently_processed=set())
-def get_global_hash(symbol, global_hashes, local_hashes, used_definitions):
+def get_global_hash(symbol, global_hashes, local_hashes, used_definitions, visited=None):
     """Calculates the global hash of the symbol recursively over all used definitions
     """
     currently_processed = get_global_hash.currently_processed # to break recursion
+    if visited is not None:
+        visited.add(symbol)
 
     # If a symbol does not have a local hash, we assume it is a library
     # function and therefore does not require a local hash.
+
     if symbol not in local_hashes:
         return None
 
@@ -49,15 +52,18 @@ def get_global_hash(symbol, global_hashes, local_hashes, used_definitions):
 
     if symbol in used_definitions:
         used_defs = used_definitions[symbol]
+        # sys.stderr.write(repr([symbol, used_defs])+"\n")
+
         for used_def in used_defs:
             #used_def = get_name_of(used_def)
-            used_def_global_hash = get_global_hash(used_def, global_hashes, local_hashes, used_definitions)
+            used_def_global_hash = get_global_hash(used_def, global_hashes, local_hashes, used_definitions,visited)
             if used_def_global_hash is not None:
                 global_hash.update(used_def_global_hash)
-    
+
     currently_processed.remove(symbol)
 
     global_hashes[symbol] = global_hash.hexdigest()
+
     return global_hashes[symbol]
 
 
@@ -103,25 +109,30 @@ def run():
 
         # fill local_hashes
         local_hashes, used_definitions = read_info_files(working_directory)
-        
+
         symbols_to_check = []
- 
+
         if DEFINITION_FLAG in args:
             """Recursive starting from a single function or global variable definition"""
             symbol = get_param_of(DEFINITION_FLAG)
             symbols_to_check.append(symbol)
-            
+
         elif OBJECT_FILE_FLAG in args:
             """Recursive, starting from all definitions within an object file"""
             object_filename = get_param_of(OBJECT_FILE_FLAG)
             info_filename = object_filename + INFO_EXTENSION
-            symbols_to_check = get_symbols_to_check(info_filename) 
+            symbols_to_check = get_symbols_to_check(info_filename)
 
         elif LOCAL_FLAG in args:
             symbol = get_param_of(LOCAL_FLAG)
-            assert symbol in local_hashes
-            print local_hashes[symbol]
-            sys.exit(0)
+            possibilities = ['function:' + symbol, 'variable:'+symbol,
+                             'record:'+symbol]
+            for real in possibilities:
+                if real in local_hashes:
+                    print local_hashes[real]
+                    sys.exit(0)
+            sys.stderr.write("%s not found\n" % symbol)
+            sys.exit(1)
 
         elif ALL_FLAG in args:
             symbols_to_check = local_hashes.keys()
@@ -130,10 +141,18 @@ def run():
         global_hashes = {}
 
         for symbol in symbols_to_check:
-            if symbol not in local_hashes:
+            possibilities = ['function:' + symbol, 'variable:'+symbol, None]
+            for real_sym in possibilities:
+                if real_sym in local_hashes:
+                    break
+            if not real_sym:
                 print "Error: symbol '%s' not found" % symbol
                 sys.exit(1)
-            get_global_hash(symbol, global_hashes, local_hashes, used_definitions)
+            visited = set()
+            x = get_global_hash(real_sym, global_hashes, local_hashes, used_definitions,visited)
+            global_hashes[symbol] = x
+
+
 
         out_filename = None
         if OUTPUT_FLAG in args:
@@ -153,4 +172,3 @@ def run():
 
 if __name__ == "__main__":
     run()
-
