@@ -6,6 +6,5 @@ e_type e = cc;
 /*
  * check-name: Adding unused enum constant to typedeffed enum
  * obj-not-diff: yes
- * assert-ast: A != B
- * assert-obj: A == B
+ * assert-ast: A == B
  */

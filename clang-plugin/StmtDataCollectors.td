@@ -38,6 +38,16 @@ class TypeTraitExpr {
   }];
 }
 
+class UnaryExprOrTypeTraitExpr {
+  code Code = [{
+    addData(S->getKind());
+    if (S->isArgumentType()) {
+       addData(S->getArgumentType());
+    }
+  }];
+}
+
+
 //--- Calls --------------------------------------------------------------//
 class CallExpr {
   code Code = [{
@@ -248,6 +258,13 @@ class AttributedStmt {
   }];
 }
 
+class CompoundStmt {
+  code Code = [{
+    addData(S->size());
+  }];
+}
+
+
 //--- Attributes ---------------------------------------------------------//
 class Attr {
   code Code = [{
@@ -289,6 +306,23 @@ class TypeDecl {
       }
   }];
 }
+
+class EnumDecl {
+  code Code = [{
+      addData(S->getNumPositiveBits());
+      addData(S->getNumNegativeBits());
+  }];
+}
+
+class EnumConstantDecl {
+  code Code = [{
+       /* Not every enum has a init expression. Therefore, 
+          we extract the actual enum value from it. */
+       std::cout << "ASDASD" << S->getInitVal().getExtValue() << std::endl;
+       addData(S->getInitVal().getExtValue());
+  }];
+}
+
 
 class TagDecl {
   code Code = [{

@@ -248,8 +248,6 @@ public:
     /// TypeLocs.
     bool shouldWalkTypesOfTypeLocs() const { return false; }
 
-
-
     /* For some special nodes, override the traverse function, since we
        need both pre- and post order traversal */
     bool TraverseTranslationUnitDecl(TranslationUnitDecl *Unit);
@@ -262,7 +260,7 @@ public:
         // std::cerr << "DECL: " << D << "\n";
         /* For some declarations, we store the calculated hash value. */
         bool CacheHash = false;
-        if (isa<FunctionDecl>(D) && cast<FunctionDecl>(D)->isGlobal())
+        if (isa<FunctionDecl>(D) && cast<FunctionDecl>(D)->isDefined())
             CacheHash = true;
         if (isa<VarDecl>(D) && cast<VarDecl>(D)->hasGlobalStorage())
             CacheHash = true;
@@ -288,23 +286,6 @@ public:
         return ret;
     }
 
-    bool VisitCallExpr(CallExpr *Call) {
-        addData(TranslationUnitHashVisitorPrefix::CallExpr);
-        bool ret;
-        if (FunctionDecl* FD = Call->getDirectCallee()) {
-            // FIXME: This is kind of an ugly non-const hack
-            // We do a hack to avoid the hashing of the callees body.
-            // If we would do that, we would get into an endless
-            // recursion on recursive functions.
-            Stmt *Body = FD->getBody();
-            FD->setBody(nullptr);
-            ret = TraverseDecl(FD);
-            FD->setBody(Body);
-        } else if (Expr *E = Call->getCallee()) {
-            ret = TraverseStmt(E);
-        }
-        return ret;
-    }
 
 #define DEF_TYPE_GOTO_DECL(CLASS, EXPR)                 \
     bool Visit##CLASS(CLASS *T) {                       \
@@ -314,7 +295,48 @@ public:
 
     DEF_TYPE_GOTO_DECL(TypedefType, T->getDecl());
     DEF_TYPE_GOTO_DECL(RecordType,  T->getDecl());
+    // The EnumType forwards to the declaration. The declaration does
+    // not hand back to the type.
     DEF_TYPE_GOTO_DECL(EnumType,    T->getDecl());
+    bool TraverseEnumDecl(EnumDecl *E) {
+        /* In the original RecursiveASTVisitor
+           > if (D->getTypeForDecl()) {
+           >    TRY_TO(TraverseType(QualType(D->getTypeForDecl(), 0)));
+           > }
+           => NO, NO, NO, to avoid endless recursion
+        */
+        return WalkUpFromEnumDecl(E);
+    }
+
+    bool VisitDeclRefExpr(DeclRefExpr *E) {
+        ValueDecl * ValDecl = E->getDecl();
+        // Function Declarations are handled in VisitCallExpr
+        if (!ValDecl) { return true; }
+        if (isa<VarDecl>(ValDecl)) {
+            /* We emulate TraverseDecl here for VarDecl, because we
+             * are not allowed to call TraverseDecl here, since the
+             * initial expression of a DeclRefExpr might reference a
+             * sourronding Declaration itself. For example:
+             *
+             * struct foo {int N;}
+             * struct foo a = { sizeof(a) };
+             */
+            VarDecl * VD = static_cast<VarDecl *>(ValDecl);
+            VisitNamedDecl(VD);
+            TraverseType(VD->getType());
+            VisitVarDecl(VD);
+        } else if (isa<FunctionDecl>(ValDecl)) {
+            /* Hash Functions without their body */
+            FunctionDecl *FD = static_cast<FunctionDecl *>(ValDecl);
+            Stmt *Body = FD->getBody();
+            FD->setBody(nullptr);
+            TraverseDecl(FD);
+            FD->setBody(Body);
+        } else {
+            TraverseDecl(ValDecl);
+        }
+        return true;
+    }
 
 #if 0
     // C Declarations

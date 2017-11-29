@@ -534,12 +534,15 @@ def run_test_suite(tests):
     if TAP is True:
         to_console("%d..%d\n" %(1, len(running_tests)))
 
+    failed = []
     for future in running_tests:
         test_case = future.get()
         if not test_case['passed']:
             tests_failed += 1
             if test_case['check-known-to-fail']:
                 tests_known_fail += 1
+            else:
+                failed.append(test_case['test_case'])
 
 
     to_console("Out of %d tests, %d passed, %d failed (%d of them are known to fail).\n" \
@@ -547,6 +550,10 @@ def run_test_suite(tests):
                   len(running_tests) - tests_failed,
                   tests_failed,
                   tests_known_fail))
+    if failed:
+        to_console("Failed Testcases:\n")
+        for f in failed:
+            to_console(" - %s\n" % f)
 
     return tests_failed <= tests_known_fail
 

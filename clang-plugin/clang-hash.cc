@@ -154,6 +154,63 @@ struct ObjectCache {
   }
 };
 
+class DefinitionUseVisitor
+    : public RecursiveASTVisitor<DefinitionUseVisitor> {
+    typedef RecursiveASTVisitor<DefinitionUseVisitor> Inherited;
+public:
+
+    std::map<const Decl *, std::set<const Decl *>> DefUseSilo;
+    const Decl* CurrentDefinition;
+
+    bool TraverseDecl(Decl *D) {
+        bool record = false;
+        if (isa<VarDecl>(D) && static_cast<VarDecl*>(D)->hasGlobalStorage()) {
+            CurrentDefinition = D;
+            record = true;
+        }
+        if (isa<FunctionDecl>(D)) {
+            FunctionDecl *FD = static_cast<FunctionDecl*>(D);
+            std::cout << "FUNC " << std::string(FD->getName()) << std::endl;
+            CurrentDefinition = D;
+            record = true;
+        }
+
+        bool ret = Inherited::TraverseDecl(D);
+        if (record) {
+            CurrentDefinition = nullptr;
+        }
+        return ret;
+    }
+
+    bool VisitDeclRefExpr(const DeclRefExpr *Node) {
+        const ValueDecl * ValDecl = Node->getDecl();
+        if (!CurrentDefinition) return true;
+        if (!ValDecl) return true;
+
+        if (isa<VarDecl>(ValDecl)) {
+            const VarDecl *VD = static_cast<const VarDecl *>(ValDecl);
+            if (VD->hasGlobalStorage()) {
+                DefUseSilo[CurrentDefinition].insert(VD);
+            }
+        } else if (isa<FunctionDecl>(ValDecl)) {
+            const FunctionDecl *FD = static_cast<const FunctionDecl *>(ValDecl);
+            std::cout << " -> FUNC" << std::string(FD->getName()) << std::endl;
+            DefUseSilo[CurrentDefinition].insert(ValDecl);
+        }
+        return true;
+    }
+
+    bool VisitCallExpr(CallExpr *Node) {
+        if (!CurrentDefinition) return true;
+        if (FunctionDecl * FD = Node->getDirectCallee()) {
+            DefUseSilo[CurrentDefinition].insert(FD);
+        }
+        return true;
+    }
+
+};
+
+
 class HashTranslationUnitConsumer : public ASTConsumer {
 public:
   HashTranslationUnitConsumer(CompilerInstance &CI, raw_ostream *OS,
@@ -168,6 +225,9 @@ public:
     // will visit all nodes in the AST.
     TranslationUnitHashVisitor Visitor(Context);
     Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+
+    DefinitionUseVisitor DefUse;
+    DefUse.TraverseDecl(Context.getTranslationUnitDecl());
 
     hashCommandLineArguments(Visitor);
 
@@ -274,7 +334,7 @@ public:
 
           if (IsFunctionDefinition || IsNonExternVariableDeclaration) {
             *Terminal << ", [";
-            for (const auto &SavedCallee : Visitor.DefUseSilo[cast<Decl>(D)]) {
+            for (const auto &SavedCallee : DefUse.DefUseSilo[cast<Decl>(D)]) {
               // TODO: also dump records? could be forward-declarated?!
               bool AppendFilename = false;
               if (isa<FunctionDecl>(SavedCallee)) {

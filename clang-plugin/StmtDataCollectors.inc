@@ -33,17 +33,21 @@ DEF_ADD_DATA(AtomicType, {
 DEF_ADD_DATA(Attr, {
 
     std::string AttrString;      
-    // Print all template arguments into ArgString
     llvm::raw_string_ostream OS(AttrString);
     S->printPretty(OS, Context.getLangOpts());
     OS.flush();
-    std::cerr << " ATTR:" << AttrString << "\n";
     addData(AttrString);
   }
 )
 DEF_ADD_DATA(AttributedStmt, {
 
     for (const Attr *A : S->getAttrs()) {
+       // We duplicate class Attr here to not rely on being integrated
+       // into a RecursiveASTVisitor.
+       std::string AttrString;      
+       llvm::raw_string_ostream OS(AttrString);
+       A->printPretty(OS, Context.getLangOpts());
+       OS.flush();
       addData(std::string(A->getSpelling()));
     }
   }
@@ -121,6 +125,11 @@ DEF_ADD_DATA(CharacterLiteral, {
 DEF_ADD_DATA(ComplexType, {
  }
 )
+DEF_ADD_DATA(CompoundStmt, {
+
+    addData(S->size());
+  }
+)
 DEF_ADD_DATA(ConstantArrayType, {
 
       addData(S->getSize().getZExtValue());
@@ -154,6 +163,20 @@ DEF_ADD_DATA(DependentSizedArrayType, {
 )
 DEF_ADD_DATA(DependentSizedExtVectorType, {
  }
+)
+DEF_ADD_DATA(EnumConstantDecl, {
+
+       /* Not every enum has a init expression. Therefore, 
+          we extract the actual enum value from it. */
+       std::cout << "ASDASD" << S->getInitVal().getExtValue() << std::endl;
+       addData(S->getInitVal().getExtValue());
+  }
+)
+DEF_ADD_DATA(EnumDecl, {
+
+      addData(S->getNumPositiveBits());
+      addData(S->getNumNegativeBits());
+  }
 )
 DEF_ADD_DATA(Expr, {
 
@@ -333,6 +356,14 @@ DEF_ADD_DATA(TypeTraitExpr, {
 DEF_ADD_DATA(TypedefNameDecl, {
 
      addData(S->getUnderlyingType());
+  }
+)
+DEF_ADD_DATA(UnaryExprOrTypeTraitExpr, {
+
+    addData(S->getKind());
+    if (S->isArgumentType()) {
+       addData(S->getArgumentType());
+    }
   }
 )
 DEF_ADD_DATA(UnaryOperator, {
