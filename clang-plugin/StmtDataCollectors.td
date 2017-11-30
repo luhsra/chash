@@ -28,6 +28,7 @@ class ExpressionTraitExpr {
 class PredefinedExpr {
   code Code = [{
     addData(S->getIdentType());
+    addData(S->getFunctionName()->getString());
   }];
 }
 class TypeTraitExpr {
@@ -82,6 +83,7 @@ class DeclRefExpr {
 }
 class MemberExpr {
   code Code = [{
+    addData(S->isArrow());
     addData(S->getMemberDecl()->getName());
   }];
 }
@@ -134,6 +136,12 @@ class ObjCBridgedCastExpr {
   }];
 }
 
+class CastExpr {
+  code Code = [{
+    addData(S->getCastKind());
+  }];
+}
+
 //--- Miscellaneous Exprs ------------------------------------------------//
 class BinaryOperator {
   code Code = [{
@@ -143,6 +151,12 @@ class BinaryOperator {
 class UnaryOperator {
   code Code = [{
     addData(S->getOpcode());
+  }];
+}
+
+class VAArgExpr {
+  code Code = [{
+       addData(S->isMicrosoftABI());
   }];
 }
 
@@ -277,7 +291,6 @@ class Attr {
 }
 //--- Declarations -------------------------------------------------------//
 
-
 class ValueDecl  {
   code Code = [{
       /* Field Declarations can induce recursions */
@@ -318,11 +331,9 @@ class EnumConstantDecl {
   code Code = [{
        /* Not every enum has a init expression. Therefore, 
           we extract the actual enum value from it. */
-       std::cout << "ASDASD" << S->getInitVal().getExtValue() << std::endl;
        addData(S->getInitVal().getExtValue());
   }];
 }
-
 
 class TagDecl {
   code Code = [{
@@ -346,11 +357,66 @@ class VarDecl {
   }];
 }
 
+class ParmVarDecl {
+  code Code = [{
+       addData(S->isParameterPack());
+       addData(S->getOriginalType());
+  }];
+}
+
+class ImplicitParamDecl {
+  code Code = [{
+       // FIXME in newer LLVM?
+       // addData(S->getParameterKind());
+  }];
+}
+
+class FunctionDecl {
+  code Code = [{
+       addData(S->isExternC());
+       addData(S->isGlobal());
+       addData(S->isNoReturn());
+       addData(S->getStorageClass());
+       addData(S->isInlineSpecified());
+       addData(S->isInlined());
+  }];
+}
+
+class LabelDecl {
+  code Code = [{
+       addData(S->isGnuLocal());
+       addData(S->isMSAsmLabel());
+       if (S->isMSAsmLabel()) {
+          addData(S->getMSAsmLabel());
+       }
+  }];
+}
+
+class FieldDecl {
+  code Code = [{
+      addData(S->isBitField());
+  }];
+}
+
+class CapturedDecl {
+  code Code = [{
+      addData(S->isNothrow());
+  }];
+}
+
+
 //--- Types ---------------------------------------------------------------//
 
 class BuiltinType {
    code Code = [{
       addData(S->getKind());
+   }];
+}
+
+class ArrayType  {
+   code Code = [{
+      addData(S->getSizeModifier());
+      addData(S->getIndexTypeCVRQualifiers());
    }];
 }
 
@@ -392,6 +458,12 @@ class UnaryTransformType {
 class AttributedType {
    code Code = [{
         addData(S->getAttrKind());
+   }];
+}
+
+class ElaboratedType {
+   code Code = [{
+        addData(S->getKeyword());
    }];
 }
 

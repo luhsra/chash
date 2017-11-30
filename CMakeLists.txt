@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.0)
 # Generic system
 # removes -rdynamic from the linker, which llvm-ld does not support.
 set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # LLVM version.
 SET(LLVM_RECOMMENDED_VERSION 3.9)

@@ -6,6 +6,12 @@ DEF_ADD_DATA(AddrLabelExpr, {
 DEF_ADD_DATA(AdjustedType, {
  }
 )
+DEF_ADD_DATA(ArrayType, {
+
+      addData(S->getSizeModifier());
+      addData(S->getIndexTypeCVRQualifiers());
+   }
+)
 DEF_ADD_DATA(ArrayTypeTraitExpr, {
 
     addData(S->getTrait());
@@ -117,6 +123,16 @@ DEF_ADD_DATA(CallExpr, {
     }
   }
 )
+DEF_ADD_DATA(CapturedDecl, {
+
+      addData(S->isNothrow());
+  }
+)
+DEF_ADD_DATA(CastExpr, {
+
+    addData(S->getCastKind());
+  }
+)
 DEF_ADD_DATA(CharacterLiteral, {
 
     addData(S->getValue());
@@ -164,11 +180,15 @@ DEF_ADD_DATA(DependentSizedArrayType, {
 DEF_ADD_DATA(DependentSizedExtVectorType, {
  }
 )
+DEF_ADD_DATA(ElaboratedType, {
+
+        addData(S->getKeyword());
+   }
+)
 DEF_ADD_DATA(EnumConstantDecl, {
 
        /* Not every enum has a init expression. Therefore, 
           we extract the actual enum value from it. */
-       std::cout << "ASDASD" << S->getInitVal().getExtValue() << std::endl;
        addData(S->getInitVal().getExtValue());
   }
 )
@@ -191,9 +211,24 @@ DEF_ADD_DATA(ExpressionTraitExpr, {
 DEF_ADD_DATA(ExtVectorType, {
  }
 )
+DEF_ADD_DATA(FieldDecl, {
+
+      addData(S->isBitField());
+  }
+)
 DEF_ADD_DATA(FloatingLiteral, {
 
     addData(llvm::hash_value(S->getValue()));
+  }
+)
+DEF_ADD_DATA(FunctionDecl, {
+
+       addData(S->isExternC());
+       addData(S->isGlobal());
+       addData(S->isNoReturn());
+       addData(S->getStorageClass());
+       addData(S->isInlineSpecified());
+       addData(S->isInlined());
   }
 )
 DEF_ADD_DATA(FunctionNoProtoType, {
@@ -225,6 +260,12 @@ DEF_ADD_DATA(GotoStmt, {
     addData(S->getLabel()->getName());
   }
 )
+DEF_ADD_DATA(ImplicitParamDecl, {
+
+       // FIXME in newer LLVM?
+       // addData(S->getParameterKind());
+  }
+)
 DEF_ADD_DATA(IncompleteArrayType, {
  }
 )
@@ -241,6 +282,15 @@ DEF_ADD_DATA(IntegerLiteral, {
 )
 DEF_ADD_DATA(LValueReferenceType, {
  }
+)
+DEF_ADD_DATA(LabelDecl, {
+
+       addData(S->isGnuLocal());
+       addData(S->isMSAsmLabel());
+       if (S->isMSAsmLabel()) {
+          addData(S->getMSAsmLabel());
+       }
+  }
 )
 DEF_ADD_DATA(LabelStmt, {
 
@@ -266,6 +316,7 @@ DEF_ADD_DATA(MSDependentExistsStmt, {
 )
 DEF_ADD_DATA(MemberExpr, {
 
+    addData(S->isArrow());
     addData(S->getMemberDecl()->getName());
   }
 )
@@ -297,6 +348,12 @@ DEF_ADD_DATA(ObjCPropertyRefExpr, {
     addData(S->isSuperReceiver()); addData(S->isImplicitProperty());
   }
 )
+DEF_ADD_DATA(ParmVarDecl, {
+
+       addData(S->isParameterPack());
+       addData(S->getOriginalType());
+  }
+)
 DEF_ADD_DATA(PipeType, {
  }
 )
@@ -306,6 +363,7 @@ DEF_ADD_DATA(PointerType, {
 DEF_ADD_DATA(PredefinedExpr, {
 
     addData(S->getIdentType());
+    addData(S->getFunctionName()->getString());
   }
 )
 DEF_ADD_DATA(RValueReferenceType, {
@@ -375,6 +433,11 @@ DEF_ADD_DATA(UnaryTransformType, {
 
         addData(S->getUTTKind());
    }
+)
+DEF_ADD_DATA(VAArgExpr, {
+
+       addData(S->isMicrosoftABI());
+  }
 )
 DEF_ADD_DATA(ValueDecl, {
 

@@ -221,21 +221,29 @@ public:
     /// Step 1: Calculate Hash
     const auto StartHashing = std::chrono::high_resolution_clock::now();
 
+    TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
+
     // Traversing the translation unit decl via a RecursiveASTVisitor
     // will visit all nodes in the AST.
-    TranslationUnitHashVisitor Visitor(Context);
-    Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+    CHashVisitor Visitor(Context);
+    Visitor.TraverseDecl(TU);
 
-    DefinitionUseVisitor DefUse;
-    DefUse.TraverseDecl(Context.getTranslationUnitDecl());
+    unsigned ProcessedBytes;
+    /* The Translation Unit hash contains not only the AST hash, but
+     * also the command line arguments */
+    Hash TUHash;
+    const Hash::Digest *ASTHash = Visitor.getHash(TU);
+    TUHash << *ASTHash;
+    hashCommandLineArguments(TUHash);
 
-    hashCommandLineArguments(Visitor);
+    std::string HashString = TUHash.getDigest().asString();
+    hash_new = strdup(HashString.c_str());
 
     const auto FinishHashing = std::chrono::high_resolution_clock::now();
 
-    unsigned ProcessedBytes;
-    const std::string HashString = Visitor.getHash(&ProcessedBytes);
-    hash_new = strdup(HashString.c_str());
+    /* Record all uses of interessting definitions for clang-global-hash */
+    DefinitionUseVisitor DefUse;
+    DefUse.TraverseDecl(TU);
 
     char *cachedir = getenv("CLANG_HASH_CACHE");
     ObjectCache cache(cachedir ? cachedir : "", Terminal);
@@ -392,7 +400,7 @@ public:
 
 private:
   // Returns true if the -stop-if-same-hash flag is set, else false.
-  void hashCommandLineArguments(TranslationUnitHashVisitor &Visitor) {
+  void hashCommandLineArguments(Hash &TUHash) {
     // Get command line arguments
     const std::string PPID{std::to_string(getppid())};
     const std::string FilePath = "/proc/" + PPID + "/cmdline";
@@ -430,10 +438,9 @@ private:
           continue; // also don't hash this (plugin argument)
         }
 
-        CommandLineArgs.push_back(Arg);
+        TUHash << Arg;
       } while (Arg.size());
 
-      Visitor.hashCommandLine(CommandLineArgs);
     } else {
       errs() << "Warning: could not open file \"" << FilePath
              << "\", cannot hash command line arguments.\n";
