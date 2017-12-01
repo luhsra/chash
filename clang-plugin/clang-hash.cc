@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include "Hash.h"
 
 using namespace clang;
 using namespace llvm;
@@ -169,8 +170,6 @@ public:
             record = true;
         }
         if (isa<FunctionDecl>(D)) {
-            FunctionDecl *FD = static_cast<FunctionDecl*>(D);
-            std::cout << "FUNC " << std::string(FD->getName()) << std::endl;
             CurrentDefinition = D;
             record = true;
         }
@@ -193,8 +192,6 @@ public:
                 DefUseSilo[CurrentDefinition].insert(VD);
             }
         } else if (isa<FunctionDecl>(ValDecl)) {
-            const FunctionDecl *FD = static_cast<const FunctionDecl *>(ValDecl);
-            std::cout << " -> FUNC" << std::string(FD->getName()) << std::endl;
             DefUseSilo[CurrentDefinition].insert(ValDecl);
         }
         return true;

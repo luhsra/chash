@@ -3,12 +3,6 @@ DEF_ADD_DATA(AddrLabelExpr, {
     addData(S->getLabel()->getName());
   }
 )
-DEF_ADD_DATA(ArrayType, {
-
-      addData(S->getSizeModifier());
-      addData(S->getIndexTypeCVRQualifiers());
-   }
-)
 DEF_ADD_DATA(ArrayTypeTraitExpr, {
 
     addData(S->getTrait());
@@ -30,15 +24,6 @@ DEF_ADD_DATA(AsmStmt, {
     }
   }
 )
-DEF_ADD_DATA(Attr, {
-
-    std::string AttrString;      
-    llvm::raw_string_ostream OS(AttrString);
-    S->printPretty(OS, Context.getLangOpts());
-    OS.flush();
-    addData(AttrString);
-  }
-)
 DEF_ADD_DATA(AttributedStmt, {
 
     for (const Attr *A : S->getAttrs()) {
@@ -52,20 +37,10 @@ DEF_ADD_DATA(AttributedStmt, {
     }
   }
 )
-DEF_ADD_DATA(AttributedType, {
-
-        addData(S->getAttrKind());
-   }
-)
 DEF_ADD_DATA(BinaryOperator, {
 
     addData(S->getOpcode());
   }
-)
-DEF_ADD_DATA(BuiltinType, {
-
-      addData(S->getKind());
-   }
 )
 DEF_ADD_DATA(CXXBoolLiteralExpr, {
 
@@ -111,11 +86,6 @@ DEF_ADD_DATA(CallExpr, {
     }
   }
 )
-DEF_ADD_DATA(CapturedDecl, {
-
-      addData(S->isNothrow());
-  }
-)
 DEF_ADD_DATA(CastExpr, {
 
     addData(S->getCastKind());
@@ -130,11 +100,6 @@ DEF_ADD_DATA(CompoundStmt, {
 
     addData(S->size());
   }
-)
-DEF_ADD_DATA(ConstantArrayType, {
-
-      addData(S->getSize().getZExtValue());
-   }
 )
 DEF_ADD_DATA(DeclRefExpr, {
 
@@ -153,24 +118,6 @@ DEF_ADD_DATA(DeclStmt, {
     }
   }
 )
-DEF_ADD_DATA(ElaboratedType, {
-
-        addData(S->getKeyword());
-   }
-)
-DEF_ADD_DATA(EnumConstantDecl, {
-
-       /* Not every enum has a init expression. Therefore, 
-          we extract the actual enum value from it. */
-       addData(S->getInitVal().getExtValue());
-  }
-)
-DEF_ADD_DATA(EnumDecl, {
-
-      addData(S->getNumPositiveBits());
-      addData(S->getNumNegativeBits());
-  }
-)
 DEF_ADD_DATA(Expr, {
 
     addData(S->getType());
@@ -181,39 +128,10 @@ DEF_ADD_DATA(ExpressionTraitExpr, {
     addData(S->getTrait());
   }
 )
-DEF_ADD_DATA(FieldDecl, {
-
-      addData(S->isBitField());
-  }
-)
 DEF_ADD_DATA(FloatingLiteral, {
 
     addData(llvm::hash_value(S->getValue()));
   }
-)
-DEF_ADD_DATA(FunctionDecl, {
-
-       addData(S->isExternC());
-       addData(S->isGlobal());
-       addData(S->isNoReturn());
-       addData(S->getStorageClass());
-       addData(S->isInlineSpecified());
-       addData(S->isInlined());
-  }
-)
-DEF_ADD_DATA(FunctionProtoType, {
-
-      addData(S->getExceptionSpecType());
-      addData(S->isVariadic());
-      addData(S->getRefQualifier());
-      addData(S->hasTrailingReturn());
-   }
-)
-DEF_ADD_DATA(FunctionType, {
-
-      addData(S->getRegParmType());
-      addData(S->getCallConv());
-   }
 )
 DEF_ADD_DATA(GenericSelectionExpr, {
 
@@ -227,11 +145,6 @@ DEF_ADD_DATA(GotoStmt, {
     addData(S->getLabel()->getName());
   }
 )
-DEF_ADD_DATA(ImplicitParamDecl, {
-
-       addData(S->getParameterKind());
-  }
-)
 DEF_ADD_DATA(IndirectGotoStmt, {
 
     if (S->getConstantTarget())
@@ -241,15 +154,6 @@ DEF_ADD_DATA(IndirectGotoStmt, {
 DEF_ADD_DATA(IntegerLiteral, {
 
     addData(llvm::hash_value(S->getValue()));
-  }
-)
-DEF_ADD_DATA(LabelDecl, {
-
-       addData(S->isGnuLocal());
-       addData(S->isMSAsmLabel());
-       if (S->isMSAsmLabel()) {
-          addData(S->getMSAsmLabel());
-       }
   }
 )
 DEF_ADD_DATA(LabelStmt, {
@@ -280,11 +184,6 @@ DEF_ADD_DATA(MemberExpr, {
     addData(S->getMemberDecl()->getName());
   }
 )
-DEF_ADD_DATA(NamedDecl, {
-
-      addData(S->getName());
-  }
-)
 DEF_ADD_DATA(ObjCAtCatchStmt, {
 
     addData(S->hasEllipsis());
@@ -303,12 +202,6 @@ DEF_ADD_DATA(ObjCIndirectCopyRestoreExpr, {
 DEF_ADD_DATA(ObjCPropertyRefExpr, {
 
     addData(S->isSuperReceiver()); addData(S->isImplicitProperty());
-  }
-)
-DEF_ADD_DATA(ParmVarDecl, {
-
-       addData(S->isParameterPack());
-       addData(S->getOriginalType());
   }
 )
 DEF_ADD_DATA(PredefinedExpr, {
@@ -331,31 +224,11 @@ DEF_ADD_DATA(StringLiteral, {
     addData(S->getString());
 }
 )
-DEF_ADD_DATA(TagDecl, {
-
-     addData(S->getTagKind());
-  }
-)
-DEF_ADD_DATA(Type, {
-
-     addData(S->getTypeClass());
-  }
-)
-DEF_ADD_DATA(TypeDecl, {
-
-      addData(QualType(S->getTypeForDecl(),0));
-  }
-)
 DEF_ADD_DATA(TypeTraitExpr, {
 
     addData(S->getTrait());
     for (unsigned i = 0; i < S->getNumArgs(); ++i)
       addData(S->getArg(i)->getType());
-  }
-)
-DEF_ADD_DATA(TypedefNameDecl, {
-
-     addData(S->getUnderlyingType());
   }
 )
 DEF_ADD_DATA(UnaryExprOrTypeTraitExpr, {
@@ -371,34 +244,9 @@ DEF_ADD_DATA(UnaryOperator, {
     addData(S->getOpcode());
   }
 )
-DEF_ADD_DATA(UnaryTransformType, {
-
-        addData(S->getUTTKind());
-   }
-)
 DEF_ADD_DATA(VAArgExpr, {
 
        addData(S->isMicrosoftABI());
   }
-)
-DEF_ADD_DATA(ValueDecl, {
-
-      addData(S->getType());
-      addData(S->isWeak());
-  }
-)
-DEF_ADD_DATA(VarDecl, {
-
-      addData(S->getStorageClass());
-      addData(S->getTLSKind());
-      addData(S->isModulePrivate());
-      addData(S->isNRVOVariable());
-  }
-)
-DEF_ADD_DATA(VectorType, {
-
-      addData(S->getNumElements());
-      addData(S->getVectorKind());
-   }
 )
 #undef DEF_ADD_DATA

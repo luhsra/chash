@@ -7,12 +7,8 @@
 #include "clang/AST/DataCollection.h"
 #include "llvm/Support/MD5.h"
 
-
-
 #include <string>
 #include <map>
-
-#include "Hash.h"
 
 namespace clang {
 
@@ -199,7 +195,7 @@ namespace clang {
         }
     public:
 
-#define DEF_ADD_DATA(CLASS, CODE)                   \
+#define DEF_ADD_DATA_STORED(CLASS, CODE)            \
         template<class=void>                        \
         bool Visit##CLASS(const CLASS *S) {         \
             unsigned tag = CHashConstants::CLASS;   \
@@ -209,7 +205,14 @@ namespace clang {
             CODE;                                   \
             return true;                            \
         }
+#define DEF_ADD_DATA(CLASS, CODE) DEF_ADD_DATA_STORED(CLASS, CODE)
 #include "StmtDataCollectors.inc"
+#define DEF_ADD_DATA(CLASS, CODE) DEF_ADD_DATA_STORED(CLASS, CODE)
+#include "AttrDataCollectors.inc"
+#define DEF_ADD_DATA(CLASS, CODE) DEF_ADD_DATA_STORED(CLASS, CODE)
+#include "DeclDataCollectors.inc"
+#define DEF_ADD_DATA(CLASS, CODE) DEF_ADD_DATA_STORED(CLASS, CODE)
+#include "TypeDataCollectors.inc"
 
 
         CHashVisitor(ASTContext &Context) : Context(Context) { }
