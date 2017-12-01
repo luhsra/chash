@@ -3,118 +3,48 @@
 
 // #include "SHA1.h"
 #include "MurMurHash3.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Format.h"
+#include <array>
 
-struct Hash : protected MurMurHash3 {
+namespace llvm {
+struct MurMur3 : protected MurMurHash3 {
+    struct Digest {
+        std::array<uint8_t, 16> Bytes;
 
-  typedef MurMurHash3 Algorithm;
+        SmallString<32> digest() const {
+            SmallString<32> Str;
+            raw_svector_ostream Res(Str);
+            for (int i = 0; i < 16; ++i)
+                Res << format("%.2x", Bytes[i]);
+            return Str;
+        }
+    };
 
-  struct Digest {
-    enum { DIGEST_WORDS = Algorithm::DIGEST_WORDS };
-    uint32_t Value[Algorithm::DIGEST_WORDS];
-    mutable uint32_t Length; // Number of hashed bytes
-
-    bool operator==(const Digest &Other) const {
-      for (unsigned I = 0; I < DIGEST_WORDS; ++I) {
-        if (Other.Value[I] != Value[I])
-          return false;
-      }
-      return true;
+    /// Add the bytes in the StringRef \p Str to the hash.
+    // Note that this isn't a string and so this won't include any trailing NULL
+    // bytes.
+    void update(StringRef Str) {
+        ArrayRef<uint8_t> SVal((const uint8_t *)Str.data(), Str.size());
+        update(SVal);
     }
 
-    bool operator!=(const Digest &Other) const { return !(*this == Other); }
-
-    std::string asString() const {
-      std::stringstream ss;
-      for (unsigned I = 0; I < DIGEST_WORDS; ++I) {
-        ss << std::hex << std::setfill('0') << std::setw(8) << Value[I];
-      }
-      return ss.str();
+    void update(ArrayRef<uint8_t> Data) {
+        const uint8_t *Ptr = Data.data();
+        unsigned long Size = Data.size();
+        while (Size-- > 0) {
+            processByte(*Ptr);
+            Ptr++;
+        }
     }
-  };
 
-  Hash &processBlock(const void *const Start, const void *const End) {
-    const uint8_t *Begin = static_cast<const uint8_t *>(Start);
-    const uint8_t *Finish = static_cast<const uint8_t *>(End);
-    while (Begin != Finish) {
-      processByte(*Begin);
-      ++Begin;
+    void final(Digest &Ret)  const {
+        MurMur3 Copy = *this;
+        Copy.finalize((uint32_t*)Ret.Bytes.data());
     }
-    return *this;
-  }
-
-  Hash &processBytes(const void *const Data, size_t Length) {
-    const uint8_t *Block = static_cast<const uint8_t *>(Data);
-    processBlock(Block, Block + Length);
-    return *this;
-  }
-
-  // Digest Operators
-  const Digest getDigest() const {
-    Hash Copy = *this;
-    Digest Ret;
-    Ret.Length = Copy.finalize(Ret.Value);
-    return Ret;
-  }
-
-  // Stream Operators
-  Hash &operator<<(uint8_t X) {
-    processByte(X);
-    return *this;
-  }
-
-  Hash &operator<<(uint16_t X) {
-    *this << (uint8_t)(X & 0xFF) << (uint8_t)(X >> 8);
-    return *this;
-  }
-
-  Hash &operator<<(uint32_t X) {
-    *this << (uint16_t)(X & 0xFFFF) << (uint16_t)(X >> 16);
-    return *this;
-  }
-
-  Hash &operator<<(uint64_t X) {
-    *this << (uint32_t)(X & 0xFFFFFFFF) << (uint32_t)(X >> 32);
-    return *this;
-  }
-
-  Hash &operator<<(int8_t X) {
-    processByte(X);
-    return *this;
-  }
-
-  Hash &operator<<(int16_t X) {
-    *this << (int8_t)(X & 0xFF) << (int8_t)(X >> 8);
-    return *this;
-  }
-
-  Hash &operator<<(int32_t X) {
-    *this << (int16_t)(X & 0xFFFF) << (int16_t)(X >> 16);
-    return *this;
-  }
-
-  Hash &operator<<(int64_t X) {
-    *this << (int32_t)(X & 0xFFFFFFFF) << (int32_t)(X >> 32);
-    return *this;
-  }
-
-  Hash &operator<<(const Digest &X) {
-      m_byteCount += X.Length;
-      return processBytes(X.Value, sizeof(X.Value));
-  }
-
-  Hash &operator<<(const Hash &Other) {
-    *this << Other.getDigest();
-    return *this;
-  }
-
-  Hash &operator<<(const std::string &X) {
-    processBytes(X.c_str(), X.length());
-    return *this;
-  }
-
-  Hash &operator<<(const clang::VersionTuple &VT) {
-    *this << VT.getAsString();
-    return *this;
-  }
 };
+
+}
 #endif

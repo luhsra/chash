@@ -217,6 +217,9 @@ public:
                               bool StopIfSameHash)
       : CI(CI), Terminal(OS), StopIfSameHash(StopIfSameHash) {}
 
+    typedef llvm::MurMur3 Hash;
+    typedef llvm::MurMur3::Digest HashResult;
+
   virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
     /// Step 1: Calculate Hash
     const auto StartHashing = std::chrono::high_resolution_clock::now();
@@ -225,18 +228,21 @@ public:
 
     // Traversing the translation unit decl via a RecursiveASTVisitor
     // will visit all nodes in the AST.
-    CHashVisitor Visitor(Context);
+    CHashVisitor<Hash, HashResult> Visitor(Context);
     Visitor.TraverseDecl(TU);
 
     unsigned ProcessedBytes;
     /* The Translation Unit hash contains not only the AST hash, but
      * also the command line arguments */
     Hash TUHash;
-    const Hash::Digest *ASTHash = Visitor.getHash(TU);
-    TUHash << *ASTHash;
+    HashResult TUHashResult;
+    const HashResult *ASTHash = Visitor.getHash(TU);
+    TUHash.update(ASTHash->Bytes);
     hashCommandLineArguments(TUHash);
 
-    std::string HashString = TUHash.getDigest().asString();
+
+    TUHash.final(TUHashResult);
+    std::string HashString = TUHashResult.digest().str();
     hash_new = strdup(HashString.c_str());
 
     const auto FinishHashing = std::chrono::high_resolution_clock::now();
@@ -284,7 +290,7 @@ public:
       *Terminal << "element-hashes: [";
       for (const auto &SavedHash : Visitor.DeclSilo) {
         const Decl *D = SavedHash.first;
-        const Hash::Digest &Dig = SavedHash.second;
+        const HashResult &Dig = SavedHash.second;
         // Only Top-level declarations
         if (D->getDeclContext() &&
             isa<TranslationUnitDecl>(D->getDeclContext()) &&
@@ -337,7 +343,7 @@ public:
                                      : Filename);
           }
           *Terminal << "\", \"";
-          *Terminal << Dig.asString();
+          *Terminal << Dig.digest().str();
           *Terminal << "\"";
 
           if (IsFunctionDefinition || IsNonExternVariableDeclaration) {
@@ -438,7 +444,7 @@ private:
           continue; // also don't hash this (plugin argument)
         }
 
-        TUHash << Arg;
+        TUHash.update(Arg);
       } while (Arg.size());
 
     } else {

@@ -366,8 +366,7 @@ class ParmVarDecl {
 
 class ImplicitParamDecl {
   code Code = [{
-       // FIXME in newer LLVM?
-       // addData(S->getParameterKind());
+       addData(S->getParameterKind());
   }];
 }
 
@@ -406,6 +405,12 @@ class CapturedDecl {
 
 
 //--- Types ---------------------------------------------------------------//
+
+class Type {
+  code Code = [{
+     addData(S->getTypeClass());
+  }];
+}
 
 class BuiltinType {
    code Code = [{
@@ -467,32 +472,6 @@ class ElaboratedType {
    }];
 }
 
-/* Some Types are just an extension to another type and wrap it. We
-   use TypeOfType with its empty code block for this. We define it as
-   empty to give the user of this file a hook for taking over control. */
-
-class TypeOfType { code Code = [{ }]; }
-class ComplexType         : TypeOfType {}
-class PointerType         : TypeOfType {}
-class BlockPointerType    : TypeOfType {}
-class LValueReferenceType : TypeOfType {}
-class RValueReferenceType : TypeOfType {}
-class MemberPointerType   : TypeOfType {}
-class AdjustedType        : TypeOfType {}
-class DecayedType         : TypeOfType {}
-class VariableArrayType   : TypeOfType {}
-class IncompleteArrayType : TypeOfType {}
-class DependentSizedArrayType     : TypeOfType {}
-/* FIXME: class DependentAddressSpaceType   : TypeOfType {} */
-class DependentSizedExtVectorType : TypeOfType {}
-class ExtVectorType       : TypeOfType {}
-class FunctionNoProtoType : TypeOfType {}
-class TypeOfExprType : TypeOfType {}
-class AtomicType     : TypeOfType {}
-class PipeType       : TypeOfType {}
-class DecltypeType   : TypeOfType {}
-
-class AutoType       : TypeOfType {}
 
 
 

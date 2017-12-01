@@ -3,9 +3,6 @@ DEF_ADD_DATA(AddrLabelExpr, {
     addData(S->getLabel()->getName());
   }
 )
-DEF_ADD_DATA(AdjustedType, {
- }
-)
 DEF_ADD_DATA(ArrayType, {
 
       addData(S->getSizeModifier());
@@ -32,9 +29,6 @@ DEF_ADD_DATA(AsmStmt, {
       addData(S->getClobber(i));
     }
   }
-)
-DEF_ADD_DATA(AtomicType, {
- }
 )
 DEF_ADD_DATA(Attr, {
 
@@ -63,16 +57,10 @@ DEF_ADD_DATA(AttributedType, {
         addData(S->getAttrKind());
    }
 )
-DEF_ADD_DATA(AutoType, {
- }
-)
 DEF_ADD_DATA(BinaryOperator, {
 
     addData(S->getOpcode());
   }
-)
-DEF_ADD_DATA(BlockPointerType, {
- }
 )
 DEF_ADD_DATA(BuiltinType, {
 
@@ -138,9 +126,6 @@ DEF_ADD_DATA(CharacterLiteral, {
     addData(S->getValue());
   }
 )
-DEF_ADD_DATA(ComplexType, {
- }
-)
 DEF_ADD_DATA(CompoundStmt, {
 
     addData(S->size());
@@ -150,9 +135,6 @@ DEF_ADD_DATA(ConstantArrayType, {
 
       addData(S->getSize().getZExtValue());
    }
-)
-DEF_ADD_DATA(DecayedType, {
- }
 )
 DEF_ADD_DATA(DeclRefExpr, {
 
@@ -170,15 +152,6 @@ DEF_ADD_DATA(DeclStmt, {
       }
     }
   }
-)
-DEF_ADD_DATA(DecltypeType, {
- }
-)
-DEF_ADD_DATA(DependentSizedArrayType, {
- }
-)
-DEF_ADD_DATA(DependentSizedExtVectorType, {
- }
 )
 DEF_ADD_DATA(ElaboratedType, {
 
@@ -208,9 +181,6 @@ DEF_ADD_DATA(ExpressionTraitExpr, {
     addData(S->getTrait());
   }
 )
-DEF_ADD_DATA(ExtVectorType, {
- }
-)
 DEF_ADD_DATA(FieldDecl, {
 
       addData(S->isBitField());
@@ -230,9 +200,6 @@ DEF_ADD_DATA(FunctionDecl, {
        addData(S->isInlineSpecified());
        addData(S->isInlined());
   }
-)
-DEF_ADD_DATA(FunctionNoProtoType, {
- }
 )
 DEF_ADD_DATA(FunctionProtoType, {
 
@@ -262,12 +229,8 @@ DEF_ADD_DATA(GotoStmt, {
 )
 DEF_ADD_DATA(ImplicitParamDecl, {
 
-       // FIXME in newer LLVM?
-       // addData(S->getParameterKind());
+       addData(S->getParameterKind());
   }
-)
-DEF_ADD_DATA(IncompleteArrayType, {
- }
 )
 DEF_ADD_DATA(IndirectGotoStmt, {
 
@@ -279,9 +242,6 @@ DEF_ADD_DATA(IntegerLiteral, {
 
     addData(llvm::hash_value(S->getValue()));
   }
-)
-DEF_ADD_DATA(LValueReferenceType, {
- }
 )
 DEF_ADD_DATA(LabelDecl, {
 
@@ -320,9 +280,6 @@ DEF_ADD_DATA(MemberExpr, {
     addData(S->getMemberDecl()->getName());
   }
 )
-DEF_ADD_DATA(MemberPointerType, {
- }
-)
 DEF_ADD_DATA(NamedDecl, {
 
       addData(S->getName());
@@ -354,20 +311,11 @@ DEF_ADD_DATA(ParmVarDecl, {
        addData(S->getOriginalType());
   }
 )
-DEF_ADD_DATA(PipeType, {
- }
-)
-DEF_ADD_DATA(PointerType, {
- }
-)
 DEF_ADD_DATA(PredefinedExpr, {
 
     addData(S->getIdentType());
     addData(S->getFunctionName()->getString());
   }
-)
-DEF_ADD_DATA(RValueReferenceType, {
- }
 )
 DEF_ADD_DATA(Stmt, {
 
@@ -388,6 +336,11 @@ DEF_ADD_DATA(TagDecl, {
      addData(S->getTagKind());
   }
 )
+DEF_ADD_DATA(Type, {
+
+     addData(S->getTypeClass());
+  }
+)
 DEF_ADD_DATA(TypeDecl, {
 
       // If we would hash the resulting type for a typedef, we would get into an endless recursion.
@@ -397,12 +350,6 @@ DEF_ADD_DATA(TypeDecl, {
          addData(QualType(S->getTypeForDecl(),0));
       }
   }
-)
-DEF_ADD_DATA(TypeOfExprType, {
- }
-)
-DEF_ADD_DATA(TypeOfType, {
- }
 )
 DEF_ADD_DATA(TypeTraitExpr, {
 
@@ -457,9 +404,6 @@ DEF_ADD_DATA(VarDecl, {
       addData(S->isModulePrivate());
       addData(S->isNRVOVariable());
   }
-)
-DEF_ADD_DATA(VariableArrayType, {
- }
 )
 DEF_ADD_DATA(VectorType, {
 

@@ -7,7 +7,7 @@ set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # LLVM version.
-SET(LLVM_RECOMMENDED_VERSION 3.9)
+SET(LLVM_RECOMMENDED_VERSION 6.0)
 SET(GCC_RECOMMENDED_VERSION 6)
 
 
@@ -15,11 +15,11 @@ if(NOT DEFINED ${LLVM_ROOT})
   # find llvm-config. prefers to the one with version suffix, Ex:llvm-config-3.4
     # find llvm-config. prefers to the one with version suffix, Ex:llvm-config-3.4
     find_program(LLVM_CONFIG_EXE NAMES "llvm-config-${LLVM_RECOMMENDED_VERSION}"
-      HINTS ~/llvm-build/bin /proj/i4vamos/tools/llvm-3.7/llvm-build/bin)
+      HINTS ~/llvm-build/bin)
 
   if (NOT LLVM_CONFIG_EXE)
     find_program(LLVM_CONFIG_EXE NAMES "llvm-config"
-      HINTS ~/llvm-build/bin /proj/i4vamos/tools/llvm-3.7/llvm-build/bin)
+      HINTS ~/llvm-build/bin)
   endif()
 
   # Get the directory of llvm by using llvm-config. also remove whitespaces.
