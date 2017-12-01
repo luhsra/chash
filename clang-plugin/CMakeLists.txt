@@ -21,5 +21,5 @@ include_directories(${LLVM_SRCROOT}/tools/clang/include)
 
 add_library(clang-hash SHARED
   clang-hash.cc
-  hash-visitor.cc)
+)
 SET_TARGET_PROPERTIES(clang-hash PROPERTIES LINK_FLAGS ${LLVM_LDFLAGS})

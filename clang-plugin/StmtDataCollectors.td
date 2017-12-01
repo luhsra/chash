@@ -293,12 +293,7 @@ class Attr {
 
 class ValueDecl  {
   code Code = [{
-      /* Field Declarations can induce recursions */
-      if (isa<FieldDecl>(S)) {
-        addData(std::string(S->getType().getAsString()));
-      } else {
-        addData(S->getType());
-      }
+      addData(S->getType());
       addData(S->isWeak());
   }];
 }
@@ -311,12 +306,7 @@ class NamedDecl {
 
 class TypeDecl {
   code Code = [{
-      // If we would hash the resulting type for a typedef, we would get into an endless recursion.
-      if (!isa<TypedefNameDecl>(S)
-          && !isa<RecordDecl>(S)
-          && !isa<EnumDecl>(S)) {
-         addData(QualType(S->getTypeForDecl(),0));
-      }
+      addData(QualType(S->getTypeForDecl(),0));
   }];
 }
 

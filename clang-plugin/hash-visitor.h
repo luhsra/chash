@@ -325,7 +325,20 @@ namespace clang {
             return Inherited::WalkUpFromEnumDecl(E);
         }
 
+        bool VisitTypeDecl(TypeDecl * D) {
+            addData(CHashConstants::TypeDecl);
+            // If we would hash the resulting type for a typedef, we
+            // would get into an endless recursion.
+            if (!isa<TypedefNameDecl>(D)
+                && !isa<RecordDecl>(D)
+                && !isa<EnumDecl>(D)) {
+                addData(QualType(D->getTypeForDecl(),0));
+            }
+            return true;
+        }
+
         bool VisitDeclRefExpr(DeclRefExpr *E) {
+            addData(CHashConstants::DeclRefExpr);
             ValueDecl * ValDecl = E->getDecl();
             // Function Declarations are handled in VisitCallExpr
             if (!ValDecl) { return true; }
@@ -352,6 +365,18 @@ namespace clang {
             } else {
                 TraverseDecl(ValDecl);
             }
+            return true;
+        }
+
+        bool VisitValueDecl(ValueDecl *D) {
+            addData(CHashConstants::ValueDecl);
+            /* Field Declarations can induce recursions */
+            if (isa<FieldDecl>(D)) {
+                addData(std::string(D->getType().getAsString()));
+            } else {
+                addData(D->getType());
+            }
+            addData(D->isWeak());
             return true;
         }
 
