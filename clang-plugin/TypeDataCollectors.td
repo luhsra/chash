@@ -1,4 +1,5 @@
 //--- Types ---------------------------------------------------------------//
+
 class Type {
   code Code = [{
      addData(S->getTypeClass());
