@@ -13,6 +13,12 @@ DEF_ADD_DATA(AsmStmt, {
     addData(S->isSimple());
     addData(S->isVolatile());
     addData(S->generateAsmString(Context));
+
+    // CrossRef + FIXME
+    addData(S->getNumInputs());
+    addData(S->getNumOutputs());
+    addData(S->getNumClobbers());
+
     for (unsigned i = 0; i < S->getNumInputs(); ++i) {
       addData(S->getInputConstraint(i));
     }
@@ -98,6 +104,7 @@ DEF_ADD_DATA(CharacterLiteral, {
 )
 DEF_ADD_DATA(CompoundStmt, {
 
+    // CrossRef
     addData(S->size());
   }
 )
@@ -108,9 +115,10 @@ DEF_ADD_DATA(DeclRefExpr, {
 )
 DEF_ADD_DATA(DeclStmt, {
 
-    auto numDecls = std::distance(S->decl_begin(), S->decl_end());
-    addData(static_cast<unsigned>(numDecls));
-    // FIXME?
+    // CrossRef
+    addData(S->decls());
+
+    // FIXME? As this should be done by a using visitor
     for (const Decl *D : S->decls()) {
       if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
         addData(VD->getType());
@@ -135,6 +143,8 @@ DEF_ADD_DATA(FloatingLiteral, {
 )
 DEF_ADD_DATA(GenericSelectionExpr, {
 
+    // CrossRef
+    addData(S->getNumAssocs());
     for (unsigned i = 0; i < S->getNumAssocs(); ++i) {
       addData(S->getAssocType(i));
     }
@@ -163,14 +173,23 @@ DEF_ADD_DATA(LabelStmt, {
 )
 DEF_ADD_DATA(LambdaExpr, {
 
+    addData(S->isGenericLambda());
+    addData(S->isMutable());
+    addData(S->hasExplicitParameters());
+    addData(S->hasExplicitResultType());
+
+
+    // CrossRef
+    addData(S->captures());
+    addData(S->explicit_captures());
     for (const LambdaCapture &C : S->captures()) {
       addData(C.isPackExpansion());
       addData(C.getCaptureKind());
       if (C.capturesVariable())
         addData(C.getCapturedVar()->getType());
     }
-    addData(S->isGenericLambda());
-    addData(S->isMutable());
+    
+
   }
 )
 DEF_ADD_DATA(MSDependentExistsStmt, {
@@ -180,7 +199,7 @@ DEF_ADD_DATA(MSDependentExistsStmt, {
 )
 DEF_ADD_DATA(MemberExpr, {
 
-    addData(S->isArrow());
+    // I suspect this should be included: addData(S->isArrow());
     addData(S->getMemberDecl()->getName());
   }
 )
@@ -210,6 +229,12 @@ DEF_ADD_DATA(PredefinedExpr, {
     addData(S->getFunctionName()->getString());
   }
 )
+DEF_ADD_DATA(PseudoObjectExpr, {
+
+    // CrossRef
+    addData(S->semantics());
+  }
+)
 DEF_ADD_DATA(Stmt, {
 
     addData(S->getStmtClass());
@@ -217,6 +242,9 @@ DEF_ADD_DATA(Stmt, {
     // macro-generated code.
     addData(data_collection::getMacroStack(S->getLocStart(), Context));
     addData(data_collection::getMacroStack(S->getLocEnd(), Context));
+
+    // CrossRef
+    addData(S->children());
   }
 )
 DEF_ADD_DATA(StringLiteral, {
@@ -227,6 +255,8 @@ DEF_ADD_DATA(StringLiteral, {
 DEF_ADD_DATA(TypeTraitExpr, {
 
     addData(S->getTrait());
+    // CrossRef
+    addData(S->getNumArgs());
     for (unsigned i = 0; i < S->getNumArgs(); ++i)
       addData(S->getArg(i)->getType());
   }

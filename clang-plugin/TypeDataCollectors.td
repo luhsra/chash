@@ -2,7 +2,7 @@
 
 class Type {
   code Code = [{
-     addData(S->getTypeClass());
+     addData(llvm::hash_value(S->getTypeClass()));
   }];
 }
 
@@ -45,6 +45,9 @@ class FunctionProtoType {
       addData(S->isVariadic());
       addData(S->getRefQualifier());
       addData(S->hasTrailingReturn());
+
+      addData(S->param_types());
+      addData(S->exceptions());
    }];
 }
 
@@ -65,3 +68,11 @@ class ElaboratedType {
         addData(S->getKeyword());
    }];
 }
+
+class ObjCObjectType {
+   code Code = [{
+        addData(S->getTypeArgsAsWritten());
+   }];
+}
+
+

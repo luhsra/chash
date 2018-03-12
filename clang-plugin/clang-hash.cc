@@ -164,6 +164,7 @@ public:
     const Decl* CurrentDefinition;
 
     bool TraverseDecl(Decl *D) {
+        if (!D) return true;
         bool record = false;
         if (isa<VarDecl>(D) && static_cast<VarDecl*>(D)->hasGlobalStorage()) {
             CurrentDefinition = D;

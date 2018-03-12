@@ -5,6 +5,9 @@ class Stmt {
     // macro-generated code.
     addData(data_collection::getMacroStack(S->getLocStart(), Context));
     addData(data_collection::getMacroStack(S->getLocEnd(), Context));
+
+    // CrossRef
+    addData(S->children());
   }];
 }
 
@@ -34,6 +37,8 @@ class PredefinedExpr {
 class TypeTraitExpr {
   code Code = [{
     addData(S->getTrait());
+    // CrossRef
+    addData(S->getNumArgs());
     for (unsigned i = 0; i < S->getNumArgs(); ++i)
       addData(S->getArg(i)->getType());
   }];
@@ -213,28 +218,48 @@ class CXXFoldExpr {
 }
 class GenericSelectionExpr {
   code Code = [{
+    // CrossRef
+    addData(S->getNumAssocs());
     for (unsigned i = 0; i < S->getNumAssocs(); ++i) {
       addData(S->getAssocType(i));
     }
   }];
 }
+
+class PseudoObjectExpr {
+  code Code = [{
+    // CrossRef
+    addData(S->semantics());
+  }];
+}
+
 class LambdaExpr {
   code Code = [{
+    addData(S->isGenericLambda());
+    addData(S->isMutable());
+    addData(S->hasExplicitParameters());
+    addData(S->hasExplicitResultType());
+
+
+    // CrossRef
+    addData(S->captures());
+    addData(S->explicit_captures());
     for (const LambdaCapture &C : S->captures()) {
       addData(C.isPackExpansion());
       addData(C.getCaptureKind());
       if (C.capturesVariable())
         addData(C.getCapturedVar()->getType());
     }
-    addData(S->isGenericLambda());
-    addData(S->isMutable());
+    
+
   }];
 }
 class DeclStmt {
   code Code = [{
-    auto numDecls = std::distance(S->decl_begin(), S->decl_end());
-    addData(static_cast<unsigned>(numDecls));
-    // FIXME?
+    // CrossRef
+    addData(S->decls());
+
+    // FIXME? As this should be done by a using visitor
     for (const Decl *D : S->decls()) {
       if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
         addData(VD->getType());
@@ -247,6 +272,12 @@ class AsmStmt {
     addData(S->isSimple());
     addData(S->isVolatile());
     addData(S->generateAsmString(Context));
+
+    // CrossRef + FIXME
+    addData(S->getNumInputs());
+    addData(S->getNumOutputs());
+    addData(S->getNumClobbers());
+
     for (unsigned i = 0; i < S->getNumInputs(); ++i) {
       addData(S->getInputConstraint(i));
     }
@@ -274,8 +305,8 @@ class AttributedStmt {
 
 class CompoundStmt {
   code Code = [{
+    // CrossRef
     addData(S->size());
   }];
 }
-
 

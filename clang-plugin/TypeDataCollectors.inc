@@ -30,6 +30,9 @@ DEF_ADD_DATA(FunctionProtoType, {
       addData(S->isVariadic());
       addData(S->getRefQualifier());
       addData(S->hasTrailingReturn());
+
+      addData(S->param_types());
+      addData(S->exceptions());
    }
 )
 DEF_ADD_DATA(FunctionType, {
@@ -38,9 +41,14 @@ DEF_ADD_DATA(FunctionType, {
       addData(S->getCallConv());
    }
 )
+DEF_ADD_DATA(ObjCObjectType, {
+
+        addData(S->getTypeArgsAsWritten());
+   }
+)
 DEF_ADD_DATA(Type, {
 
-     addData(S->getTypeClass());
+     addData(llvm::hash_value(S->getTypeClass()));
   }
 )
 DEF_ADD_DATA(UnaryTransformType, {

@@ -1,5 +1,34 @@
 //--- Declarations -------------------------------------------------------//
 
+class Decl {
+  code Code = [{
+      // Every Declaration gets a tag field in the hash stream. It is
+      // hashed to add additional randomness to the hash
+      addData(llvm::hash_value(S->getKind()));
+
+      // CrossRef
+      addData(S->hasAttrs());
+      if (S->hasAttrs())
+        addData(S->attrs());
+  }];
+}
+
+class DeclContext  {
+   code Code = [{
+      // CrossRef
+      addData(S->decls());
+   }];
+}
+
+class BlockDecl  {
+   code Code = [{
+      // CrossRef
+      auto it = llvm::make_range(S->capture_begin(), S->capture_end());
+      addData(it);
+   }];
+}
+
+
 class ValueDecl  {
   code Code = [{
       addData(S->getType());
@@ -9,7 +38,7 @@ class ValueDecl  {
 
 class NamedDecl {
   code Code = [{
-      addData(S->getName());
+      addData(S->getNameAsString());
   }];
 }
 
@@ -77,6 +106,10 @@ class FunctionDecl {
        addData(S->getStorageClass());
        addData(S->isInlineSpecified());
        addData(S->isInlined());
+
+       // CrossRef
+       auto range = llvm::make_range(S->param_begin(), S->param_end());
+       addData(range);
   }];
 }
 
@@ -87,6 +120,22 @@ class LabelDecl {
        if (S->isMSAsmLabel()) {
           addData(S->getMSAsmLabel());
        }
+  }];
+}
+
+class CXXRecordDecl {
+  code Code = [{
+       // CrossRef
+       if (S->isCompleteDefinition()) {
+           addData(S->bases());
+       }
+  }];
+}
+
+class CXXConstructorDecl {
+  code Code = [{
+       // CrossRef
+       addData(S->inits());
   }];
 }
 
@@ -102,4 +151,55 @@ class CapturedDecl {
   }];
 }
 
+class DecompositionDecl {
+  code Code = [{
+      // CrossRef
+      addData(S->bindings());
+  }];
+}
+
+
+//--- Obj-C ---------------------------------------------------------//
+
+class ObjCCategoryDecl {
+  code Code = [{
+     // CrossRef
+     if (auto *it = S->getTypeParamList()) {
+       auto range = llvm::make_range(it->begin(), it->end());
+       addData(range);
+     }
+  }];
+}
+
+class ObjCInterfaceDecl {
+  code Code = [{
+     // CrossRef
+     if (auto *it = S->getTypeParamListAsWritten()) {
+       auto range = llvm::make_range(it->begin(), it->end());
+       addData(range);
+     }
+  }];
+}
+
+class ObjCMethodDecl {
+  code Code = [{
+     // CrossRef
+     auto range = llvm::make_range(S->param_begin(), S->param_end());
+     addData(range);
+  }];
+}
+
+//--- Templates -----------------------------------------------------//
+
+class FriendTemplateDecl {
+  code Code = [{
+      // CrossRef
+      addData(S->getNumTemplateParameters());
+      for (unsigned I = 0, E = S->getNumTemplateParameters(); I < E; ++I) {
+          auto TPL = S->getTemplateParameterList(I);
+          auto it  = llvm::make_range(TPL->begin(), TPL->end());
+          addData(it);
+      }
+  }];
+}
 
