@@ -7,6 +7,9 @@ set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # LLVM version.
+# Know to work:
+#   - clang: 6.0, 7.0
+#   - gcc: 6, 7
 SET(LLVM_RECOMMENDED_VERSION 6.0)
 SET(GCC_RECOMMENDED_VERSION 6)
 

@@ -28,9 +28,11 @@ For more academic information see: https://lab.sra.uni-hannover.de/Research/cHas
 Software Package Requirements
 -----------------------------
 
-- clang-3.9-dev
-- llvm-3.9-dev
+- clang-6.0-dev
+- llvm-6.0-dev
 - gcc-6-plugin-dev
+
+The plugin works also with other versions. Please consult and change the CMakeLists.txt file accordingly.
 
 Build the compiler plugins
 --------------------------
