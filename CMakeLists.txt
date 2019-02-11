@@ -44,7 +44,7 @@ find_program(LLVM_CXX_COMPILER "clang++-${LLVM_RECOMMENDED_VERSION}"
 find_program(GCC_C_COMPILER "gcc-${GCC_RECOMMENDED_VERSION}"
              NAMES gcc)
 # Find the G++
-find_program(GCC_CXX_COMPILER "gcc++-${GCC_RECOMMENDED_VERSION}"
+find_program(GCC_CXX_COMPILER "g++-${GCC_RECOMMENDED_VERSION}"
              NAMES g++)
 
 
@@ -60,6 +60,7 @@ endif()
 
 message(STATUS "LLVM compiler: ${LLVM_C_COMPILER}")
 message(STATUS "GCC compiler: ${GCC_C_COMPILER}")
+message(STATUS "GXX compiler: ${GCC_CXX_COMPILER}")
 
 
 # Use System C and CXX compiler
